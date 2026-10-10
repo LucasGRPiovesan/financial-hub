@@ -1,0 +1,188 @@
+[project]
+name = "financial-hub"
+version = "0.1.0"
+description = "Financial Hub - financial system of record for integrated products"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "fastapi==0.143.0",
+    "uvicorn[standard]==0.54.0",
+    "pydantic==2.14.0",
+    "pydantic-settings>=2.11,<3",
+    "sqlalchemy[asyncio]==2.1.4",
+    "alembic==1.20.0",
+    "psycopg[binary]==3.3.6",
+    "structlog==26.1.0",
+    "httpx>=0.28,<1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov>=7,<8",
+    "hypothesis>=6.140,<7",
+    "ruff==0.17.0",
+    "pyright[nodejs]==1.1.414",
+    "import-linter>=2.5,<3",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev"]
+
+# --- ruff ---------------------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["financial_hub"]
+
+# --- pyright ------------------------------------------------------------------------------------
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__"]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+# --- pytest -------------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --cov=financial_hub --cov-report=term-missing:skip-covered"
+
+[tool.coverage.run]
+source = ["financial_hub"]
+branch = true
+
+# --- import-linter (docs/ARCHITECTURE.md section 3, rules 1-3) -----------------------------------
+[tool.importlinter]
+root_package = "financial_hub"
+include_external_packages = false
+
+[[tool.importlinter.contracts]]
+name = "1. shared depends on nothing internal"
+type = "forbidden"
+source_modules = ["financial_hub.shared"]
+forbidden_modules = [
+    "financial_hub.platform",
+    "financial_hub.modules",
+    "financial_hub.workers",
+    "financial_hub.mcp",
+    "financial_hub.main",
+]
+
+[[tool.importlinter.contracts]]
+name = "1. platform depends only on shared"
+type = "forbidden"
+source_modules = ["financial_hub.platform"]
+forbidden_modules = [
+    "financial_hub.modules",
+    "financial_hub.workers",
+    "financial_hub.mcp",
+    "financial_hub.main",
+]
+
+[[tool.importlinter.contracts]]
+name = "2. domain depends only on shared"
+type = "forbidden"
+source_modules = ["financial_hub.modules.*.domain"]
+forbidden_modules = [
+    "financial_hub.modules.*.application",
+    "financial_hub.modules.*.infrastructure",
+    "financial_hub.modules.*.api",
+    "financial_hub.platform",
+    "financial_hub.workers",
+    "financial_hub.mcp",
+    "financial_hub.main",
+]
+
+[[tool.importlinter.contracts]]
+name = "2. modules never import each other's domain"
+type = "independence"
+modules = [
+    "financial_hub.modules.identity.domain",
+    "financial_hub.modules.projects.domain",
+    "financial_hub.modules.customers.domain",
+    "financial_hub.modules.ledger.domain",
+    "financial_hub.modules.wallets.domain",
+    "financial_hub.modules.pricing.domain",
+    "financial_hub.modules.metering.domain",
+    "financial_hub.modules.billing.domain",
+    "financial_hub.modules.payments.domain",
+    "financial_hub.modules.reconciliation.domain",
+    "financial_hub.modules.integrations.domain",
+    "financial_hub.modules.events.domain",
+    "financial_hub.modules.webhooks.domain",
+    "financial_hub.modules.realtime.domain",
+    "financial_hub.modules.audit.domain",
+    "financial_hub.modules.intelligence.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "2. modules never import each other's infrastructure"
+type = "independence"
+modules = [
+    "financial_hub.modules.identity.infrastructure",
+    "financial_hub.modules.projects.infrastructure",
+    "financial_hub.modules.customers.infrastructure",
+    "financial_hub.modules.ledger.infrastructure",
+    "financial_hub.modules.wallets.infrastructure",
+    "financial_hub.modules.pricing.infrastructure",
+    "financial_hub.modules.metering.infrastructure",
+    "financial_hub.modules.billing.infrastructure",
+    "financial_hub.modules.payments.infrastructure",
+    "financial_hub.modules.reconciliation.infrastructure",
+    "financial_hub.modules.integrations.infrastructure",
+    "financial_hub.modules.events.infrastructure",
+    "financial_hub.modules.webhooks.infrastructure",
+    "financial_hub.modules.realtime.infrastructure",
+    "financial_hub.modules.audit.infrastructure",
+    "financial_hub.modules.intelligence.infrastructure",
+]
+
+[[tool.importlinter.contracts]]
+name = "2. modules never import each other's api"
+type = "independence"
+modules = [
+    "financial_hub.modules.identity.api",
+    "financial_hub.modules.projects.api",
+    "financial_hub.modules.customers.api",
+    "financial_hub.modules.ledger.api",
+    "financial_hub.modules.wallets.api",
+    "financial_hub.modules.pricing.api",
+    "financial_hub.modules.metering.api",
+    "financial_hub.modules.billing.api",
+    "financial_hub.modules.payments.api",
+    "financial_hub.modules.reconciliation.api",
+    "financial_hub.modules.integrations.api",
+    "financial_hub.modules.events.api",
+    "financial_hub.modules.webhooks.api",
+    "financial_hub.modules.realtime.api",
+    "financial_hub.modules.audit.api",
+    "financial_hub.modules.intelligence.api",
+]
+
+[[tool.importlinter.contracts]]
+name = "3. api layers depend only on their own application"
+type = "forbidden"
+source_modules = ["financial_hub.modules.*.api"]
+forbidden_modules = [
+    "financial_hub.modules.*.domain",
+    "financial_hub.modules.*.infrastructure",
+]
+allow_indirect_imports = true

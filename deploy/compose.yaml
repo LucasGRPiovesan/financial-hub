@@ -1,0 +1,122 @@
+name: financial-hub
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-financial_hub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-financial_hub}
+      POSTGRES_DB: ${POSTGRES_DB:-financial_hub}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  migrate:
+    image: financial-hub-backend:dev
+    pull_policy: never
+    command: ["alembic", "upgrade", "head"]
+    environment: &backend-env
+      APP_ENV: ${APP_ENV:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://financial_hub:financial_hub@db:5432/financial_hub}
+    volumes: &backend-volumes
+      - ../backend:/app
+      - backend-venv:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ../backend
+      target: dev
+    image: financial-hub-backend:dev
+    environment: *backend-env
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes: *backend-volumes
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  worker:
+    image: financial-hub-backend:dev
+    pull_policy: never
+    command: ["python", "-m", "financial_hub.workers"]
+    environment: *backend-env
+    volumes: *backend-volumes
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, sys, time; sys.exit(0 if time.time() - os.path.getmtime('/tmp/worker.heartbeat') < 60 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    stop_grace_period: 10s
+
+  web:
+    build:
+      context: ../frontend
+      target: dev
+    image: financial-hub-web:dev
+    environment:
+      API_PROXY_TARGET: http://api:8000
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - ../frontend:/app
+      - web-node-modules:/app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5173/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  lgtm:
+    image: grafana/otel-lgtm:0.36.0
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+    volumes:
+      - lgtm-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
+
+volumes:
+  db-data:
+  backend-venv:
+  web-node-modules:
+  lgtm-data:
