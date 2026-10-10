@@ -23,9 +23,11 @@ services:
     pull_policy: never
     command: ["alembic", "upgrade", "head"]
     environment: &backend-env
-      APP_ENV: ${APP_ENV:-dev}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://financial_hub:financial_hub@db:5432/financial_hub}
+      FH_APP_ENV: ${FH_APP_ENV:-dev}
+      FH_LOG_LEVEL: ${FH_LOG_LEVEL:-INFO}
+      FH_DATABASE_URL: ${FH_DATABASE_URL:-postgresql+psycopg://financial_hub:financial_hub@db:5432/financial_hub}
+      FH_OTEL_EXPORTER_OTLP_ENDPOINT: ${FH_OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4318}
+      FH_OTEL_SERVICE_NAME: financial-hub-api
     volumes: &backend-volumes
       - ../backend:/app
       - backend-venv:/app/.venv
@@ -61,7 +63,9 @@ services:
     image: financial-hub-backend:dev
     pull_policy: never
     command: ["python", "-m", "financial_hub.workers"]
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      FH_OTEL_SERVICE_NAME: financial-hub-worker
     volumes: *backend-volumes
     depends_on:
       migrate:
