@@ -38,7 +38,9 @@ RUN --mount=type=cache,target=/home/app/.cache/uv,uid=1000,gid=1000 \
 # --- runtime: no uv, no dev tools, no source tree ---
 FROM python:3.14-slim AS runtime
 ENV PYTHONUNBUFFERED=1 PATH="/app/.venv/bin:$PATH"
-RUN groupadd --system --gid 1000 app \
+# pip is not needed at runtime and vendors its own (often outdated) urllib3/msgpack/setuptools.
+RUN python -m pip uninstall --yes --disable-pip-version-check pip \
+    && groupadd --system --gid 1000 app \
     && useradd --system --uid 1000 --gid app --create-home app
 WORKDIR /app
 COPY --from=build --chown=app:app /app/.venv ./.venv
