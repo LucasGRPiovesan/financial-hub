@@ -7,7 +7,7 @@ locking write in the same unit of work is refused because it could lock out of o
 """
 
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime
 from uuid import UUID
 
@@ -45,6 +45,34 @@ type AggregateLock = Callable[[], Awaitable[None]]
 
 _WRITE_MARK = "financial_hub.ledger.write_locked"
 
+type EntryBuilder = Callable[[Mapping[repo.AccountKey, Account]], EntryDraft | None]
+"""Builds an entry from the locked accounts (``(code, currency)`` -> account, current balance)."""
+
+
+@dataclass(frozen=True, slots=True)
+class DeferredEntry:
+    """An entry built under the account locks, from current balances (balance-aware recipes).
+
+    ``accounts`` must list every account the built entry may post to (they are provisioned and
+    locked with the rest of the write). When ``idempotency_key`` already exists the stored entry
+    is returned without calling ``build``: the balances it was built from have moved since.
+    """
+
+    idempotency_key: str
+    accounts: tuple[tuple[AccountSpec, Currency], ...]
+    build: EntryBuilder
+
+
+@dataclass(frozen=True, slots=True)
+class Transition:
+    """``pending -> posted`` or ``pending -> archived`` of a stored entry (idempotent)."""
+
+    entry_id: UUID
+    target: EntryStatus
+
+
+type WriteItem = EntryDraft | DeferredEntry | Transition
+
 
 class LedgerService:
     def __init__(self, uow: UnitOfWork) -> None:
@@ -64,40 +92,129 @@ class LedgerService:
         if not entries:
             return []
         project_id = self._single_project(entries)
-        unique = self._dedupe(entries)
+        results = await self.write(project_id, entries, aggregate_lock=aggregate_lock)
+        return [entry for entry in results if entry is not None]
+
+    async def write(
+        self,
+        project_id: UUID,
+        items: Sequence[WriteItem],
+        *,
+        aggregate_lock: AggregateLock | None = None,
+    ) -> list[JournalEntry | None]:
+        """The one locking write of a unit of work: entries, deferred entries and transitions.
+
+        All accounts (of static entries, declared by deferred entries, and of the transitioned
+        entries) are provisioned and locked **once**, in id order. Items are processed in order:
+        a :class:`DeferredEntry` builder sees the locked balances plus the deltas of the items
+        before it. ``no_overdraft`` is checked over the deltas of all items together.
+
+        One result per item: the stored entry (new, replayed or transitioned), or ``None`` for a
+        deferred entry whose builder produced nothing (every leg zero).
+        """
+        if not items:
+            return []
+        static = [item for item in items if isinstance(item, EntryDraft)]
+        if any(draft.project_id != project_id for draft in static):
+            raise ValidationFailed("all entries of one ledger write belong to one project")
+        unique = self._dedupe(static)
+        deferred = [item for item in items if isinstance(item, DeferredEntry)]
+        deferred_keys = [item.idempotency_key for item in deferred]
+        if len(set(deferred_keys)) != len(deferred_keys) or set(deferred_keys) & set(unique):
+            raise ValidationFailed("an idempotency key appears twice in one ledger write")
+        moves = [item for item in items if isinstance(item, Transition)]
+        if len({move.entry_id for move in moves}) != len(moves):
+            raise ValidationFailed("an entry is transitioned at most once per ledger write")
+        for move in moves:
+            if move.target not in (EntryStatus.POSTED, EntryStatus.ARCHIVED):
+                raise ValidationFailed("a pending entry is either posted or voided (archived)")
+        # Postings are immutable: reading them before the locks is safe; status is re-read below.
+        moved = {move.entry_id: await self.get_entry(project_id, move.entry_id) for move in moves}
+
         session = self._begin_write()
         if aggregate_lock is not None:
             await aggregate_lock()
 
-        accounts, ids = await self._provision_and_lock(project_id, unique.values())
-
-        existing = await repo.entry_ids_by_key(session, project_id, unique)
-        stored: dict[str, UUID] = {}
-        new: list[EntryDraft] = []
-        for key, draft in sorted(unique.items()):
-            if key in existing:
-                stored[key] = self._replayed(draft, *existing[key])
-            else:
-                new.append(draft)
-        await self._check_reversals(new)
-
-        legs = {
-            draft.idempotency_key: [
-                Posting(new_uuid(), ids[p.key], p.direction, p.amount) for p in draft.postings
+        specs = self._merge_specs(
+            [(p.key, p.account) for d in unique.values() for p in d.postings]
+            + [
+                ((spec.code, currency.code), spec)
+                for item in deferred
+                for spec, currency in item.accounts
             ]
-            for draft in new
-        }
-        deltas: dict[UUID, BalanceDelta] = {}
-        for draft in new:
-            for account_id, delta in balance_deltas(
-                ((p.account_id, p.direction, p.amount) for p in legs[draft.idempotency_key]),
-                None,
-                draft.status,
-            ).items():
-                deltas[account_id] = deltas.get(account_id, BalanceDelta()) + delta
-        self._check_no_overdraft(accounts, deltas)
+        )
+        await repo.insert_missing_accounts(session, project_id, specs)
+        ids = await repo.account_ids(session, project_id, specs)
+        locked = await repo.lock_accounts(
+            session,
+            [*ids.values(), *(p.account_id for e in moved.values() for p in e.postings)],
+        )
+        self._check_specs(specs, {key: locked[account_id] for key, account_id in ids.items()})
 
-        for draft in new:
+        existing = await repo.entry_ids_by_key(session, project_id, [*unique, *deferred_keys])
+        balances = {account_id: account.balance for account_id, account in locked.items()}
+        deltas: dict[UUID, BalanceDelta] = {}
+
+        def apply(changes: Mapping[UUID, BalanceDelta]) -> None:
+            for account_id, delta in changes.items():
+                deltas[account_id] = deltas.get(account_id, BalanceDelta()) + delta
+                balances[account_id] = balances[account_id].apply(delta)
+
+        stored: dict[str, UUID] = {}
+        new: dict[str, tuple[EntryDraft, list[Posting]]] = {}
+        transitions: list[tuple[UUID, EntryStatus]] = []
+        results: list[str | UUID | None] = []
+        for item in items:
+            if isinstance(item, Transition):
+                entry = moved[item.entry_id]
+                status = await repo.entry_status(session, item.entry_id)
+                current = replace(entry, status=status or entry.status)
+                if current.transition_to(item.target):
+                    apply(
+                        balance_deltas(
+                            ((p.account_id, p.direction, p.amount) for p in entry.postings),
+                            current.status,
+                            item.target,
+                        )
+                    )
+                    transitions.append((item.entry_id, item.target))
+                results.append(item.entry_id)
+                continue
+            key = item.idempotency_key
+            results.append(key)
+            if key in stored or key in new:
+                continue
+            if isinstance(item, DeferredEntry):
+                if key in existing:
+                    # Built from balances that have moved since: replay by key, never rebuild.
+                    stored[key] = existing[key][0]
+                    continue
+                visible = {
+                    k: replace(locked[account_id], balance=balances[account_id])
+                    for k, account_id in ids.items()
+                }
+                draft = item.build(visible)
+                if draft is None:
+                    results[-1] = None
+                    continue
+                self._check_built(project_id, item, draft, ids)
+            else:
+                draft = unique[key]
+                if key in existing:
+                    stored[key] = self._replayed(draft, *existing[key])
+                    continue
+            legs = [Posting(new_uuid(), ids[p.key], p.direction, p.amount) for p in draft.postings]
+            apply(
+                balance_deltas(
+                    ((p.account_id, p.direction, p.amount) for p in legs), None, draft.status
+                )
+            )
+            new[key] = (draft, legs)
+
+        await self._check_reversals([draft for draft, _ in new.values()])
+        self._check_no_overdraft(locked, deltas)
+
+        for key, (draft, legs) in sorted(new.items()):
             entry_id = new_uuid()
             inserted = await repo.insert_entry(
                 session,
@@ -115,20 +232,22 @@ class LedgerService:
             )
             if not inserted:
                 # Unreachable while writers of one key lock the same accounts; kept as a guard.
-                raced = await repo.entry_ids_by_key(session, project_id, [draft.idempotency_key])
-                stored[draft.idempotency_key] = self._replayed(draft, *raced[draft.idempotency_key])
+                raced = await repo.entry_ids_by_key(session, project_id, [key])
+                stored[key] = self._replayed(draft, *raced[key])
                 continue
             await repo.insert_postings(
-                session,
-                entry_id=entry_id,
-                project_id=project_id,
-                postings=legs[draft.idempotency_key],
+                session, entry_id=entry_id, project_id=project_id, postings=legs
             )
             await repo.apply(session, entry_id)
-            stored[draft.idempotency_key] = entry_id
+            stored[key] = entry_id
+        for entry_id, target in transitions:
+            if not await repo.set_status(session, entry_id, target):  # pragma: no cover - locked
+                raise Conflict(f"journal entry {entry_id} changed concurrently")
+            await repo.apply(session, entry_id)
 
-        loaded = await repo.load_entries(session, project_id, stored.values())
-        return [loaded[stored[draft.idempotency_key]] for draft in entries]
+        wanted = [stored[r] if isinstance(r, str) else r for r in results]
+        loaded = await repo.load_entries(session, project_id, (r for r in wanted if r is not None))
+        return [None if r is None else loaded[r] for r in wanted]
 
     async def create_pending(
         self, draft: EntryDraft, *, aggregate_lock: AggregateLock | None = None
@@ -171,6 +290,35 @@ class LedgerService:
         Pending entries are voided, not reversed. ``effective_at`` is explicit so that a replay
         with the same key hashes the same.
         """
+        draft = await self.build_reversal(
+            project_id,
+            entry_id,
+            idempotency_key,
+            effective_at=effective_at,
+            recipe=recipe,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            metadata=metadata,
+        )
+        (entry,) = await self.post_entries([draft], aggregate_lock=aggregate_lock)
+        return entry
+
+    async def build_reversal(
+        self,
+        project_id: UUID,
+        entry_id: UUID,
+        idempotency_key: str,
+        *,
+        effective_at: datetime,
+        recipe: str = "reversal",
+        correlation_id: UUID | None = None,
+        causation_id: UUID | None = None,
+        metadata: Mapping[str, JsonValue] | None = None,
+    ) -> EntryDraft:
+        """The mirror draft of a posted entry, to be written with :meth:`write` (no lock taken).
+
+        "Reversed at most once" and "still posted" are re-checked under lock when written.
+        """
         session = self._uow.session
         original = await self.get_entry(project_id, entry_id)
         if original.status is not EntryStatus.POSTED:
@@ -194,8 +342,7 @@ class LedgerService:
         )
         if draft is None:  # pragma: no cover - stored postings are > 0
             raise Conflict("entry has nothing to reverse")
-        (entry,) = await self.post_entries([draft], aggregate_lock=aggregate_lock)
-        return entry
+        return draft
 
     async def provision_accounts(
         self, project_id: UUID, accounts: Iterable[tuple[AccountSpec, Currency]]
@@ -217,6 +364,20 @@ class LedgerService:
         if entry is None:
             raise NotFound(f"journal entry {entry_id} not found")
         return entry
+
+    async def find_entry_by_key(
+        self, project_id: UUID, idempotency_key: str
+    ) -> JournalEntry | None:
+        found = await repo.entry_ids_by_key(self._uow.session, project_id, [idempotency_key])
+        if idempotency_key not in found:
+            return None
+        return await self.get_entry(project_id, found[idempotency_key][0])
+
+    async def get_accounts(
+        self, project_id: UUID, account_ids: Iterable[UUID]
+    ) -> dict[UUID, Account]:
+        """Accounts by id (unknown ids are absent from the result)."""
+        return await repo.get_accounts(self._uow.session, project_id, account_ids)
 
     async def get_account(self, project_id: UUID, account_id: UUID) -> Account:
         account = await repo.get_account(self._uow.session, project_id, account_id)
@@ -291,17 +452,6 @@ class LedgerService:
                     f"({accounts[key].spec}), requested {spec}"
                 )
 
-    async def _provision_and_lock(
-        self, project_id: UUID, drafts: Iterable[EntryDraft]
-    ) -> tuple[dict[UUID, Account], dict[repo.AccountKey, UUID]]:
-        session = self._uow.session
-        specs = self._merge_specs((p.key, p.account) for d in drafts for p in d.postings)
-        await repo.insert_missing_accounts(session, project_id, specs)
-        ids = await repo.account_ids(session, project_id, specs)
-        locked = await repo.lock_accounts(session, ids.values())
-        self._check_specs(specs, {key: locked[account_id] for key, account_id in ids.items()})
-        return locked, ids
-
     @staticmethod
     def _replayed(draft: EntryDraft, entry_id: UUID, payload_hash: str) -> UUID:
         if payload_hash != draft.payload_hash:
@@ -309,6 +459,19 @@ class LedgerService:
                 f"idempotency key {draft.idempotency_key!r} was already used with another payload"
             )
         return entry_id
+
+    @staticmethod
+    def _check_built(
+        project_id: UUID,
+        item: DeferredEntry,
+        draft: EntryDraft,
+        ids: Mapping[repo.AccountKey, UUID],
+    ) -> None:
+        if draft.project_id != project_id or draft.idempotency_key != item.idempotency_key:
+            raise RuntimeError("a deferred entry must build its declared project and key")
+        undeclared = sorted({p.key for p in draft.postings} - set(ids))
+        if undeclared:
+            raise RuntimeError(f"deferred entry posts to undeclared accounts {undeclared}")
 
     async def _check_reversals(self, drafts: Sequence[EntryDraft]) -> None:
         targets = [d.reverses_entry_id for d in drafts if d.reverses_entry_id is not None]
