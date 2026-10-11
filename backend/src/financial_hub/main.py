@@ -8,6 +8,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from financial_hub.modules.events.api.stream import router as stream_router
+from financial_hub.modules.events.application.realtime import build_broker
 from financial_hub.modules.identity.api.routes import configure_identity
 from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
@@ -40,10 +42,14 @@ def _lifespan(
             instrument_engine(engine, telemetry)
         app.state.engine = engine
         app.state.session_factory = create_session_factory(engine)
+        broker = build_broker(engine, clock=app.state.clock)
+        app.state.realtime = broker
+        await broker.start()
         logger.info("api.started", env=settings.app_env, telemetry=telemetry is not None)
         try:
             yield
         finally:
+            await broker.stop()
             await engine.dispose()
             logger.info("api.stopped")
             if telemetry is not None:
@@ -77,6 +83,7 @@ def create_app(
     configure_identity(app, settings, clock=app.state.clock, hasher=password_hasher)
     app.include_router(auth_router)
     app.include_router(projects_router)
+    app.include_router(stream_router)
 
     @app.get("/health/live", dependencies=[public()])
     async def live() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]

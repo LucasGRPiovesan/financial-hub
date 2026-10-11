@@ -31,6 +31,7 @@ EXPECTED = {
     ("POST", "/v1/projects"): ("authenticated", None),
     ("GET", "/v1/projects/{project_id}"): ("permission", "projects:read"),
     ("PATCH", "/v1/projects/{project_id}"): ("permission", "projects:manage"),
+    ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
 }
 
 

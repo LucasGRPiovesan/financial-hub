@@ -23,6 +23,15 @@ class EventsSettings(BaseSettings):
     scheduler_tick_seconds: float = Field(default=5.0, gt=0)
     scheduler_lock_key: int = 1
     scheduler_catch_up_limit: int = Field(default=100, ge=1)
+    # Realtime SSE stream (ADR-0010).
+    stream_heartbeat_seconds: float = Field(default=15.0, gt=0)
+    stream_queue_size: int = Field(default=256, ge=1)
+    stream_poll_interval_seconds: float = Field(default=2.0, gt=0)
+    stream_batch_size: int = Field(default=500, ge=1, le=1000)
+    stream_replay_max_events: int = Field(default=1000, ge=1, le=10_000)
+    stream_replay_max_age_seconds: float = Field(default=86_400.0, gt=0)
+    stream_listen_backoff_base_seconds: float = Field(default=0.5, gt=0)
+    stream_listen_backoff_cap_seconds: float = Field(default=30.0, gt=0)
 
     @property
     def lease(self) -> timedelta:
