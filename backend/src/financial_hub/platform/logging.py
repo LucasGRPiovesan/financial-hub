@@ -17,7 +17,8 @@ from structlog.typing import EventDict, WrappedLogger
 
 REDACTED: Final = "[REDACTED]"
 SENSITIVE_KEY: Final = re.compile(
-    r"password|secret|token|authorization|access_token|api[_-]?key|cpf|cnpj", re.IGNORECASE
+    r"password|secret|token|authorization|access_token|api[_-]?key|cookie|csrf|cpf|cnpj",
+    re.IGNORECASE,
 )
 
 _handler: logging.Handler | None = None

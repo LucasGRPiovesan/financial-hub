@@ -20,6 +20,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi==0.66b1",
     "opentelemetry-instrumentation-sqlalchemy==0.66b1",
     "opentelemetry-instrumentation-httpx==0.66b1",
+    "argon2-cffi==25.1.0",
 ]
 
 [dependency-groups]
@@ -50,7 +51,8 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+# Tests assert, and their fixtures are literal throwaway passwords.
+"tests/**" = ["S101", "S105", "S106"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["financial_hub"]
@@ -89,6 +91,7 @@ forbidden_modules = [
     "financial_hub.modules",
     "financial_hub.workers",
     "financial_hub.mcp",
+    "financial_hub.cli",
     "financial_hub.main",
 ]
 
@@ -100,6 +103,7 @@ forbidden_modules = [
     "financial_hub.modules",
     "financial_hub.workers",
     "financial_hub.mcp",
+    "financial_hub.cli",
     "financial_hub.main",
 ]
 
@@ -114,6 +118,7 @@ forbidden_modules = [
     "financial_hub.platform",
     "financial_hub.workers",
     "financial_hub.mcp",
+    "financial_hub.cli",
     "financial_hub.main",
 ]
 
@@ -190,5 +195,30 @@ source_modules = ["financial_hub.modules.*.api"]
 forbidden_modules = [
     "financial_hub.modules.*.domain",
     "financial_hub.modules.*.infrastructure",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. identity and projects reach each other only through application.api"
+type = "forbidden"
+source_modules = ["financial_hub.modules.projects"]
+forbidden_modules = [
+    "financial_hub.modules.identity.api",
+    "financial_hub.modules.identity.domain",
+    "financial_hub.modules.identity.infrastructure",
+    "financial_hub.modules.identity.application.service",
+    "financial_hub.modules.identity.application.tokens",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. projects is reached from identity only through application.api"
+type = "forbidden"
+source_modules = ["financial_hub.modules.identity"]
+forbidden_modules = [
+    "financial_hub.modules.projects.api",
+    "financial_hub.modules.projects.domain",
+    "financial_hub.modules.projects.infrastructure",
+    "financial_hub.modules.projects.application.service",
 ]
 allow_indirect_imports = true

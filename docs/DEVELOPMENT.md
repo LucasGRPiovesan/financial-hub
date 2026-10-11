@@ -105,6 +105,30 @@ docker compose run --rm --no-deps api uv add <pkg>==<version>          # rewrite
 
 Same for npm: `docker compose run --rm --no-deps web npm install --save-exact <pkg>`.
 
+## Bootstrap operator
+
+There is no sign-up: the first operator (and optionally a project it owns) comes from the CLI,
+which writes through the `api` image as the restricted `fh_app` role.
+
+```bash
+# interactive: prompts twice for the password (12..128 characters), nothing echoed
+docker compose run --rm api python -m financial_hub.cli create-operator \
+  --email you@example.com --display-name "Your Name" \
+  --project-slug acme --project-name "Acme"
+
+# non-interactive (scripts): the password comes only from the environment, never from argv
+read -rs FH_BOOTSTRAP_PASSWORD && export FH_BOOTSTRAP_PASSWORD
+docker compose run --rm -e FH_BOOTSTRAP_PASSWORD api python -m financial_hub.cli create-operator \
+  --email you@example.com --display-name "Your Name"
+unset FH_BOOTSTRAP_PASSWORD
+```
+
+`--project-slug`/`--project-name` go together; operator and project are created atomically (a taken
+slug or email changes nothing). There is no `--password` flag on purpose (shell history, `ps`).
+Then sign in through the web app or `POST /v1/auth/login`; the session is the `fh_session` cookie
+(HttpOnly, SameSite=Lax, `Secure` outside `FH_APP_ENV=dev`) and unsafe requests must send the
+`X-CSRF-Token` returned by login and `GET /v1/auth/me`.
+
 ## Images
 
 - `backend/Dockerfile`: targets `dev` (full deps incl. dev group, `--reload`) and `runtime` (production deps only,
