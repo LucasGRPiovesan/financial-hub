@@ -4,9 +4,16 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "./index.css";
-import { router } from "./router";
+import { ToastProvider } from "./components/ui/toast";
+import { installUnauthorizedRedirect } from "./features/auth/session";
+import { initTheme } from "./lib/theme";
+import { createAppRouter } from "./router";
+
+initTheme();
 
 const queryClient = new QueryClient();
+const router = createAppRouter(queryClient);
+installUnauthorizedRedirect(router, queryClient);
 
 const container = document.getElementById("root");
 if (!container) throw new Error("Missing #root element");
@@ -14,7 +21,9 @@ if (!container) throw new Error("Missing #root element");
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

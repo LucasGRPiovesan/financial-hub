@@ -1,14 +1,100 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
+  redirect,
+  type RouterHistory,
+} from "@tanstack/react-router";
 
-import { HomePage } from "./routes/home";
+import { meQueryOptions } from "./features/auth/auth-api";
+import { LoginPage } from "./features/auth/login-page";
+import { safeRedirectTarget } from "./features/auth/redirect";
+import { AppShell } from "./features/shell/app-shell";
+import { NAV_ITEMS } from "./features/shell/nav";
+import { isApiError } from "./lib/api";
+import { OverviewPage } from "./routes/overview";
+import { PlaceholderPage } from "./routes/placeholder";
+import { PendingShell, RouteError } from "./routes/route-states";
 
-const rootRoute = createRootRoute({ component: Outlet });
-const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: HomePage });
+export interface RouterContext {
+  queryClient: QueryClient;
+}
 
-export const router = createRouter({ routeTree: rootRoute.addChildren([homeRoute]) });
+function buildRouteTree() {
+  const rootRoute = createRootRouteWithContext<RouterContext>()({
+    component: Outlet,
+    errorComponent: RouteError,
+  });
+
+  const loginRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/login",
+    validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+      const target = safeRedirectTarget(search.redirect);
+      return target ? { redirect: target } : {};
+    },
+    beforeLoad: async ({ context }) => {
+      // Already signed in: skip the form.
+      const signedIn = await context.queryClient.ensureQueryData(meQueryOptions).then(
+        () => true,
+        (error: unknown) => {
+          if (isApiError(error) && error.status === 401) return false;
+          throw error;
+        },
+      );
+      if (signedIn) throw redirect({ to: "/" });
+    },
+    component: function Login() {
+      const { redirect: redirectTo } = loginRoute.useSearch();
+      return <LoginPage redirectTo={redirectTo} />;
+    },
+  });
+
+  const appRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    id: "app",
+    beforeLoad: async ({ context, location }) => {
+      try {
+        await context.queryClient.ensureQueryData(meQueryOptions);
+      } catch (error) {
+        if (isApiError(error) && error.status === 401) {
+          const target = safeRedirectTarget(location.href);
+          throw redirect({ to: "/login", search: target ? { redirect: target } : {} });
+        }
+        throw error;
+      }
+    },
+    component: AppShell,
+    pendingComponent: PendingShell,
+  });
+
+  const overviewRoute = createRoute({ getParentRoute: () => appRoute, path: "/", component: OverviewPage });
+  const placeholderRoutes = NAV_ITEMS.filter((item) => item.to !== "/").map((item) =>
+    createRoute({
+      getParentRoute: () => appRoute,
+      path: item.to,
+      component: function Placeholder() {
+        return <PlaceholderPage item={item} />;
+      },
+    }),
+  );
+
+  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...placeholderRoutes])]);
+}
+
+export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
+  return createRouter({
+    routeTree: buildRouteTree(),
+    context: { queryClient },
+    history,
+    defaultPreload: "intent",
+  });
+}
 
 declare module "@tanstack/react-router" {
   interface Register {
-    router: typeof router;
+    router: ReturnType<typeof createAppRouter>;
   }
 }

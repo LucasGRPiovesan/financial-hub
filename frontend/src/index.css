@@ -1,1 +1,185 @@
 @import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/*
+ * Financial Hub operator console - design tokens.
+ *
+ * Colour tokens use light-dark(), so one declaration serves both themes. `color-scheme` follows
+ * prefers-color-scheme by default; <html data-theme="light|dark"> (set by src/lib/theme.ts)
+ * overrides it for the manual toggle.
+ *
+ * Direction: a ledger. Ink-navy chrome, cool paper canvas, one ultramarine for actions and one
+ * brass for "you are here". Capability scope (the product's honesty label) gets its own palette
+ * and a distinct border style per scope so it never relies on colour alone.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@theme {
+  /* Typography */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.0625rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.125rem;
+  --tracking-tight: -0.015em;
+
+  /* Surfaces */
+  --color-canvas: light-dark(#eef0ef, #0a0f17);
+  --color-surface: light-dark(#ffffff, #111826);
+  --color-surface-sunken: light-dark(#f6f7f6, #0d131e);
+  --color-overlay: light-dark(rgb(14 23 38 / 0.45), rgb(0 0 0 / 0.65));
+  --color-line: light-dark(#dde1df, #243044);
+  --color-line-strong: light-dark(#b9c0bd, #3a4a63);
+  /* Edge of form controls: the border is what identifies the control, so it needs 3:1 (WCAG 1.4.11). */
+  --color-control: light-dark(#7a8491, #6f7f9a);
+
+  /* Text */
+  --color-ink: light-dark(#0e1726, #e8edf5);
+  --color-ink-muted: light-dark(#4a5568, #9aa7bb);
+  --color-ink-faint: light-dark(#5f6b7d, #8896ab);
+
+  /* Chrome (sidebar stays ink in both themes) */
+  --color-chrome: light-dark(#0e1726, #070b12);
+  --color-chrome-raised: light-dark(#18243a, #101a2a);
+  --color-chrome-ink: #e6ebf3;
+  --color-chrome-muted: #9fb0c8;
+  --color-chrome-line: #26344d;
+  --color-chrome-brass: #e0b24f;
+
+  /* Actions */
+  --color-primary: light-dark(#2b3fd8, #7b8cff);
+  --color-primary-hover: light-dark(#2232b8, #95a2ff);
+  --color-primary-ink: light-dark(#ffffff, #0a0f17);
+  --color-primary-soft: light-dark(#e8ebff, #1a2247);
+  --color-brass: light-dark(#a06d12, #e0b24f);
+  --color-ring: light-dark(#2b3fd8, #95a2ff);
+
+  /* Status */
+  --color-danger: light-dark(#b42318, #ff8a7e);
+  --color-danger-soft: light-dark(#fdecea, #3a1714);
+  --color-warning: light-dark(#8a5300, #f2b45a);
+  --color-warning-soft: light-dark(#fff3dc, #33240c);
+  --color-success: light-dark(#0b6b4d, #5fd6a4);
+  --color-success-soft: light-dark(#e2f5ec, #0f2c22);
+  --color-info: light-dark(#1d4f91, #7fb4f5);
+  --color-info-soft: light-dark(#e5f0fc, #12284a);
+
+  /* Capability scope */
+  --color-scope-implemented: light-dark(#0b6b4d, #5fd6a4);
+  --color-scope-implemented-soft: light-dark(#e2f5ec, #0f2c22);
+  --color-scope-sandbox: light-dark(#1d4f91, #7fb4f5);
+  --color-scope-sandbox-soft: light-dark(#e5f0fc, #12284a);
+  --color-scope-simulated: light-dark(#6a3fb5, #c1a3ff);
+  --color-scope-simulated-soft: light-dark(#f0e9fc, #261a45);
+  --color-scope-planned: light-dark(#4a5568, #9aa7bb);
+  --color-scope-planned-soft: light-dark(#eef0ef, #1a2333);
+
+  /* Radius: tight, instrument-like; larger only for floating layers */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 11px;
+
+  /* Shadow: a hairline plus a low ambient; overlays get a real lift */
+  --shadow-raised: 0 1px 0 rgb(14 23 38 / 0.04), 0 1px 3px rgb(14 23 38 / 0.06);
+  --shadow-overlay: 0 12px 32px -8px rgb(14 23 38 / 0.35), 0 2px 6px rgb(14 23 38 / 0.12);
+
+  /* Motion */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-fade-in: fade-in 140ms var(--ease-out-quart);
+  --animate-pop-in: pop-in 160ms var(--ease-out-quart);
+  --animate-slide-in-left: slide-in-left 200ms var(--ease-out-quart);
+  --animate-slide-in-right: slide-in-right 200ms var(--ease-out-quart);
+  --animate-toast-in: toast-in 220ms var(--ease-out-quart);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-primary-soft);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Tabular figures: amounts and counters line up in columns. */
+  .figures {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  /* The ledger rule: a double line, as under a ruled column total. */
+  .ledger-rule {
+    border-bottom: 3px double var(--color-line-strong);
+  }
+}

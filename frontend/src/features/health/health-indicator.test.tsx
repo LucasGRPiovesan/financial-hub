@@ -23,7 +23,7 @@ describe("HealthIndicator", () => {
     );
     renderIndicator();
     expect(await screen.findByText(/API: live/)).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith("/api/health/live");
+    expect(fetch).toHaveBeenCalledWith("/health/live");
   });
 
   it("shows unreachable when the API fails", async () => {
