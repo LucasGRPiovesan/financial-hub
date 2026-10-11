@@ -1,5 +1,6 @@
 """Public API of the ledger module: other modules import only from here (ARCHITECTURE s3)."""
 
+from financial_hub.modules.ledger.application.queries import LedgerQueryService
 from financial_hub.modules.ledger.application.recipes import (
     RecipeResult,
     apply_recipe,
@@ -137,6 +138,7 @@ __all__ = [
     "InvoiceVoided",
     "JournalEntry",
     "JsonValue",
+    "LedgerQueryService",
     "LedgerService",
     "NormalBalance",
     "OwnerKind",

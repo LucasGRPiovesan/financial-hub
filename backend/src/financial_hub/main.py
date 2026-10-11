@@ -13,6 +13,7 @@ from financial_hub.modules.events.application.realtime import build_broker
 from financial_hub.modules.identity.api.routes import configure_identity
 from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
+from financial_hub.modules.ledger.api.routes import router as ledger_router
 from financial_hub.modules.projects.api.routes import router as projects_router
 from financial_hub.platform.db import create_engine, create_session_factory
 from financial_hub.platform.http.auth import public, verify_route_declarations
@@ -84,6 +85,7 @@ def create_app(
     app.include_router(auth_router)
     app.include_router(projects_router)
     app.include_router(stream_router)
+    app.include_router(ledger_router)
 
     @app.get("/health/live", dependencies=[public()])
     async def live() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
