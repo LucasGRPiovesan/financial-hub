@@ -115,7 +115,10 @@ async def test_live_events_are_framed_as_sse(api: Api, owner_engine: AsyncEngine
         event = await project.publish(
             "hi", subject="order-1", causation_id=cause.id, correlation_id=correlation
         )
-        (frame,) = await response.event_frames(1)
+        # A fresh connection may also get "cause" if the broker had not pumped it yet.
+        frame = (await response.event_frames(1))[0]
+        if frame.data["subject"] != "order-1":
+            frame = (await response.event_frames(1))[0]
 
     assert EventCursor.decode(frame.field("id") or "") == event.cursor
     assert frame.field("event") == "system.test"
