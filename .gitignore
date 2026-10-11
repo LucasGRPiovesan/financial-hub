@@ -32,3 +32,6 @@ playwright/.cache/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Playwright MCP session artifacts (local browser QA)
+.playwright-mcp/
