@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned tool images (no secrets involved). Bump deliberately.
+  GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1
+  TRIVY_IMAGE: aquasec/trivy:0.75.0
+  PIP_AUDIT_VERSION: "2.9.0"
+
+jobs:
+  backend:
+    name: Backend (lint, types, imports, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Create .env from the example (no real secrets)
+        run: cp .env.example .env
+      # Containers run as uid 1000 (app/node), the runner user differs and the source is bind-mounted.
+      - name: Make bind-mounted source writable for the container user
+        run: chmod -R a+rwX backend frontend
+      # Same image/tag compose uses (migrate, api, worker, test all reuse it, pull_policy: never).
+      - name: Build backend dev image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          target: dev
+          load: true
+          pull: true
+          tags: financial-hub-backend:dev
+          cache-from: type=gha,scope=backend-dev
+          cache-to: type=gha,scope=backend-dev,mode=max
+      - run: bash scripts/lint.sh
+      - run: bash scripts/typecheck.sh
+      - run: bash scripts/imports.sh
+      - name: Tests (starts db + migrate)
+        run: bash scripts/test.sh --junitxml=/app/test-results/junit.xml --cov-report=xml:/app/test-results/coverage.xml
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-test-reports
+          path: backend/test-results/
+          if-no-files-found: ignore
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color db migrate | tail -n 200
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+  frontend:
+    name: Frontend (lint, types, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Create .env from the example (no real secrets)
+        run: cp .env.example .env
+      # Containers run as uid 1000 (app/node), the runner user differs and the source is bind-mounted.
+      - name: Make bind-mounted source writable for the container user
+        run: chmod -R a+rwX backend frontend
+      - name: Build web dev image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: frontend
+          target: dev
+          load: true
+          pull: true
+          tags: financial-hub-web:dev
+          cache-from: type=gha,scope=web-dev
+          cache-to: type=gha,scope=web-dev,mode=max
+      - run: bash scripts/web-lint.sh
+      - run: bash scripts/web-typecheck.sh
+      - run: bash scripts/web-test.sh
+      - run: bash scripts/web-build.sh
+
+  security:
+    name: Security (secrets, dependencies, images)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks scans the full history
+
+      - name: gitleaks (full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" \
+            git --redact --verbose --no-banner --config /repo/.gitleaks.toml /repo
+
+      - name: pip-audit (backend/uv.lock)
+        run: |
+          docker run --rm -v "$PWD/backend:/src:ro" ghcr.io/astral-sh/uv:0.13.0 \
+            export --project /src --frozen --no-emit-project --format requirements-txt > requirements.audit.txt
+          docker run --rm -i -v "$PWD/requirements.audit.txt:/r.txt:ro" python:3.14-slim sh -c \
+            "pip install -q --disable-pip-version-check pip-audit==$PIP_AUDIT_VERSION && pip-audit --no-deps --disable-pip --strict -r /r.txt"
+
+      - name: npm audit (frontend/package-lock.json)
+        run: |
+          docker run --rm -v "$PWD/frontend:/app:ro" -w /app node:24-alpine \
+            npm audit --audit-level=high
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Scan what ships: the runtime/prod targets, not the dev images.
+      - name: Build api runtime image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          target: runtime
+          load: true
+          pull: true
+          tags: financial-hub-api:ci
+          cache-from: type=gha,scope=api-runtime
+          cache-to: type=gha,scope=api-runtime,mode=max
+      - name: Build web prod image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: frontend
+          target: prod
+          load: true
+          pull: true
+          tags: financial-hub-web:ci
+          cache-from: type=gha,scope=web-prod
+          cache-to: type=gha,scope=web-prod,mode=max
+      - name: Trivy (fail on CRITICAL,HIGH; unfixed ignored)
+        run: |
+          for image in financial-hub-api:ci financial-hub-web:ci; do
+            echo "::group::trivy $image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              "$TRIVY_IMAGE" image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+              "$image"
+            echo "::endgroup::"
+          done

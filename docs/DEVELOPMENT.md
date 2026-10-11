@@ -50,6 +50,27 @@ docker compose run --rm migrate alembic upgrade head                   # apply m
 docker compose run --rm test pytest tests/unit                         # unit tests only
 ```
 
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull requests (concurrent runs of the same ref are
+cancelled; `permissions: contents: read`; third-party actions pinned to commit SHAs; no GitHub secrets needed).
+
+| Job | What it runs |
+|---|---|
+| `backend` | builds the `dev` image (buildx + GHA cache), `.env` from `.env.example`, then `scripts/lint.sh`, `typecheck.sh`, `imports.sh`, `test.sh` (junit/coverage uploaded as the `backend-test-reports` artifact) |
+| `frontend` | `scripts/web-lint.sh`, `web-typecheck.sh`, `web-test.sh`, `web-build.sh` |
+| `security` | gitleaks over the full history (`.gitleaks.toml`), `pip-audit` on `backend/uv.lock`, `npm audit --audit-level=high`, Trivy on the `runtime` api and `prod` web images (CRITICAL,HIGH, unfixed ignored) |
+
+Reproduce locally with the same scripts (`scripts/check.sh`) and:
+
+```bash
+docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git --redact --no-banner --config /repo/.gitleaks.toml /repo
+docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest      # validate workflows
+```
+
+`.gitleaks.toml` allowlists are only for documented fake values (currently none). Tool image versions are pinned in the
+workflow `env:` block; bump them deliberately.
+
 ## Database roles
 
 The runtime never holds owner credentials (ADR-0003 addendum), not even in dev.
