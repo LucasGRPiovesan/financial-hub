@@ -34,7 +34,7 @@ All wrappers live in `scripts/` (bash) and are plain `docker compose run --rm` c
 | Lint | `scripts/lint.sh` | `docker compose run --rm --no-deps api ruff check .` + `ruff format --check .` |
 | Typecheck (pyright strict, `src/`) | `scripts/typecheck.sh` | `docker compose run --rm --no-deps api pyright` |
 | Import contracts | `scripts/imports.sh` | `docker compose run --rm --no-deps api lint-imports` |
-| Tests (unit + integration, needs db) | `scripts/test.sh [pytest args]` | `docker compose run --rm api pytest` |
+| Tests (unit + integration, needs db) | `scripts/test.sh [pytest args]` | `docker compose run --rm test pytest` |
 | Web lint | `scripts/web-lint.sh` | `docker compose run --rm --no-deps web npm run lint` |
 | Web typecheck | `scripts/web-typecheck.sh` | `docker compose run --rm --no-deps web npm run typecheck` |
 | Web tests | `scripts/web-test.sh` | `docker compose run --rm --no-deps web npm run test` |
@@ -45,10 +45,36 @@ Other useful commands:
 
 ```bash
 docker compose run --rm api ruff format .                              # apply formatting
-docker compose run --rm api alembic revision -m "describe change"      # new migration
-docker compose run --rm api alembic upgrade head                       # apply migrations
-docker compose run --rm api pytest tests/unit                          # unit tests only
+docker compose run --rm migrate alembic revision -m "describe change"  # new migration
+docker compose run --rm migrate alembic upgrade head                   # apply migrations
+docker compose run --rm test pytest tests/unit                         # unit tests only
 ```
+
+## Database roles
+
+The runtime never holds owner credentials (ADR-0003 addendum), not even in dev.
+
+| Role | Login | Used by | Can |
+|---|---|---|---|
+| `POSTGRES_USER` (`financial_hub`) | yes | `migrate`, `test` (fixtures only) | everything; created by the postgres image |
+| `fh_owner` | **no** | owns every ledger table and function | granted to the migration login; never logs in |
+| `fh_app` | yes | `api`, `worker`, ledger tests | `SELECT` + column-level `INSERT` on ledger tables, `UPDATE(status)` on entries, `EXECUTE` on `ledger_apply` / `ledger_lock_accounts`; no `UPDATE`/`DELETE` of postings or balances, no DDL, no temp tables |
+
+- Both roles are created by migration `0001_ledger_core` (idempotent; the downgrade drops them).
+- `FH_APP_DB_PASSWORD` (in `.env`; dev default in `.env.example`) is read by the migration and
+  by compose to build the `api`/`worker` URL; compose refuses to start without it. Owner
+  credentials (`POSTGRES_*`) reach only `migrate` and the `test` service.
+- The migration sets the password only when it runs (upgrade from below `0001`). To rotate it
+  later: change `FH_APP_DB_PASSWORD` in `.env`, set the same value with
+  `docker compose exec db psql -U financial_hub -c '\password fh_app'`, then
+  `docker compose up -d api worker`.
+- The `test` service (profile `test`, used by `scripts/test.sh`) gets the owner URL as
+  `FH_DATABASE_URL` (fixtures and owner-side trigger tests) and `FH_APP_TEST_DATABASE_URL` as
+  `fh_app`, so the ledger tests prove the runtime privileges. Ledger rows are append-only, so tests
+  isolate by a fresh `project_id` instead of cleaning up.
+- Check the role the api actually uses:
+  `docker compose exec db psql -U financial_hub -c "SELECT DISTINCT usename FROM pg_stat_activity WHERE usename = 'fh_app'"`
+  after a request to `/health/ready`.
 
 Adding or updating a Python dependency (the host has no uv; use the dev image):
 

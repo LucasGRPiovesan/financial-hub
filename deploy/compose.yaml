@@ -1,5 +1,16 @@
 name: financial-hub
 
+# DB credentials (ADR-0003 addendum): the owner/migration login (POSTGRES_*) reaches only `migrate`
+# and the opt-in `test` service. `api` and `worker` connect as `fh_app` (no DDL, no UPDATE/DELETE on
+# ledger rows); its password comes from FH_APP_DB_PASSWORD (.env) and is never hard-coded here.
+x-owner-database-url: &owner-database-url postgresql+psycopg://${POSTGRES_USER:-financial_hub}:${POSTGRES_PASSWORD:-financial_hub}@db:5432/${POSTGRES_DB:-financial_hub}
+x-app-database-url: &app-database-url postgresql+psycopg://fh_app:${FH_APP_DB_PASSWORD:?set FH_APP_DB_PASSWORD in .env (see .env.example)}@db:5432/${POSTGRES_DB:-financial_hub}
+x-backend-env: &backend-env
+  FH_APP_ENV: ${FH_APP_ENV:-dev}
+  FH_LOG_LEVEL: ${FH_LOG_LEVEL:-INFO}
+  FH_OTEL_EXPORTER_OTLP_ENDPOINT: ${FH_OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4318}
+  FH_OTEL_SERVICE_NAME: financial-hub-api
+
 services:
   db:
     image: postgres:18
@@ -22,12 +33,11 @@ services:
     image: financial-hub-backend:dev
     pull_policy: never
     command: ["alembic", "upgrade", "head"]
-    environment: &backend-env
-      FH_APP_ENV: ${FH_APP_ENV:-dev}
-      FH_LOG_LEVEL: ${FH_LOG_LEVEL:-INFO}
-      FH_DATABASE_URL: ${FH_DATABASE_URL:-postgresql+psycopg://financial_hub:financial_hub@db:5432/financial_hub}
-      FH_OTEL_EXPORTER_OTLP_ENDPOINT: ${FH_OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4318}
-      FH_OTEL_SERVICE_NAME: financial-hub-api
+    environment:
+      <<: *backend-env
+      FH_DATABASE_URL: *owner-database-url
+      # Read by migration 0001 to set the fh_app login password (never stored in the migration).
+      FH_APP_DB_PASSWORD: ${FH_APP_DB_PASSWORD:?set FH_APP_DB_PASSWORD in .env (see .env.example)}
     volumes: &backend-volumes
       - ../backend:/app
       - backend-venv:/app/.venv
@@ -41,7 +51,9 @@ services:
       context: ../backend
       target: dev
     image: financial-hub-backend:dev
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      FH_DATABASE_URL: *app-database-url
     ports:
       - "${API_PORT:-8000}:8000"
     volumes: *backend-volumes
@@ -65,6 +77,7 @@ services:
     command: ["python", "-m", "financial_hub.workers"]
     environment:
       <<: *backend-env
+      FH_DATABASE_URL: *app-database-url
       FH_OTEL_SERVICE_NAME: financial-hub-worker
     volumes: *backend-volumes
     depends_on:
@@ -81,6 +94,24 @@ services:
       retries: 3
       start_period: 15s
     stop_grace_period: 10s
+
+  # Opt-in (`docker compose run --rm test pytest`): never started by `up`. Owner credentials for
+  # fixtures and DDL; FH_APP_TEST_DATABASE_URL lets ledger tests prove the fh_app privileges.
+  test:
+    image: financial-hub-backend:dev
+    pull_policy: never
+    profiles: ["test"]
+    command: ["pytest"]
+    environment:
+      <<: *backend-env
+      FH_DATABASE_URL: *owner-database-url
+      FH_APP_TEST_DATABASE_URL: *app-database-url
+      FH_OTEL_EXPORTER_OTLP_ENDPOINT: ""
+    volumes: *backend-volumes
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
 
   web:
     build:

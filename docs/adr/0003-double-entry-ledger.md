@@ -25,3 +25,45 @@ The ledger is the financial source of truth. It must be immutable, balanced, saf
 
 ## Alternatives
 Computed balances via `SUM` (simple, slow at scale); TigerBeetle/Formance as external ledger (strong, but adds infra and hides the modeling we want to demonstrate); event-sourced balances only (complex reads).
+
+## Addendum (2026-10-10, W2.1 implementation, migration `0001_ledger_core`)
+
+Decisions taken while implementing the ledger core; they refine, not replace, the decision above.
+
+1. **Same idempotency key, different payload → `IdempotencyKeyReused` (HTTP 422)**, not `Conflict`.
+   The payload hash covers project, recipe, initial status, `effective_at`, `reverses_entry_id` and
+   the multiset of `(account code, currency, direction, amount)`; delivery data
+   (`correlation_id`, `causation_id`, `metadata`) is excluded so a redelivered fact replays. The
+   check runs inside one batch and against stored entries (under the account locks).
+2. **Locking without `UPDATE`**: `SELECT … FOR UPDATE` needs `UPDATE` privilege, which `fh_app`
+   must not have on `ledger_accounts`. The lock step (§5.2) therefore calls
+   `ledger_lock_accounts(uuid[])`, a `SECURITY DEFINER` SQL function owned by `fh_owner` that only
+   locks (`ORDER BY id FOR UPDATE`) and returns the rows. Hardening: fixed
+   `search_path = pg_catalog, public, pg_temp`, `REVOKE ALL … FROM PUBLIC`, `EXECUTE` granted only
+   to `fh_app`. `ledger_apply(uuid)` is the other `SECURITY DEFINER` function, hardened the same way.
+3. **Roles**: a `NOLOGIN` role `fh_owner` owns every ledger object (it is granted to the migration
+   login, which runs DDL under `SET ROLE fh_owner`); `fh_app` is `LOGIN NOINHERIT`. Both are created
+   idempotently by the migration; its downgrade revokes, `DROP OWNED` and drops them. The `fh_app`
+   password comes from `FH_APP_DB_PASSWORD` (env), never from code. Owner credentials never reach
+   the runtime containers (`api`, `worker`), even in dev; only `migrate` and the profile-`test`
+   service get them (DEVELOPMENT.md, "Database roles").
+4. **`fh_app` grants** (exhaustive): `SELECT` on the three tables; column-level `INSERT` on
+   `ledger_accounts` (identity and flags, never balances or `version`) and `journal_entries` (never
+   `applied_status`); `INSERT` on `ledger_postings`; `UPDATE(status)` on `journal_entries`;
+   `EXECUTE` on `ledger_apply`, `ledger_lock_accounts` and `ledger_assert_entry` (called by the
+   deferred trigger). Also revoked from `PUBLIC`: `CREATE` on schema `public` and `TEMPORARY` on the
+   database.
+5. **"Balances changed by exactly the entry's postings" (§2) is implemented as `applied_status`**:
+   only `ledger_apply` can write balance columns (privileges) and it records the status it applied
+   in `journal_entries.applied_status` (not writable by `fh_app`; a trigger also rejects writes
+   outside `ledger_apply`). The deferred check requires `applied_status = status` at commit, so an
+   entry inserted or transitioned without `ledger_apply` cannot commit. `ledger_apply` computes the
+   deltas itself from the stored postings (`pending/posted` factors per transition), so the applied
+   amounts are exact by construction. The `fh.ledger_apply` setting checked by the guard trigger is
+   defense in depth only; setting it grants nothing to `fh_app`.
+6. **Deferred check, extended**: besides ≥ 2 postings, balance per currency and project/currency
+   consistency, it re-checks `no_overdraft` (`available >= 0`) at commit. Postings can only join an
+   entry before it is applied; a new entry starts `pending` or `posted`.
+7. **One locking write per unit of work**: `LedgerService.post_entries` (and post/void) refuse a
+   second ledger write in the same unit of work (`RuntimeError`), because a second lock phase could
+   lock accounts out of id order. Callers collect every entry of the UoW and post once.
