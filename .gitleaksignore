@@ -1,0 +1,7 @@
+# Fake credentials used by tests (provider-account fixtures and the isolation probe); none is a real secret.
+# Fingerprint = commit:path:rule:line. Add entries only for documented fake values (see .gitleaks.toml).
+097bf0b78f66c7ab8c8c7fda4e9e46a8ce221879:backend/tests/integration/isolation/test_cross_project.py:generic-api-key:44
+097bf0b78f66c7ab8c8c7fda4e9e46a8ce221879:backend/tests/integration/projects/helpers.py:generic-api-key:30
+097bf0b78f66c7ab8c8c7fda4e9e46a8ce221879:backend/tests/integration/providers/test_provider_accounts.py:generic-api-key:388
+097bf0b78f66c7ab8c8c7fda4e9e46a8ce221879:backend/tests/integration/providers/test_provider_accounts.py:generic-api-key:389
+097bf0b78f66c7ab8c8c7fda4e9e46a8ce221879:backend/tests/integration/providers/test_provider_accounts.py:generic-api-key:390
