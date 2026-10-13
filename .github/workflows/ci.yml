@@ -87,6 +87,21 @@ jobs:
       - run: bash scripts/web-typecheck.sh
       - run: bash scripts/web-test.sh
       - run: bash scripts/web-build.sh
+      # Drift check: the backend image (compose `api`) is built in the backend job only, so the OpenAPI dump runs
+      # here after building it too; the committed snapshot and generated client must match the backend.
+      - name: Build backend dev image (for the OpenAPI dump)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          target: dev
+          load: true
+          pull: true
+          tags: financial-hub-backend:dev
+          cache-from: type=gha,scope=backend-dev
+      - name: API client is up to date (scripts/web-api.sh)
+        run: |
+          bash scripts/web-api.sh
+          git diff --exit-code -- frontend/openapi.json frontend/src/api/generated
 
   security:
     name: Security (secrets, dependencies, images)

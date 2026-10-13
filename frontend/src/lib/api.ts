@@ -4,11 +4,29 @@
  * written to any storage). Errors are RFC 9457 problem+json and surface as ApiError.
  */
 
+/** One field-level validation failure (ADR-0001: `errors[]`). */
+export interface ProblemFieldError {
+  pointer?: string;
+  detail?: string;
+}
+
 export interface ProblemDetails {
   type?: string;
   title?: string;
   status?: number;
   detail?: string;
+  instance?: string;
+  errors?: ProblemFieldError[];
+}
+
+/** The RFC 9457 shape every failed API call surfaces as (an ApiError satisfies it). */
+export interface ApiProblem {
+  type: string;
+  title: string;
+  status: number;
+  detail: string | null;
+  instance: string | null;
+  errors?: ProblemFieldError[];
 }
 
 export class ApiError extends Error {
@@ -16,6 +34,8 @@ export class ApiError extends Error {
   readonly type: string;
   readonly title: string;
   readonly detail: string | null;
+  readonly instance: string | null;
+  readonly errors: ProblemFieldError[] | undefined;
   /** Seconds to wait, from the Retry-After header (429/503); null when absent. */
   readonly retryAfterSeconds: number | null;
 
@@ -24,6 +44,8 @@ export class ApiError extends Error {
     type?: string;
     title: string;
     detail?: string | null;
+    instance?: string | null;
+    errors?: ProblemFieldError[];
     retryAfterSeconds?: number | null;
   }) {
     super(init.detail ?? init.title);
@@ -32,6 +54,8 @@ export class ApiError extends Error {
     this.type = init.type ?? "about:blank";
     this.title = init.title;
     this.detail = init.detail ?? null;
+    this.instance = init.instance ?? null;
+    this.errors = init.errors;
     this.retryAfterSeconds = init.retryAfterSeconds ?? null;
   }
 
@@ -43,6 +67,16 @@ export class ApiError extends Error {
 
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
+}
+
+/** True for any failed API call, including network failures (status 0). */
+export function isProblem(error: unknown): error is ApiError & ApiProblem {
+  return error instanceof ApiError;
+}
+
+/** A user-presentable message: the problem's detail, else its title, else the fallback. */
+export function problemMessage(error: unknown, fallback = "Something went wrong."): string {
+  return error instanceof ApiError ? (error.detail ?? error.title) : fallback;
 }
 
 let csrfToken: string | null = null;
@@ -89,6 +123,13 @@ function parseRetryAfter(header: string | null): number | null {
   return Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
+function toFieldError(item: Record<string, unknown>): ProblemFieldError {
+  return {
+    pointer: typeof item.pointer === "string" ? item.pointer : undefined,
+    detail: typeof item.detail === "string" ? item.detail : undefined,
+  };
+}
+
 async function toApiError(response: Response): Promise<ApiError> {
   const retryAfterSeconds = parseRetryAfter(response.headers.get("Retry-After"));
   let problem: ProblemDetails = {};
@@ -99,6 +140,8 @@ async function toApiError(response: Response): Promise<ApiError> {
         type: typeof body.type === "string" ? body.type : undefined,
         title: typeof body.title === "string" ? body.title : undefined,
         detail: typeof body.detail === "string" ? body.detail : undefined,
+        instance: typeof body.instance === "string" ? body.instance : undefined,
+        errors: Array.isArray(body.errors) ? body.errors.filter(isRecord).map(toFieldError) : undefined,
       };
     }
   } catch {
@@ -109,6 +152,8 @@ async function toApiError(response: Response): Promise<ApiError> {
     type: problem.type,
     title: problem.title ?? (response.statusText || `HTTP ${response.status}`),
     detail: problem.detail,
+    instance: problem.instance,
+    errors: problem.errors,
     retryAfterSeconds,
   });
 }
