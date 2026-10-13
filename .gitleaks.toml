@@ -5,11 +5,11 @@ title = "financial-hub"
 [extend]
 useDefault = true
 
-# No allowlist entries are needed today: .env.example holds dev-only defaults
-# (POSTGRES_PASSWORD=financial_hub, FH_APP_DB_PASSWORD=fh_app_dev_only) that the default rules do not flag.
-# Example of the required shape if one is ever needed:
-#
-# [[allowlists]]
-# description = "Fake key used in tests/fixtures; not a real credential"
-# paths = ['''backend/tests/.*''']
-# regexes = ['''FAKE_EXAMPLE_KEY_[A-Z0-9]+''']
+# Test fixtures that look like credentials must be spelled fake-... / FAKE_... (any case). Both conditions
+# must hold (AND): a test path AND a fake-prefixed secret. Findings in older commits are pinned by
+# fingerprint in .gitleaksignore.
+[[allowlists]]
+description = "Fake credentials in tests, by naming convention; not real secrets"
+condition = "AND"
+paths = ['''^(backend/tests|frontend/src)/.*''']
+regexes = ['''(?i)^fake[-_][A-Za-z0-9_.-]*$''']
