@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
-test_db pytest "$@"
+with_lock test_db pytest "$@"

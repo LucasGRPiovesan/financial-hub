@@ -8,12 +8,21 @@ x-app-database-url: &app-database-url postgresql+psycopg://fh_app:${FH_APP_DB_PA
 x-backend-env: &backend-env
   FH_APP_ENV: ${FH_APP_ENV:-dev}
   FH_LOG_LEVEL: ${FH_LOG_LEVEL:-INFO}
-  FH_OTEL_EXPORTER_OTLP_ENDPOINT: ${FH_OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4318}
+  # Empty disables export. The `lgtm` stack is opt-in (profile `observability`, docs/DEVELOPMENT.md).
+  FH_OTEL_EXPORTER_OTLP_ENDPOINT: ${FH_OTEL_EXPORTER_OTLP_ENDPOINT:-}
   FH_OTEL_SERVICE_NAME: financial-hub-api
+  # Secrets at rest and the API key pepper (docs/SECURITY.md); empty = dev defaults / disabled.
+  FH_ENCRYPTION_KEYS: ${FH_ENCRYPTION_KEYS:-}
+  FH_API_KEY_PEPPER: ${FH_API_KEY_PEPPER:-}
 
 services:
   db:
     image: postgres:18
+    # Dev/test tuning only: commits return before the WAL flush (a crash may lose the last few
+    # transactions, never corrupts). Production settings live with the deployment, not here.
+    command: ["postgres", "-c", "synchronous_commit=off", "-c", "checkpoint_timeout=15min", "-c", "shared_buffers=256MB"]
+    cpus: 2
+    mem_limit: 1g
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-financial_hub}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-financial_hub}
@@ -56,6 +65,8 @@ services:
       FH_DATABASE_URL: *app-database-url
     ports:
       - "${API_PORT:-8000}:8000"
+    cpus: 1.5
+    mem_limit: 1g
     volumes: *backend-volumes
     depends_on:
       migrate:
@@ -80,6 +91,8 @@ services:
       FH_DATABASE_URL: *app-database-url
       FH_OTEL_SERVICE_NAME: financial-hub-worker
     volumes: *backend-volumes
+    cpus: 1
+    mem_limit: 512m
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -102,11 +115,17 @@ services:
     pull_policy: never
     profiles: ["test"]
     command: ["pytest"]
+    # Bounded so a full suite never starves the host; scripts/test.sh also runs one suite at a time.
+    cpus: 3
+    mem_limit: 2g
     environment:
       <<: *backend-env
       FH_DATABASE_URL: *owner-database-url
       FH_APP_TEST_DATABASE_URL: *app-database-url
       FH_OTEL_EXPORTER_OTLP_ENDPOINT: ""
+      # Hermetic tests: never the developer's local secrets (tests set their own).
+      FH_ENCRYPTION_KEYS: ""
+      FH_API_KEY_PEPPER: ""
     volumes: *backend-volumes
     depends_on:
       migrate:
@@ -120,6 +139,10 @@ services:
     image: financial-hub-web:dev
     environment:
       API_PROXY_TARGET: http://api:8000
+      # Bind mounts from a Windows drive deliver no inotify events, so Vite polls; keep it slow.
+      VITE_POLL_INTERVAL_MS: ${VITE_POLL_INTERVAL_MS:-1000}
+    cpus: 1.5
+    mem_limit: 1g
     ports:
       - "${WEB_PORT:-5173}:5173"
     volumes:
@@ -135,8 +158,13 @@ services:
       retries: 6
       start_period: 15s
 
+  # Opt-in (about 0.7 GB RAM idle): COMPOSE_PROFILES=observability plus
+  # FH_OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318 in .env, then `docker compose up -d`.
   lgtm:
     image: grafana/otel-lgtm:0.36.0
+    profiles: ["observability"]
+    cpus: 1.5
+    mem_limit: 1536m
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
       - "${OTLP_GRPC_PORT:-4317}:4317"

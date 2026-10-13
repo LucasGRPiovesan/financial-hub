@@ -7,7 +7,7 @@ The host runs **only Docker**. Python, Node and every tool (ruff, pyright, pytes
 ```bash
 cp .env.example .env          # no real secrets in it; .env is git-ignored
 docker compose up -d --build  # from the repo root
-docker compose ps             # db, api, worker, web, lgtm healthy; migrate exited 0
+docker compose ps             # db, api, worker, web healthy; migrate exited 0
 ```
 
 | Service | URL / port | Notes |
@@ -17,7 +17,20 @@ docker compose ps             # db, api, worker, web, lgtm healthy; migrate exit
 | `db` | localhost:5432 | postgres:18, named volume `db-data` |
 | `migrate` | - | one-shot `alembic upgrade head`; api and worker wait for it |
 | `worker` | - | `python -m financial_hub.workers` (placeholder loop until M3) |
-| `lgtm` | Grafana :3000, OTLP gRPC :4317, OTLP HTTP :4318 | `grafana/otel-lgtm:0.36.0` |
+| `lgtm` | Grafana :3000, OTLP gRPC :4317, OTLP HTTP :4318 | `grafana/otel-lgtm:0.36.0`, opt-in (see below) |
+
+### Resource limits and observability
+
+Every service has a CPU/memory cap in `deploy/compose.yaml` (the `test` service gets 3 CPUs / 2 GB),
+and `scripts/test.sh` holds a host-wide lock so parallel agents run one test suite at a time
+(`waiting for another test run` means it is queued). On Windows, also cap the WSL2 VM in
+`%UserProfile%.wslconfig` (for example `memory=8GB`, `processors=6`) and run `wsl --shutdown`.
+Postgres runs with `synchronous_commit=off` (dev/test only). Vite polls the bind mount every
+`VITE_POLL_INTERVAL_MS` (default 1000).
+
+The Grafana LGTM stack (about 0.7 GB idle) is opt-in. To enable it, add to `.env`:
+`COMPOSE_PROFILES=observability` and `FH_OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318`, then
+`docker compose up -d`. Without it, OTel export is disabled.
 
 Stop with `docker compose down` (add `-v` to also drop the database and the dependency volumes).
 
@@ -70,6 +83,16 @@ docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest      # validate
 
 `.gitleaks.toml` allowlists are only for documented fake values (currently none). Tool image versions are pinned in the
 workflow `env:` block; bump them deliberately.
+
+## Regenerating the API client
+
+`bash scripts/web-api.sh` dumps the backend schema (`create_app().openapi()`, run in the `api` container, no DB needed)
+to `frontend/openapi.json` (sorted keys, 2-space indent) and runs [orval](https://orval.dev) in the `web` container. It
+writes TanStack Query v5 hooks and types to `frontend/src/api/generated/` (one file per OpenAPI tag under `endpoints/`,
+shared types under `model/`). Both the snapshot and the generated code are committed and excluded from eslint; CI
+(`frontend` job) re-runs the script and fails on `git diff`. Run it after any backend route or schema change.
+Generated hooks call `src/api/mutator.ts`, which wraps `lib/api.ts` (cookies, CSRF header, problem+json -> `ApiError`,
+401 redirect). Live updates: `useProjectStream(projectId)` in `src/lib/realtime/` (SSE, invalidates queries by event type).
 
 ## Database roles
 
