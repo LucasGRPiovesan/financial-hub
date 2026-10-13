@@ -70,12 +70,21 @@ async def project_names(session: AsyncSession, project_ids: Collection[UUID]) ->
     return {row.id: row.name for row in (await session.execute(statement)).all()}
 
 
-async def rename_project(session: AsyncSession, project_id: UUID, name: str) -> Project | None:
+async def update_project(
+    session: AsyncSession,
+    project_id: UUID,
+    *,
+    name: str | None = None,
+    status: ProjectStatus | None = None,
+) -> Project | None:
+    """Apply the given changes (at least one); ``None`` when the project does not exist."""
+    values: dict[str, Any] = {"updated_at": func.now()}
+    if name is not None:
+        values["name"] = name
+    if status is not None:
+        values["status"] = status.value
     statement = (
-        update(projects)
-        .where(projects.c.id == project_id)
-        .values(name=name, updated_at=func.now())
-        .returning(*_COLUMNS)
+        update(projects).where(projects.c.id == project_id).values(**values).returning(*_COLUMNS)
     )
     row = (await session.execute(statement)).first()
     return None if row is None else _project(row)

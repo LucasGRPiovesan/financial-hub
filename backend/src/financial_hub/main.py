@@ -14,6 +14,10 @@ from financial_hub.modules.identity.api.routes import configure_identity
 from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
 from financial_hub.modules.ledger.api.routes import router as ledger_router
+from financial_hub.modules.projects.api.api_keys import router as api_keys_router
+from financial_hub.modules.projects.api.auth import configure_projects
+from financial_hub.modules.projects.api.providers import catalog_router as provider_catalog_router
+from financial_hub.modules.projects.api.providers import router as provider_accounts_router
 from financial_hub.modules.projects.api.routes import router as projects_router
 from financial_hub.platform.db import create_engine, create_session_factory
 from financial_hub.platform.http.auth import public, verify_route_declarations
@@ -83,7 +87,11 @@ def create_app(
     app.state.clock = clock or SystemClock()
     configure_identity(app, settings, clock=app.state.clock, hasher=password_hasher)
     app.include_router(auth_router)
+    configure_projects(app, settings)
     app.include_router(projects_router)
+    app.include_router(api_keys_router)
+    app.include_router(provider_accounts_router)
+    app.include_router(provider_catalog_router)
     app.include_router(stream_router)
     app.include_router(ledger_router)
 

@@ -153,3 +153,60 @@ async def test_project_routes_require_a_session(api: Api) -> None:
         created = await client.post("/v1/projects", json={"slug": unique_slug(), "name": "X"})
 
     assert listed.status_code == read.status_code == created.status_code == 401
+
+
+async def test_patch_renames_archives_and_reactivates(api: Api) -> None:
+    owner = await api.operator()
+    project = await create_project(api, owner, "Before")
+    client, csrf_token = await logged_in(api, owner)
+    path = f"/v1/projects/{project['id']}"
+    async with aclosing(client):
+        renamed = await client.patch(path, json={"name": "  After  "}, headers=csrf(csrf_token))
+        archived = await client.patch(path, json={"status": "archived"}, headers=csrf(csrf_token))
+        both = await client.patch(
+            path, json={"name": "Final", "status": "active"}, headers=csrf(csrf_token)
+        )
+        fetched = await client.get(path)
+
+    assert renamed.json() == {**project, "name": "After"}
+    assert archived.json() == {**project, "name": "After", "status": "archived"}
+    assert both.json() == {**project, "name": "Final", "status": "active"}
+    assert fetched.json() == both.json()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {"name": ""},
+        {"name": "   "},
+        {"status": "deleted"},
+        {"slug": "new-slug"},
+        {"name": None, "status": None},
+    ],
+)
+async def test_patch_rejects_empty_and_invalid_updates(api: Api, body: dict[str, object]) -> None:
+    owner = await api.operator()
+    project = await create_project(api, owner, "Stable")
+    client, csrf_token = await logged_in(api, owner)
+    path = f"/v1/projects/{project['id']}"
+    async with aclosing(client):
+        response = await client.patch(path, json=body, headers=csrf(csrf_token))
+        fetched = await client.get(path)
+
+    assert response.status_code == 422
+    assert fetched.json() == project  # nothing changed
+
+
+async def test_patch_needs_csrf_and_a_session(api: Api) -> None:
+    owner = await api.operator()
+    project = await create_project(api, owner)
+    client, _ = await logged_in(api, owner)
+    path = f"/v1/projects/{project['id']}"
+    async with aclosing(client):
+        without_csrf = await client.patch(path, json={"name": "No CSRF"})
+    async with api.client() as anonymous:
+        anonymous_patch = await anonymous.patch(path, json={"name": "Anonymous"})
+
+    assert without_csrf.status_code == 403
+    assert anonymous_patch.status_code == 401

@@ -1,4 +1,4 @@
-"""Projects: the tenant boundary (ADR-0011). API keys and provider accounts arrive with task 1.2."""
+"""Projects: the tenant boundary (ADR-0011). API keys and provider accounts live beside it."""
 
 import re
 from dataclasses import dataclass

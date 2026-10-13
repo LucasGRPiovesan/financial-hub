@@ -31,6 +31,31 @@ EXPECTED = {
     ("POST", "/v1/projects"): ("authenticated", None),
     ("GET", "/v1/projects/{project_id}"): ("permission", "projects:read"),
     ("PATCH", "/v1/projects/{project_id}"): ("permission", "projects:manage"),
+    ("POST", "/v1/projects/{project_id}/api-keys"): ("permission", "api_keys:manage"),
+    ("GET", "/v1/projects/{project_id}/api-keys"): ("permission", "api_keys:manage"),
+    ("POST", "/v1/projects/{project_id}/api-keys/{key_id}/revoke"): (
+        "permission",
+        "api_keys:manage",
+    ),
+    ("GET", "/v1/provider-catalog"): ("authenticated", None),
+    ("POST", "/v1/projects/{project_id}/provider-accounts"): ("permission", "integrations:manage"),
+    ("GET", "/v1/projects/{project_id}/provider-accounts"): ("permission", "integrations:read"),
+    ("GET", "/v1/projects/{project_id}/provider-accounts/{account_id}"): (
+        "permission",
+        "integrations:read",
+    ),
+    ("PUT", "/v1/projects/{project_id}/provider-accounts/{account_id}/credentials"): (
+        "permission",
+        "integrations:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/provider-accounts/{account_id}/activate"): (
+        "permission",
+        "integrations:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/provider-accounts/{account_id}/deactivate"): (
+        "permission",
+        "integrations:manage",
+    ),
     ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts"): ("permission", "ledger:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts/{account_id}"): (

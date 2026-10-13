@@ -6,7 +6,12 @@ from datetime import datetime
 from uuid import UUID
 
 from financial_hub.modules.identity.application.api import Permission, Role, grant_membership
-from financial_hub.modules.projects.domain import Project, validate_name, validate_slug
+from financial_hub.modules.projects.domain import (
+    Project,
+    ProjectStatus,
+    validate_name,
+    validate_slug,
+)
 from financial_hub.modules.projects.infrastructure import repository
 from financial_hub.platform.db import UnitOfWork
 from financial_hub.platform.http.auth import Principal
@@ -96,12 +101,34 @@ class ProjectService:
             raise NotFound("Project not found.")
         return _view(project)
 
-    async def rename(self, project_id: UUID, name: str) -> ProjectView:
-        try:
-            name = validate_name(name)
-        except ValueError as error:
-            raise _invalid("/name", error) from None
-        project = await repository.rename_project(self._uow.session, project_id, name)
+    async def update(
+        self, project_id: UUID, *, name: str | None = None, status: str | None = None
+    ) -> ProjectView:
+        """Rename and/or archive/reactivate; at least one change is required."""
+        if name is None and status is None:
+            raise ValidationFailed(
+                "The request contains invalid fields.",
+                errors=[
+                    FieldError(
+                        pointer="/", detail="provide name and/or status", code="empty_update"
+                    )
+                ],
+            )
+        new_name: str | None = None
+        if name is not None:
+            try:
+                new_name = validate_name(name)
+            except ValueError as error:
+                raise _invalid("/name", error) from None
+        new_status: ProjectStatus | None = None
+        if status is not None:
+            try:
+                new_status = ProjectStatus(status)
+            except ValueError:
+                raise _invalid("/status", ValueError("must be active or archived")) from None
+        project = await repository.update_project(
+            self._uow.session, project_id, name=new_name, status=new_status
+        )
         if project is None:
             raise NotFound("Project not found.")
         return _view(project)

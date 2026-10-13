@@ -4,7 +4,7 @@ Each handler runs one Unit of Work and commits it before the response is built.
 """
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request, status
 from pydantic import BaseModel, Field
@@ -43,7 +43,10 @@ class CreateProjectRequest(BaseModel):
 
 
 class UpdateProjectRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
+    """Rename and/or archive/reactivate; at least one field."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    status: Literal["active", "archived"] | None = None
 
 
 def _uow(request: Request) -> UnitOfWork:
@@ -93,5 +96,7 @@ async def update_project(
     request: Request,
 ) -> ProjectOut:
     async with _uow(request) as uow:
-        view = await ProjectService(uow).rename(scope.project_id, body.name)
+        view = await ProjectService(uow).update(
+            scope.project_id, name=body.name, status=body.status
+        )
     return ProjectOut.of(view)

@@ -10,8 +10,9 @@ Every route declares exactly how it may be reached, through one FastAPI dependen
   Principals that cannot see the project get 404 (no project enumeration); visible projects
   without the permission get 403.
 
-Authentication schemes plug in as ``Authenticator`` objects (``install_authenticators``): the
-operator session cookie today, API keys later. The first one that recognises the request wins.
+Authentication schemes plug in as ``Authenticator`` objects (``install_authenticators`` /
+``add_authenticator``): the operator session cookie and project API keys (``Authorization:
+Bearer fh_...``, checked first). The first one that recognises the request wins.
 ``undeclared_routes`` lists routes without a declaration; ``create_app`` refuses to start with any
 and a test enumerates ``effective_routes`` too.
 """
@@ -89,6 +90,16 @@ class AccessDeclaration:
 
 def install_authenticators(app: FastAPI, *authenticators: Authenticator) -> None:
     app.state.authenticators = tuple(authenticators)
+
+
+def add_authenticator(app: FastAPI, authenticator: Authenticator, *, first: bool = False) -> None:
+    """Plug one more scheme into the chain: last by default, ``first=True`` to take precedence.
+
+    Precedence matters when a request carries credentials of several schemes: the first scheme
+    that recognises the request decides (and may reject it) without consulting the others.
+    """
+    current: tuple[Authenticator, ...] = getattr(app.state, "authenticators", ())
+    app.state.authenticators = (authenticator, *current) if first else (*current, authenticator)
 
 
 def _declare[F: Callable[..., Any]](function: F, declaration: AccessDeclaration) -> F:

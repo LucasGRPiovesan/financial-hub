@@ -1,11 +1,5 @@
-from collections.abc import AsyncIterator
+"""Fixtures shared with the identity suite (real Postgres: runtime role and owner engines)."""
 
-import pytest
+from tests.integration.identity.conftest import api, app_engine, owner_engine
 
-from tests.integration.identity.support import Api, running_api
-
-
-@pytest.fixture
-async def api() -> AsyncIterator[Api]:
-    async with running_api() as running:
-        yield running
+__all__ = ["api", "app_engine", "owner_engine"]

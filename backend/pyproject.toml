@@ -21,6 +21,7 @@ dependencies = [
     "opentelemetry-instrumentation-sqlalchemy==0.66b1",
     "opentelemetry-instrumentation-httpx==0.66b1",
     "argon2-cffi==25.1.0",
+    "cryptography==50.0.2",
 ]
 
 [dependency-groups]
@@ -221,4 +222,42 @@ forbidden_modules = [
     "financial_hub.modules.projects.infrastructure",
     "financial_hub.modules.projects.application.service",
 ]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "5. decryption is importable only by provider infrastructure"
+type = "forbidden"
+# source_modules must not overlap the forbidden module (import-linter silently skips an overlapping
+# pair, which made this contract vacuous when it listed the root package): list the siblings.
+source_modules = [
+    "financial_hub.cli",
+    "financial_hub.main",
+    "financial_hub.mcp",
+    "financial_hub.modules",
+    "financial_hub.shared",
+    "financial_hub.workers",
+    "financial_hub.platform.db",
+    "financial_hub.platform.http",
+    "financial_hub.platform.logging",
+    "financial_hub.platform.settings",
+    "financial_hub.platform.telemetry",
+    "financial_hub.platform.crypto.keyring",
+    "financial_hub.platform.crypto.seal",
+]
+forbidden_modules = ["financial_hub.platform.crypto.unseal"]
+ignore_imports = [
+    "financial_hub.modules.projects.infrastructure.credentials_vault -> financial_hub.platform.crypto.unseal",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "5. only provider adapters reach the credentials vault"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.projects.application",
+    "financial_hub.modules.projects.api",
+    "financial_hub.modules.projects.domain",
+    "financial_hub.main",
+]
+forbidden_modules = ["financial_hub.modules.projects.infrastructure.credentials_vault"]
 allow_indirect_imports = true

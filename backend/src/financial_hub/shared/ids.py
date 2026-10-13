@@ -21,6 +21,7 @@ class IdPrefix(StrEnum):
     CUSTOMER_IDENTITY = "cid"
     PROJECT = "prj"
     API_KEY = "key"
+    PROVIDER_ACCOUNT = "pva"
     ACCOUNT = "acc"
     JOURNAL_ENTRY = "je"
     POSTING = "pst"

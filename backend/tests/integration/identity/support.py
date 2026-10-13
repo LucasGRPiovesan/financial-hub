@@ -5,6 +5,7 @@ Isolation: nothing can be deleted, so every test uses unique emails/slugs and it
 The ``FrozenClock`` starts at the real current time so rows stay plausible next to ``now()``.
 """
 
+import base64
 import os
 import secrets
 from collections.abc import AsyncGenerator
@@ -35,6 +36,9 @@ PASSWORD = "correct horse battery"
 BASE_URL = "http://testserver"
 # Cheap Argon2id for tests that are not about the parameters themselves.
 FAST_ARGON2: dict[str, int] = {"time_cost": 1, "memory_cost": 1024, "parallelism": 1}
+# Deterministic test secrets: a pepper (32+ chars, not the dev default) and one 32-byte data key.
+TEST_PEPPER = "test-pepper-0123456789abcdef-0123456789abcdef"
+TEST_DATA_KEY = base64.b64encode(bytes([1]) * 32).decode()
 
 
 def app_database_url() -> str:
@@ -131,6 +135,8 @@ def make_settings(**overrides: Any) -> Settings:
     values: dict[str, Any] = {
         "database_url": SecretStr(app_database_url()),
         "app_env": "dev",
+        "api_key_pepper": SecretStr(TEST_PEPPER),
+        "encryption_keys": {1: SecretStr(TEST_DATA_KEY)},
         "otel_exporter_otlp_endpoint": None,
     }
     values.update(overrides)
