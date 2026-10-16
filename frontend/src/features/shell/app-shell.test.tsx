@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCsrfToken } from "../../lib/api";
-import { THEME_STORAGE_KEY } from "../../lib/theme";
+import { selectProject } from "../../lib/project-selection";
+import { initTheme, THEME_STORAGE_KEY } from "../../lib/theme";
 import { expectNoAxeViolations } from "../../test/axe";
 import { overviewData } from "../../test/console-mocks";
 import { json, ME, mockApi, renderApp, resetApiState } from "../../test/harness";
@@ -117,6 +118,38 @@ describe("app shell", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
     expect(await screen.findByRole("button", { name: "Theme: Dark" })).toBeInTheDocument();
+  });
+
+  it("restores the persisted theme on the next visit and offers a system option", async () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    initTheme(); // what main.tsx does before the first render
+    mockApi(signedIn);
+    const user = userEvent.setup();
+    renderApp("/");
+    await screen.findByRole("heading", { name: "Overview" });
+    expect(await screen.findByRole("button", { name: "Theme: Dark" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Theme: Dark" }));
+    expect(await screen.findByRole("menuitemradio", { name: "Dark" })).toBeChecked();
+    await user.click(screen.getByRole("menuitemradio", { name: /System/ }));
+    expect(await screen.findByRole("button", { name: /Theme: System/ })).toBeInTheDocument();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it("shows where the operator is: breadcrumb, project and role", async () => {
+    selectProject("p-1"); // the in-memory fallback of an earlier test would otherwise leak in
+    mockApi(signedIn);
+    const user = userEvent.setup();
+    renderApp("/");
+    await screen.findByRole("heading", { name: "Overview" });
+
+    const crumbs = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(crumbs).getByText("Overview")).toHaveAttribute("aria-current", "page");
+    await user.click(screen.getByRole("button", { name: /Operator menu/ }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("owner")).toBeInTheDocument();
+    const where = within(menu).getByText((_, element) => element?.tagName === "P" && /in Acme Payments$/.test(element.textContent ?? ""));
+    expect(where).toBeInTheDocument();
   });
 
   it("signs out with the CSRF header and returns to the login page", async () => {

@@ -1,6 +1,9 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
+
+// Screens are lazy chunks: the first import of each is transformed on demand, which outlasts the 1s default.
+configure({ asyncUtilTimeout: 5000 });
 
 // vitest runs without globals, so testing-library cannot register its own cleanup.
 afterEach(() => cleanup());

@@ -25,7 +25,7 @@ interface SidebarNavProps {
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
   return (
-    <nav aria-label="Primary" className="flex flex-col gap-1 overflow-y-auto px-3 pb-6">
+    <nav aria-label="Primary" className="flex flex-col gap-1 overflow-y-auto px-3 pb-6 [color-scheme:dark] [scrollbar-width:thin]">
       {NAV_GROUPS.map((group, index) => (
         <Fragment key={group[0]?.to ?? index}>
           {index > 0 ? <div aria-hidden="true" className="mx-2 my-2 h-px bg-chrome-line" /> : null}

@@ -1,8 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +21,9 @@ import { isThemePreference, useTheme } from "../../lib/theme";
 import { useActiveMembership } from "../../lib/project-selection";
 import { logout, type Membership, type Operator } from "../auth/auth-api";
 import { clearSession } from "../auth/session";
+import { useProject } from "../console/use-project";
+import { roleTone } from "../console/roles";
+import { NAV_ITEMS } from "./nav";
 
 export function ProjectSwitcher({ memberships }: { memberships: readonly Membership[] }) {
   const { active, select } = useActiveMembership(memberships);
@@ -97,7 +101,32 @@ function initials(operator: Operator): string {
   return (letters || operator.email.slice(0, 2)).toUpperCase();
 }
 
+/** Where the operator is: console, then the current section. Hidden on narrow screens (the page title says it). */
+export function Breadcrumbs() {
+  const { pathname } = useLocation();
+  const item = NAV_ITEMS.find((candidate) => (candidate.to === "/" ? pathname === "/" : pathname.startsWith(candidate.to)));
+  if (!item) return null;
+  return (
+    <nav aria-label="Breadcrumb" className="ml-2 hidden min-w-0 md:block">
+      <ol className="flex items-center gap-1.5 text-sm text-ink-muted">
+        <li>
+          <Link to="/" className="rounded-xs hover:text-ink">
+            Console
+          </Link>
+        </li>
+        <li aria-hidden="true" className="text-ink-faint">
+          /
+        </li>
+        <li aria-current="page" className="truncate font-medium text-ink">
+          {item.label}
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
 export function OperatorMenu({ operator }: { operator: Operator }) {
+  const { membership } = useProject();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
@@ -140,6 +169,12 @@ export function OperatorMenu({ operator }: { operator: Operator }) {
         <div className="px-2 py-1.5">
           <p className="truncate text-sm font-medium">{operator.display_name}</p>
           <p className="truncate text-xs text-ink-muted">{operator.email}</p>
+          {membership ? (
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
+              <Badge tone={roleTone(membership.role)}>{membership.role}</Badge>
+              in {membership.project_name}
+            </p>
+          ) : null}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={signingOut} onSelect={() => void signOut()}>

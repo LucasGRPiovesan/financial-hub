@@ -2,17 +2,41 @@ import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
 import { cn } from "../../lib/cn";
 
-/** The scrolling wrapper keeps wide ledgers usable on narrow screens. */
-export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
+/**
+ * The scrolling wrapper keeps wide ledgers usable on narrow screens. With `maxHeight` it also scrolls
+ * vertically and the header row sticks to the top of the scroll area.
+ */
+export function Table({
+  className,
+  maxHeight,
+  regionLabel,
+  ...props
+}: HTMLAttributes<HTMLTableElement> & { maxHeight?: string; regionLabel?: string }) {
   return (
-    <div className="w-full overflow-x-auto">
+    <div
+      className={cn("w-full overflow-x-auto", maxHeight && "overflow-y-auto")}
+      style={maxHeight ? { maxHeight } : undefined}
+      // A scrollable region must be reachable by keyboard.
+      tabIndex={maxHeight ? 0 : undefined}
+      role={maxHeight ? "region" : undefined}
+      aria-label={maxHeight ? regionLabel : undefined}
+    >
       <table className={cn("w-full border-collapse text-sm", className)} {...props} />
     </div>
   );
 }
 
+/** Hairline rows, no zebra: the double rule under the header is the only heavy line. */
 export function TableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("border-b-[3px] border-double border-line-strong", className)} {...props} />;
+  return (
+    <thead
+      className={cn(
+        "sticky top-0 z-10 bg-surface shadow-[inset_0_-1px_0_0_var(--color-line-strong),inset_0_-3px_0_0_var(--color-surface),inset_0_-4px_0_0_var(--color-line-strong)]",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {

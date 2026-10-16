@@ -8,7 +8,7 @@ import { DialogDescription, DialogTitle, Sheet, SheetContent, SheetTrigger } fro
 import { meQueryOptions } from "../auth/auth-api";
 import { ProjectProvider } from "../console/project-context";
 import { BrandMark, SidebarNav } from "./sidebar-nav";
-import { OperatorMenu, ProjectSwitcher, ThemeMenu } from "./top-bar";
+import { Breadcrumbs, OperatorMenu, ProjectSwitcher, ThemeMenu } from "./top-bar";
 
 export function AppShell() {
   const { data: me } = useSuspenseQuery(meQueryOptions);
@@ -29,6 +29,9 @@ export function AppShell() {
           <BrandMark />
         </div>
         <SidebarNav />
+        <p className="mt-auto border-t border-chrome-line px-5 py-4 text-xs leading-relaxed text-chrome-muted">
+          Evaluation environment. Not for real payments.
+        </p>
       </aside>
 
       <div className="flex min-w-0 flex-col">
@@ -50,6 +53,7 @@ export function AppShell() {
           </Sheet>
 
           <ProjectSwitcher memberships={me.memberships} />
+          <Breadcrumbs />
           <div className="ml-auto flex items-center gap-1">
             <ThemeMenu />
             <OperatorMenu operator={me.operator} />

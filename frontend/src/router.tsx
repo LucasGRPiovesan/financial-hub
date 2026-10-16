@@ -3,6 +3,7 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   Outlet,
   redirect,
   type RouterHistory,
@@ -14,13 +15,18 @@ import { safeRedirectTarget } from "./features/auth/redirect";
 import { AppShell } from "./features/shell/app-shell";
 import { NAV_ITEMS } from "./features/shell/nav";
 import { isApiError } from "./lib/api";
-import { ApiKeysPage } from "./routes/api-keys";
-import { IntegrationsPage } from "./routes/integrations";
-import { MembersPage } from "./routes/members";
-import { OverviewPage } from "./routes/overview";
-import { PlaceholderPage } from "./routes/placeholder";
-import { ProjectsPage } from "./routes/projects";
 import { PendingShell, RouteError } from "./routes/route-states";
+
+// Screens load on demand so the first paint ships only the shell, sign-in and the router.
+const OverviewPage = lazyRouteComponent(() => import("./routes/overview"), "OverviewPage");
+const PlaceholderPage = lazyRouteComponent(() => import("./routes/placeholder"), "PlaceholderPage");
+const SCREENS = {
+  "/projects": lazyRouteComponent(() => import("./routes/projects"), "ProjectsPage"),
+  "/api-keys": lazyRouteComponent(() => import("./routes/api-keys"), "ApiKeysPage"),
+  "/members": lazyRouteComponent(() => import("./routes/members"), "MembersPage"),
+  "/customers": lazyRouteComponent(() => import("./routes/customers"), "CustomersPage"),
+  "/integrations": lazyRouteComponent(() => import("./routes/integrations"), "IntegrationsPage"),
+};
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -75,12 +81,7 @@ function buildRouteTree() {
   });
 
   const overviewRoute = createRoute({ getParentRoute: () => appRoute, path: "/", component: OverviewPage });
-  const screens: Record<string, () => React.JSX.Element> = {
-    "/projects": ProjectsPage,
-    "/api-keys": ApiKeysPage,
-    "/members": MembersPage,
-    "/integrations": IntegrationsPage,
-  };
+  const screens: Record<string, typeof OverviewPage> = SCREENS;
   const screenRoutes = Object.entries(screens).map(([path, component]) =>
     createRoute({ getParentRoute: () => appRoute, path, component }),
   );

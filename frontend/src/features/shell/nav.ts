@@ -51,8 +51,8 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
       to: "/customers",
       label: "Customers",
       icon: Users,
-      scope: "planned",
-      summary: "Look up customers, their payment methods and their history.",
+      scope: "implemented",
+      summary: "Find customers by your own reference and keep their identity data tidy.",
     },
   ],
   [
@@ -129,7 +129,7 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
       to: "/members",
       label: "Members",
       icon: UserCog,
-      scope: "planned",
+      scope: "implemented",
       summary: "See who can access the project and what each role allows.",
     },
     {

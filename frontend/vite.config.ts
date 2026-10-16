@@ -20,13 +20,16 @@ export default defineConfig({
     proxy: {
       "/v1": proxy,
       "/health": proxy,
-      // Legacy prefix from the scaffold (docs/DEVELOPMENT.md): /api/x -> /x.
-      "/api": { ...proxy, rewrite: (path) => path.replace(/^\/api/, "") },
+      // Legacy prefix from the scaffold (docs/DEVELOPMENT.md): /api/x -> /x. Anchored with a slash so the SPA route
+      // /api-keys is not swallowed (a bare "/api" key matches by prefix and a hard reload got the API's 404).
+      "^/api/": { ...proxy, rewrite: (path) => path.replace(/^\/api/, "") },
     },
   },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
     css: false,
+    // Screens are lazy chunks; the first import of each is transformed on demand and can be slow in the container.
+    testTimeout: 20_000,
   },
 });

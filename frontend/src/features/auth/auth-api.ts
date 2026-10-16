@@ -1,5 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 
+import {
+  demoLoginV1AuthDemoLoginPost,
+  demoOperatorsV1AuthDemoOperatorsGet,
+} from "../../api/generated/endpoints/auth/auth";
+import type { DemoOperatorOut } from "../../api/generated/model";
 import { apiFetch, clearCsrfToken, setCsrfToken } from "../../lib/api";
 
 export interface Operator {
@@ -63,3 +68,30 @@ export const meQueryOptions = queryOptions({
   staleTime: 60_000,
   retry: false,
 });
+
+// ---- demo mode ------------------------------------------------------------------------------------------
+
+/**
+ * Operators the evaluation environment lets you sign in as (no password). The endpoint answers 404 when demo
+ * login is off; any failure is treated as "no demo", so the regular password form is shown instead.
+ */
+export const demoOperatorsQueryOptions = queryOptions({
+  queryKey: ["auth", "demo-operators"],
+  queryFn: async ({ signal }): Promise<DemoOperatorOut[]> => {
+    try {
+      const response = await demoOperatorsV1AuthDemoOperatorsGet({ signal });
+      return response.operators;
+    } catch {
+      return [];
+    }
+  },
+  staleTime: 5 * 60_000,
+  retry: false,
+});
+
+/** Signs in as a demo operator; afterwards the session is indistinguishable from a password login. */
+export async function demoLogin(operatorId: string): Promise<LoginResponse> {
+  const response = await demoLoginV1AuthDemoLoginPost({ operator_id: operatorId });
+  setCsrfToken(response.csrf_token);
+  return response;
+}

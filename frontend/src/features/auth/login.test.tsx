@@ -1,12 +1,34 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCsrfToken } from "../../lib/api";
 import { expectNoAxeViolations } from "../../test/axe";
+import { overviewData } from "../../test/console-mocks";
 import { json, ME, mockApi, renderApp, resetApiState } from "../../test/harness";
 
 const unauthenticated = () => json(401, { type: "about:blank", title: "Unauthorized", status: 401 });
+/** The API answers 404 when demo login is switched off: the page must fall back to the password form. */
+const noDemo = () => json(404, { type: "about:blank", title: "Not Found", status: 404 });
+const DEMO = "GET /v1/auth/demo-operators";
+
+const DEMO_OPERATORS = [
+  {
+    id: "op-1",
+    email: "ana@example.test",
+    display_name: "Ana Souza",
+    memberships: [
+      { project_id: "p-1", project_name: "Acme Payments", role: "owner" },
+      { project_id: "p-2", project_name: "Beta Billing", role: "viewer" },
+    ],
+  },
+  {
+    id: "op-2",
+    email: "bruno@example.test",
+    display_name: "Bruno Lima",
+    memberships: [{ project_id: "p-1", project_name: "Acme Payments", role: "finance" }],
+  },
+];
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, password = "correct horse") {
   await user.type(await screen.findByLabelText("Email"), "ana@example.test");
@@ -19,10 +41,10 @@ describe("login page", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("has no axe violations and a labelled form", async () => {
-    mockApi({ "GET /v1/auth/me": unauthenticated });
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: noDemo });
     const { container } = renderApp("/login");
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
+    expect(await screen.findByLabelText("Email")).toHaveAttribute("type", "email");
     expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
     await expectNoAxeViolations(container);
   });
@@ -31,11 +53,13 @@ describe("login page", () => {
     let signedIn = false;
     const { calls } = mockApi({
       "GET /v1/auth/me": () => (signedIn ? json(200, ME) : unauthenticated()),
+      [DEMO]: noDemo,
       "POST /v1/auth/login": ({ init }) => {
         signedIn = true;
         expect(JSON.parse(String(init.body))).toEqual({ email: "ana@example.test", password: "correct horse" });
         return json(200, { operator: ME.operator, csrf_token: "csrf-from-login" });
       },
+      ...overviewData("p-1"),
       "GET /health/live": () => json(200, { status: "live" }),
       "GET /health/ready": () => json(200, { status: "ready" }),
     });
@@ -54,6 +78,7 @@ describe("login page", () => {
     let signedIn = false;
     mockApi({
       "GET /v1/auth/me": () => (signedIn ? json(200, ME) : unauthenticated()),
+      [DEMO]: noDemo,
       "POST /v1/auth/login": () => {
         signedIn = true;
         return json(200, { operator: ME.operator, csrf_token: "t" });
@@ -72,6 +97,7 @@ describe("login page", () => {
   it("shows a credentials error without leaking which field was wrong", async () => {
     mockApi({
       "GET /v1/auth/me": unauthenticated,
+      [DEMO]: noDemo,
       "POST /v1/auth/login": () => json(401, { title: "Invalid credentials" }),
     });
     const user = userEvent.setup();
@@ -88,6 +114,7 @@ describe("login page", () => {
   it("locks the form for Retry-After seconds after a 429, then re-enables it", async () => {
     mockApi({
       "GET /v1/auth/me": unauthenticated,
+      [DEMO]: noDemo,
       "POST /v1/auth/login": () => json(429, { title: "Too many attempts" }, { "Retry-After": "2" }),
     });
     const user = userEvent.setup();
@@ -105,6 +132,7 @@ describe("login page", () => {
   it("explains a network failure", async () => {
     mockApi({
       "GET /v1/auth/me": unauthenticated,
+      [DEMO]: noDemo,
       "POST /v1/auth/login": () => {
         throw new TypeError("Failed to fetch");
       },
@@ -116,10 +144,11 @@ describe("login page", () => {
   });
 
   it("is operable by keyboard alone, with visible focus styles on the controls", async () => {
-    mockApi({ "GET /v1/auth/me": unauthenticated });
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: noDemo });
     const user = userEvent.setup();
     renderApp("/login");
     await screen.findByRole("heading", { name: "Sign in" });
+    await screen.findByLabelText("Email");
 
     await user.tab();
     expect(screen.getByLabelText("Email")).toHaveFocus();
@@ -133,5 +162,90 @@ describe("login page", () => {
     mockApi({ "GET /v1/auth/me": () => json(200, ME), "GET /health/live": () => json(200, {}) });
     const { router } = renderApp("/login");
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+});
+
+describe("demo operator picker", () => {
+  beforeEach(resetApiState);
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("lists the personas with their project roles and says it is demo mode", async () => {
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: () => json(200, { operators: DEMO_OPERATORS }) });
+    const { container } = renderApp("/login");
+
+    expect(await screen.findByText(/Demo mode - choose a persona; no password needed/)).toBeInTheDocument();
+    const list = screen.getByRole("list", { name: "Demo operators" });
+    expect(within(list).getByRole("heading", { name: "Ana Souza" })).toBeInTheDocument();
+    expect(within(list).getByText("bruno@example.test")).toBeInTheDocument();
+    const anaProjects = within(list).getByRole("list", { name: "Projects of Ana Souza" });
+    expect(within(anaProjects).getByText("owner")).toBeInTheDocument();
+    expect(within(anaProjects).getByText("viewer")).toBeInTheDocument();
+    expect(within(within(list).getByRole("list", { name: "Projects of Bruno Lima" })).getByText("finance")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue as Bruno Lima" })).toBeEnabled();
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+
+  it("signs in as the chosen persona and lands on the overview like a password login", async () => {
+    let signedIn = false;
+    const { calls } = mockApi({
+      "GET /v1/auth/me": () => (signedIn ? json(200, ME) : unauthenticated()),
+      [DEMO]: () => json(200, { operators: DEMO_OPERATORS }),
+      "POST /v1/auth/demo-login": ({ init }) => {
+        signedIn = true;
+        expect(JSON.parse(String(init.body))).toEqual({ operator_id: "op-1" });
+        return json(200, { operator: ME.operator, csrf_token: "csrf-from-demo" });
+      },
+      ...overviewData("p-1"),
+      "GET /health/live": () => json(200, { status: "live" }),
+    });
+    const user = userEvent.setup();
+    const { router } = renderApp("/login");
+    await user.click(await screen.findByRole("button", { name: "Continue as Ana Souza" }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    // The session is read back from /me, which is also where the CSRF token comes from.
+    expect(getCsrfToken()).toBe("csrf-from-me");
+    expect(calls.filter((call) => call.key === "POST /v1/auth/demo-login")).toHaveLength(1);
+    expect(JSON.stringify(window.localStorage)).not.toContain("csrf");
+  });
+
+  it("falls back to the password form when demo login is switched off", async () => {
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: noDemo });
+    renderApp("/login");
+    expect(await screen.findByLabelText("Email")).toBeInTheDocument();
+    expect(screen.queryByText(/Demo mode/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Demo operators" })).not.toBeInTheDocument();
+  });
+
+  it("falls back to the password form when the persona list cannot be loaded", async () => {
+    mockApi({ "GET /v1/auth/me": unauthenticated });
+    renderApp("/login");
+    expect(await screen.findByLabelText("Email")).toBeInTheDocument();
+  });
+
+  it("switches to the password form when demo login stops working, and says so", async () => {
+    mockApi({
+      "GET /v1/auth/me": unauthenticated,
+      [DEMO]: () => json(200, { operators: DEMO_OPERATORS }),
+      "POST /v1/auth/demo-login": noDemo,
+    });
+    const user = userEvent.setup();
+    renderApp("/login");
+    await user.click(await screen.findByRole("button", { name: "Continue as Bruno Lima" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Demo sign-in isn't available. Use your email and password.");
+    expect(await screen.findByLabelText("Email")).toBeInTheDocument();
+  });
+
+  it("lets the operator choose the password form and come back to the personas", async () => {
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: () => json(200, { operators: DEMO_OPERATORS }) });
+    const user = userEvent.setup();
+    renderApp("/login");
+    await user.click(await screen.findByRole("button", { name: "Use email and password instead" }));
+    expect(await screen.findByLabelText("Password")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back to demo personas" }));
+    expect(await screen.findByRole("list", { name: "Demo operators" })).toBeInTheDocument();
   });
 });

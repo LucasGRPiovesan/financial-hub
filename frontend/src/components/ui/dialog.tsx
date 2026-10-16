@@ -38,7 +38,7 @@ export function DialogContent({ className, children, ...props }: ComponentProps<
       <Overlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 animate-pop-in flex-col gap-4 rounded-lg border border-line bg-surface p-6 text-ink shadow-overlay",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain max-w-md -translate-x-1/2 -translate-y-1/2 animate-pop-in flex-col gap-4 rounded-lg border border-line bg-surface p-6 text-ink shadow-overlay",
           className,
         )}
         {...props}
@@ -88,7 +88,16 @@ export function DialogHeader({ className, ...props }: HTMLAttributes<HTMLDivElem
 }
 
 export function DialogFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props} />;
+  // Sticks to the bottom of a dialog that scrolls, so the actions stay reachable on short viewports.
+  return (
+    <div
+      className={cn(
+        "sticky bottom-0 -mx-6 -mb-6 flex flex-col-reverse gap-2 border-t border-line bg-surface px-6 py-4 sm:flex-row sm:justify-end",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function DialogTitle({ className, ...props }: ComponentProps<typeof DialogPrimitive.Title>) {
