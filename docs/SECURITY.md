@@ -13,6 +13,7 @@ Internet → API (products with API keys; operators with sessions) · Provider �
 | Area | Control |
 |---|---|
 | Operator auth | Argon2id (OWASP params), server-side sessions in Postgres, `HttpOnly; Secure; SameSite=Lax` cookie, rotation on login, idle + absolute timeout, CSRF token header on unsafe methods, login throttling |
+| Demo login | Off by default (`FH_DEMO_LOGIN`); evaluation only: lets any visitor open a session as any active operator without a password. Must never be enabled in production; the API logs a WARNING at startup when it is on, and each use is audited as `operator.login_succeeded` with `method: demo`. |
 | Authorization | RBAC roles `owner`, `admin`, `finance`, `viewer` per project; each route declares a permission; a test fails if a route lacks one |
 | Money movement (maker-checker) | **Mandatory four-eyes** for refunds, payouts, ledger adjustments (R12/R13), unapplied-cash resolution and any manifest version that changes splits or prices: requester ≠ approver, approval bound to the exact payload hash, re-authentication (password step-up) on approve. TOTP for operators is *Planned* |
 | Provider data trust | Webhooks are notifications only: project binding check (`intent.project == provider_account.project`), refetch from the provider before any posting, amounts never taken from the body (ADR-0012) |
@@ -63,6 +64,14 @@ Internet → API (products with API keys; operators with sessions) · Provider �
 ### 3.4 Tests that guard this
 
 `tests/integration/isolation` enumerates every served route containing `{project_id}` and proves that neither the owner session nor an all-scopes API key of project A can reach project B: always `404`, identical to the answer for a project that does not exist, with nothing of B changed. `tests/integration/projects` and `tests/integration/providers` cover key display-once, no plaintext in any table, wrong/revoked/expired/foreign keys, scopes, AES-GCM tampering (ciphertext, nonce, associated data), key rotation, log scrubbing, database privileges and the `0003 <-> 0004` migration round trip.
+
+
+### 3.5 Customer documents (CPF/CNPJ)
+
+- **Storage.** The document is validated (check digits), normalised to digits and stored only as `document_hash`, `document_ciphertext`, `document_last4`. The hash is HMAC-SHA256 under a subkey derived from the API-key pepper (`HMAC(pepper, "financial-hub/customer-document-hash/v1")`): it lets two projects recognise the same person without storing the number. The ciphertext is AES-GCM with associated data `customer|<fcus id>`, so a ciphertext copied to another row does not open. Only `customers.infrastructure.document_vault` decrypts (import-linter contract); no route does.
+- **Exposure.** Responses show `document_masked` (last digits) only, never the document, `fcus_` ids or other projects' identities. Logs, events, audit diffs (`REDACTED` markers) and `external_ref`-keyed payloads carry ids and field names only; tests assert this against captured logs and the events/audit tables.
+- **Erasure.** `POST .../customers/{id}/anonymize` (operators only, `customers:manage`) wipes the identity's name, contact data and metadata; the universal record is wiped when no live identity points to it. Rows stay (the ledger references them); the ledger is untouched. API keys scoped `customers:write` map to `customers:manage`.
+- **Known gaps.** Rotating the pepper breaks cross-project recognition until documents are re-hashed; `external_ref` is chosen by the client and must not contain PII; erasure at the provider is a later task.
 
 ## 4. Out of scope (portfolio)
 PCI DSS scope (no card data touches the hub — Asaas hosted checkout/tokenization only), KMS/HSM integration (*Planned*), SSO/OIDC for operators (*Planned*).

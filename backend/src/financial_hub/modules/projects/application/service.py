@@ -120,6 +120,10 @@ class ProjectService:
             rows, params.limit, _view, lambda row: Cursor(created_at=row.created_at, id=row.id)
         )
 
+    async def find_by_slug(self, slug: str) -> ProjectView | None:
+        project = await repository.get_project_by_slug(self._uow.session, slug)
+        return None if project is None else _view(project)
+
     async def get(self, project_id: UUID) -> ProjectView:
         project = await repository.get_project(self._uow.session, project_id)
         if project is None:

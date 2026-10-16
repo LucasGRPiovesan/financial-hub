@@ -23,6 +23,7 @@ class Role(StrEnum):
 class Permission(StrEnum):
     PROJECTS_READ = "projects:read"
     PROJECTS_MANAGE = "projects:manage"
+    MEMBERS_READ = "members:read"
     MEMBERS_MANAGE = "members:manage"
     API_KEYS_MANAGE = "api_keys:manage"
     CUSTOMERS_READ = "customers:read"

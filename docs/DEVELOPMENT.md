@@ -152,6 +152,27 @@ Then sign in through the web app or `POST /v1/auth/login`; the session is the `f
 (HttpOnly, SameSite=Lax, `Secure` outside `FH_APP_ENV=dev`) and unsafe requests must send the
 `X-CSRF-Token` returned by login and `GET /v1/auth/me`.
 
+## Demo mode
+
+For evaluation, the console can sign in by picking an operator instead of typing a password.
+
+1. Enable it: `FH_DEMO_LOGIN=true` (already set for the `api` service in `deploy/compose.yaml`;
+   off by default everywhere else). The API logs a WARNING at startup when it is on.
+2. Seed the demo workspace (idempotent; random passwords are never printed, so password login
+   stays unusable for these operators):
+
+   ```bash
+   docker compose run --rm api python -m financial_hub.cli seed-demo
+   ```
+
+   This creates project "Demo Store" (`demo-store`) with Ana Owner (owner), Bruno Admin (admin),
+   Carla Finance (finance) and Diego Viewer (viewer), e.g. `ana@demo.financial-hub.local`.
+3. Open the console (http://localhost:5173), choose an operator on the sign-in screen
+   (`GET /v1/auth/demo-operators`, `POST /v1/auth/demo-login`). The session, cookie and CSRF
+   token are the same as after a password login.
+
+Never enable this in production: it hands any visitor any operator's session (docs/SECURITY.md).
+
 ## Images
 
 - `backend/Dockerfile`: targets `dev` (full deps incl. dev group, `--reload`) and `runtime` (production deps only,

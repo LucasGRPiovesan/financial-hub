@@ -277,6 +277,7 @@ source_modules = [
 forbidden_modules = ["financial_hub.platform.crypto.unseal"]
 ignore_imports = [
     "financial_hub.modules.projects.infrastructure.credentials_vault -> financial_hub.platform.crypto.unseal",
+    "financial_hub.modules.customers.infrastructure.document_vault -> financial_hub.platform.crypto.unseal",
 ]
 allow_indirect_imports = true
 
@@ -290,4 +291,35 @@ source_modules = [
     "financial_hub.main",
 ]
 forbidden_modules = ["financial_hub.modules.projects.infrastructure.credentials_vault"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "5. customer documents are opened only by the document vault"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.customers.application",
+    "financial_hub.modules.customers.api",
+    "financial_hub.modules.customers.domain",
+    "financial_hub.main",
+]
+forbidden_modules = ["financial_hub.modules.customers.infrastructure.document_vault"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. customers is reached by other modules only through application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.events",
+    "financial_hub.modules.audit",
+]
+forbidden_modules = [
+    "financial_hub.modules.customers.api",
+    "financial_hub.modules.customers.domain",
+    "financial_hub.modules.customers.infrastructure",
+    "financial_hub.modules.customers.application.service",
+    "financial_hub.modules.customers.application.events",
+]
 allow_indirect_imports = true

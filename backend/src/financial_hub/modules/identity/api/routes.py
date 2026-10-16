@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from financial_hub.modules.audit.application import AuditContext, request_audit_context
 from financial_hub.modules.identity.application.service import (
     AuthService,
+    DemoOperatorView,
     IdentityConfig,
     MeView,
     OperatorPrincipal,
@@ -27,7 +28,8 @@ from financial_hub.platform.http.auth import public as public_access
 from financial_hub.platform.http.protection.rate_limit import AuthAttempt
 from financial_hub.platform.settings import Settings
 from financial_hub.shared.clock import Clock
-from financial_hub.shared.errors import Forbidden
+from financial_hub.shared.errors import FieldError, Forbidden, NotFound, ValidationFailed
+from financial_hub.shared.ids import IdPrefix, InvalidIdError, parse_id
 
 SESSION_COOKIE: Final = "fh_session"
 CSRF_HEADER: Final = "X-CSRF-Token"
@@ -218,3 +220,86 @@ async def change_password(
         audit=audit,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- demo login (FH_DEMO_LOGIN) -------------------------------------------------------------------
+# Always registered so the OpenAPI schema (and the generated client) is the same in every mode;
+# when the flag is off the guard answers 404 before the body, rate limit or session code runs.
+
+
+def _demo_login_enabled(request: Request) -> None:
+    settings: Settings = request.app.state.settings
+    if not settings.demo_login:
+        raise NotFound("Not Found")
+
+
+demo_router = APIRouter(
+    prefix="/v1/auth", tags=["auth"], dependencies=[Depends(_demo_login_enabled)]
+)
+
+
+class DemoLoginRequest(BaseModel):
+    operator_id: str = Field(min_length=1, max_length=100)
+
+
+class DemoOperatorOut(BaseModel):
+    id: str
+    email: str
+    display_name: str
+    memberships: list[MembershipOut]
+
+    @classmethod
+    def of(cls, view: DemoOperatorView) -> DemoOperatorOut:
+        return cls(
+            id=view.operator.id,
+            email=view.operator.email,
+            display_name=view.operator.display_name,
+            memberships=[
+                MembershipOut(
+                    project_id=item.project_id, project_name=item.project_name, role=item.role
+                )
+                for item in view.memberships
+            ],
+        )
+
+
+class DemoOperatorsResponse(BaseModel):
+    operators: list[DemoOperatorOut]
+
+
+@demo_router.get("/demo-operators", dependencies=[public_access()])
+async def demo_operators(service: Service) -> DemoOperatorsResponse:
+    return DemoOperatorsResponse(
+        operators=[DemoOperatorOut.of(view) for view in await service.demo_operators()]
+    )
+
+
+@demo_router.post("/demo-login", dependencies=[public_access()])
+async def demo_login(
+    body: DemoLoginRequest,
+    request: Request,
+    response: Response,
+    service: Service,
+    audit: AuditCtx,
+    _attempt: AuthAttempt,
+) -> LoginResponse:
+    try:
+        operator_id = parse_id(body.operator_id, IdPrefix.OPERATOR)
+    except InvalidIdError:
+        raise ValidationFailed(
+            "The request contains invalid fields.",
+            errors=[
+                FieldError(pointer="/operator_id", detail="not an operator id", code="invalid")
+            ],
+        ) from None
+    result = await service.demo_login(
+        operator_id=operator_id,
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        presented_token=request.cookies.get(SESSION_COOKIE),
+        audit=audit,
+    )
+    config: IdentityConfig = request.app.state.identity_config
+    max_age = int(config.session.absolute_timeout.total_seconds())
+    _set_session_cookie(request, response, result.session_token, max_age)
+    return LoginResponse(operator=OperatorOut.of(result.operator), csrf_token=result.csrf_token)

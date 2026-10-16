@@ -63,6 +63,7 @@ services:
     environment:
       <<: *backend-env
       FH_DATABASE_URL: *app-database-url
+      FH_DEMO_LOGIN: "true" # dev only: password-less operator picker (docs/SECURITY.md)
     ports:
       - "${API_PORT:-8000}:8000"
     cpus: 1.5

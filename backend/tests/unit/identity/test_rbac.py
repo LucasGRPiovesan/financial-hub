@@ -44,3 +44,12 @@ def test_permission_strings_are_area_colon_action() -> None:
     for permission in Permission:
         area, _, action = permission.value.partition(":")
         assert area and action in {"read", "manage", "adjust", "refund"}
+
+
+def test_members_are_readable_by_every_role_but_managed_by_owner_and_admin_only() -> None:
+    for role in Role:
+        assert Permission.MEMBERS_READ in permissions_for(role)
+    assert Permission.MEMBERS_MANAGE in permissions_for(Role.OWNER)
+    assert Permission.MEMBERS_MANAGE in permissions_for(Role.ADMIN)
+    assert Permission.MEMBERS_MANAGE not in permissions_for(Role.FINANCE)
+    assert Permission.MEMBERS_MANAGE not in permissions_for(Role.VIEWER)

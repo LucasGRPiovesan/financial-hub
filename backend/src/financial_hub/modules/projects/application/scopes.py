@@ -38,6 +38,7 @@ SCOPE_PERMISSIONS: Final[Mapping[ApiKeyScope, frozenset[str]]] = MappingProxyTyp
 ADMIN_ONLY: Final = frozenset(
     {
         Permission.API_KEYS_MANAGE.value,
+        Permission.MEMBERS_READ.value,
         Permission.MEMBERS_MANAGE.value,
         Permission.INTEGRATIONS_READ.value,
         Permission.INTEGRATIONS_MANAGE.value,

@@ -71,6 +71,7 @@ from financial_hub.shared.errors import (
     Conflict,
     FieldError,
     Forbidden,
+    NotFound,
     RateLimited,
     Unauthorized,
     ValidationFailed,
@@ -83,6 +84,7 @@ OPERATOR_PRINCIPAL: Final = "operator"
 INVALID_CREDENTIALS: Final = "Invalid email or password."
 TOO_MANY_ATTEMPTS: Final = "Too many login attempts. Try again later."
 UNKNOWN_IP: Final = "unknown"
+DEMO_OPERATORS_MAX: Final = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +126,12 @@ class MembershipView:
     project_id: str
     project_name: str
     role: str
+
+
+@dataclass(frozen=True, slots=True)
+class DemoOperatorView:
+    operator: OperatorView
+    memberships: list[MembershipView]
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,19 +298,8 @@ class AuthService:
         )
 
         # 3. Success: reset counters, rotate the session.
-        token, raw = tokens.new_session_token()
-        csrf_token = tokens.csrf_token_for(raw)
-        idle_expires_at, absolute_expires_at = self._config.session.expiries(now)
-        record = Session(
-            id=tokens.session_id(raw),
-            operator_id=operator.id,
-            csrf_token_hash=tokens.csrf_token_hash(csrf_token),
-            created_at=now,
-            last_seen_at=now,
-            idle_expires_at=idle_expires_at,
-            absolute_expires_at=absolute_expires_at,
-            revoked_at=None,
-        )
+        token, csrf_token, record = self._mint_session(operator.id, now)
+        absolute_expires_at = record.absolute_expires_at
         async with self._uow() as uow:
             session = uow.session
             current = await repository.get_operator(session, operator.id, for_update=True)
@@ -324,11 +321,8 @@ class AuthService:
                     await repository.rehash_password(
                         session, current.id, old_hash=current.password_hash, new_hash=new_hash
                     )
-                old = tokens.parse_session_token(presented_token)
-                if old is not None:
-                    await repository.revoke_session(session, tokens.session_id(old), now)
-                await repository.insert_session(
-                    session, record, user_agent=_user_agent(user_agent), ip=address
+                await self._open_session(
+                    session, record, presented_token, user_agent=user_agent, ip=address
                 )
                 await AuditRecorder.record(
                     session,
@@ -347,6 +341,107 @@ class AuthService:
             session_token=token,
             csrf_token=csrf_token,
             expires_at=absolute_expires_at,
+        )
+
+    def _mint_session(self, operator_id: UUID, now: datetime) -> tuple[str, str, Session]:
+        """A fresh random cookie token, its CSRF token and the (unsaved) session record."""
+        token, raw = tokens.new_session_token()
+        csrf_token = tokens.csrf_token_for(raw)
+        idle_expires_at, absolute_expires_at = self._config.session.expiries(now)
+        record = Session(
+            id=tokens.session_id(raw),
+            operator_id=operator_id,
+            csrf_token_hash=tokens.csrf_token_hash(csrf_token),
+            created_at=now,
+            last_seen_at=now,
+            idle_expires_at=idle_expires_at,
+            absolute_expires_at=absolute_expires_at,
+            revoked_at=None,
+        )
+        return token, csrf_token, record
+
+    async def _open_session(
+        self,
+        session: AsyncSession,
+        record: Session,
+        presented_token: str | None,
+        *,
+        user_agent: str | None,
+        ip: str | None,
+    ) -> None:
+        """Store ``record`` and revoke the session of the cookie the client presented."""
+        old = tokens.parse_session_token(presented_token)
+        if old is not None:
+            await repository.revoke_session(session, tokens.session_id(old), self._clock.now())
+        await repository.insert_session(session, record, user_agent=_user_agent(user_agent), ip=ip)
+
+    # --- demo login (FH_DEMO_LOGIN; evaluation only) -------------------------------------------
+
+    async def demo_operators(self) -> list[DemoOperatorView]:
+        """Active operators with their memberships, for the demo operator picker."""
+        async with self._uow() as uow:
+            session = uow.session
+            operators = await repository.list_active_operators(session, limit=DEMO_OPERATORS_MAX)
+            rows = await repository.memberships_of(session, [item.id for item in operators])
+            names = await project_names(session, {row.project_id for row in rows})
+        by_operator: dict[UUID, list[MembershipView]] = {}
+        for row in rows:
+            by_operator.setdefault(row.operator_id, []).append(
+                MembershipView(
+                    project_id=format_id(IdPrefix.PROJECT, row.project_id),
+                    project_name=names.get(row.project_id, ""),
+                    role=row.role.value,
+                )
+            )
+        return [
+            DemoOperatorView(
+                operator=_operator_view(item),
+                memberships=sorted(
+                    by_operator.get(item.id, []),
+                    key=lambda membership: (
+                        membership.project_name.casefold(),
+                        membership.project_id,
+                    ),
+                ),
+            )
+            for item in operators
+        ]
+
+    async def demo_login(
+        self,
+        *,
+        operator_id: UUID,
+        ip: str | None,
+        user_agent: str | None,
+        presented_token: str | None = None,
+        audit: AuditContext | None = None,
+    ) -> LoginResult:
+        """Open a session for an active operator without a password (same session as login)."""
+        audit = audit or AuditContext.system()
+        now = self._clock.now()
+        token, csrf_token, record = self._mint_session(operator_id, now)
+        async with self._uow() as uow:
+            session = uow.session
+            operator = await repository.get_operator(session, operator_id, for_update=True)
+            if operator is None or operator.status is not OperatorStatus.ACTIVE:
+                raise NotFound("Operator not found.")
+            await self._open_session(
+                session, record, presented_token, user_agent=user_agent, ip=_client_ip(ip)
+            )
+            await AuditRecorder.record(
+                session,
+                actor=audit.acting(_operator_actor(operator.id)),
+                action="operator.login_succeeded",
+                target=AuditTarget("operator", format_id(IdPrefix.OPERATOR, operator.id)),
+                diff={"method": "demo"},
+            )
+        operator_view = _operator_view(operator)
+        logger.warning("auth.demo_login_succeeded", operator_id=operator_view.id)
+        return LoginResult(
+            operator=operator_view,
+            session_token=token,
+            csrf_token=csrf_token,
+            expires_at=record.absolute_expires_at,
         )
 
     async def _record_failure(

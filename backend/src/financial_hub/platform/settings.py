@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     login_ip_max_attempts: int = Field(default=30, gt=0)
     login_ip_window_minutes: int = Field(default=15, gt=0)
 
+    # Demo login (docs/SECURITY.md): lets any visitor open a session as any active operator without
+    # a password. Evaluation only; off by default and never enabled in production.
+    demo_login: bool = False
+
     # Idempotency-Key (ADR-0004): how long a key is remembered, and the largest response body
     # stored for replay (bigger ones are recorded without a body, see docs/ARCHITECTURE.md).
     idempotency_ttl_hours: int = Field(default=24, gt=0)

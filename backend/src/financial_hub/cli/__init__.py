@@ -1,6 +1,7 @@
 """Administrative command line: ``python -m financial_hub.cli <command>``.
 
-``create-operator`` bootstraps an operator (and optionally a first project it owns). The password
+``seed-demo`` creates the idempotent demo workspace (``cli.demo``). ``create-operator`` bootstraps
+an operator (and optionally a first project it owns). The password
 is read from ``FH_BOOTSTRAP_PASSWORD`` or an interactive prompt, never from argv, where it would
 leak into shell history and process listings.
 """
@@ -16,6 +17,7 @@ from typing import Final, TextIO
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from financial_hub.cli.demo import SeedResult, seed_demo
 from financial_hub.modules.identity.application.service import (
     OperatorView,
     PasswordHasher,
@@ -102,6 +104,10 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--display-name", required=True)
     create.add_argument("--project-slug", help="also create this project, owned by the operator")
     create.add_argument("--project-name", help="name of the project (with --project-slug)")
+    commands.add_parser(
+        "seed-demo",
+        help="create the demo project and one operator per role (idempotent)",
+    )
     return parser
 
 
@@ -126,6 +132,32 @@ def _describe(error: DomainError) -> str:
     return "\n".join(lines)
 
 
+async def _run_seed_demo() -> SeedResult:
+    engine = create_engine(get_settings())
+    try:
+        return await seed_demo(create_session_factory(engine))
+    finally:
+        await engine.dispose()
+
+
+def _seed_demo(out: TextIO, err: TextIO) -> int:
+    try:
+        result = asyncio.run(_run_seed_demo())
+    except DomainError as error:
+        print(f"error: {_describe(error)}", file=err)
+        return 1
+    if not result.changed:
+        print("demo workspace already seeded; nothing to do", file=out)
+        return 0
+    print(
+        f"seeded demo workspace: project created={result.project_created}, "
+        f"operators created={result.operators_created}, "
+        f"memberships created={result.memberships_created}",
+        file=out,
+    )
+    return 0
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -137,6 +169,8 @@ def main(
     err = stderr or sys.stderr
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command == "seed-demo":
+        return _seed_demo(out, err)
     if (args.project_slug is None) != (args.project_name is None):
         parser.error("--project-slug and --project-name must be given together")
     try:

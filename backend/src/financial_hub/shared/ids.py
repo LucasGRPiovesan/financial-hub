@@ -17,7 +17,8 @@ _DECODE: Final[dict[str, int]] = {char: value for value, char in enumerate(ALPHA
 class IdPrefix(StrEnum):
     """Registry of entity prefixes. Adding one is cheap; renaming one breaks every stored id."""
 
-    CUSTOMER = "cus"
+    CUSTOMER = "cus"  # a project-private customer identity (what API callers see)
+    FINANCIAL_CUSTOMER = "fcus"  # the universal customer; never leaves the platform
     CUSTOMER_IDENTITY = "cid"
     PROJECT = "prj"
     API_KEY = "key"

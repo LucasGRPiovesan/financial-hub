@@ -66,3 +66,11 @@ def test_database_url_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_get_settings_is_cached() -> None:
     assert get_settings() is get_settings()
+
+
+def test_demo_login_is_off_by_default_and_read_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert make().demo_login is False
+    monkeypatch.setenv("FH_DEMO_LOGIN", "true")
+    assert make().demo_login is True

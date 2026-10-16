@@ -24,6 +24,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DemoLoginRequest,
+  DemoOperatorsResponse,
   LoginRequest,
   LoginResponse,
   MeResponse,
@@ -53,6 +55,193 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getDemoLoginV1AuthDemoLoginPostUrl = () => {
+
+
+
+
+  return `/v1/auth/demo-login`
+}
+
+/**
+ * @summary Demo Login
+ */
+export const demoLoginV1AuthDemoLoginPost = async (demoLoginRequest: DemoLoginRequest, options?: Parameters<typeof apiMutator>[1]): Promise<LoginResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiMutator<LoginResponse>(getDemoLoginV1AuthDemoLoginPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(demoLoginRequest)
+  }
+);}
+
+
+
+
+
+export const getDemoLoginV1AuthDemoLoginPostMutationKey = () => ['demoLoginV1AuthDemoLoginPost'] as const;
+
+export const getDemoLoginV1AuthDemoLoginPostMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof demoLoginV1AuthDemoLoginPost>>, TError,DemoLoginV1AuthDemoLoginPostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof demoLoginV1AuthDemoLoginPost>>, TError,DemoLoginV1AuthDemoLoginPostMutationVariables, TContext> => {
+
+const mutationKey = getDemoLoginV1AuthDemoLoginPostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof demoLoginV1AuthDemoLoginPost>>, DemoLoginV1AuthDemoLoginPostMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  demoLoginV1AuthDemoLoginPost(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DemoLoginV1AuthDemoLoginPostMutationResult = NonNullable<Awaited<ReturnType<typeof demoLoginV1AuthDemoLoginPost>>>
+    export type DemoLoginV1AuthDemoLoginPostMutationBody = DemoLoginRequest
+    export type DemoLoginV1AuthDemoLoginPostMutationError = ErrorType<Problem>
+    export type DemoLoginV1AuthDemoLoginPostMutationVariables = {data: DemoLoginRequest}
+
+    /**
+ * @summary Demo Login
+ */
+export const useDemoLoginV1AuthDemoLoginPost = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof demoLoginV1AuthDemoLoginPost>>, TError,DemoLoginV1AuthDemoLoginPostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof demoLoginV1AuthDemoLoginPost>>,
+        TError,
+        DemoLoginV1AuthDemoLoginPostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDemoLoginV1AuthDemoLoginPostMutationOptions(options), queryClient);
+    }
+    export const getDemoOperatorsV1AuthDemoOperatorsGetUrl = () => {
+
+
+
+
+  return `/v1/auth/demo-operators`
+}
+
+/**
+ * @summary Demo Operators
+ */
+export const demoOperatorsV1AuthDemoOperatorsGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<DemoOperatorsResponse> => {
+
+  return apiMutator<DemoOperatorsResponse>(getDemoOperatorsV1AuthDemoOperatorsGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDemoOperatorsV1AuthDemoOperatorsGetQueryKey = () => {
+    return [
+    `/v1/auth/demo-operators`
+    ] as const;
+    }
+
+
+export const getDemoOperatorsV1AuthDemoOperatorsGetQueryOptions = <TData = Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError = ErrorType<Problem>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDemoOperatorsV1AuthDemoOperatorsGetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>> = ({ signal }) => demoOperatorsV1AuthDemoOperatorsGet({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DemoOperatorsV1AuthDemoOperatorsGetQueryResult = NonNullable<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>>
+export type DemoOperatorsV1AuthDemoOperatorsGetQueryError = ErrorType<Problem>
+
+
+export function useDemoOperatorsV1AuthDemoOperatorsGet<TData = Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError = ErrorType<Problem>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>,
+          TError,
+          Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDemoOperatorsV1AuthDemoOperatorsGet<TData = Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>,
+          TError,
+          Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDemoOperatorsV1AuthDemoOperatorsGet<TData = Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Demo Operators
+ */
+
+export function useDemoOperatorsV1AuthDemoOperatorsGet<TData = Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof demoOperatorsV1AuthDemoOperatorsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDemoOperatorsV1AuthDemoOperatorsGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 export const getLoginV1AuthLoginPostUrl = () => {
 

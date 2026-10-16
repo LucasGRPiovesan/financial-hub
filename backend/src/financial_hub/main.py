@@ -9,14 +9,17 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from financial_hub.modules.audit.api.routes import router as audit_router
+from financial_hub.modules.customers.api.routes import router as customers_router
 from financial_hub.modules.events.api.stream import router as stream_router
 from financial_hub.modules.events.application.realtime import build_broker
 from financial_hub.modules.identity.api.routes import configure_identity
+from financial_hub.modules.identity.api.routes import demo_router as demo_auth_router
 from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
 from financial_hub.modules.ledger.api.routes import router as ledger_router
 from financial_hub.modules.projects.api.api_keys import router as api_keys_router
 from financial_hub.modules.projects.api.auth import configure_projects
+from financial_hub.modules.projects.api.members import router as members_router
 from financial_hub.modules.projects.api.providers import catalog_router as provider_catalog_router
 from financial_hub.modules.projects.api.providers import router as provider_accounts_router
 from financial_hub.modules.projects.api.routes import router as projects_router
@@ -90,11 +93,16 @@ def create_app(
     app.state.clock = clock or SystemClock()
     configure_identity(app, settings, clock=app.state.clock, hasher=password_hasher)
     app.include_router(auth_router)
+    app.include_router(demo_auth_router)
+    if settings.demo_login:
+        logger.warning("demo_login.enabled", detail="any visitor can open any operator session")
     configure_projects(app, settings)
     app.include_router(projects_router)
     app.include_router(api_keys_router)
+    app.include_router(members_router)
     app.include_router(provider_accounts_router)
     app.include_router(provider_catalog_router)
+    app.include_router(customers_router)
     app.include_router(stream_router)
     app.include_router(ledger_router)
     app.include_router(audit_router)

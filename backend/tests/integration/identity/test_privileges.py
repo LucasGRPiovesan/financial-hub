@@ -21,7 +21,6 @@ async def statement_fails(engine: AsyncEngine, sql: str) -> None:
     [
         "DELETE FROM operators",
         "DELETE FROM sessions",
-        "DELETE FROM project_memberships",
         "DELETE FROM projects",
         "DELETE FROM login_throttle",
         "TRUNCATE operators",
@@ -32,7 +31,6 @@ async def statement_fails(engine: AsyncEngine, sql: str) -> None:
         "UPDATE sessions SET operator_id = operator_id WHERE false",
         "UPDATE sessions SET csrf_token_hash = csrf_token_hash WHERE false",
         "UPDATE sessions SET absolute_expires_at = absolute_expires_at WHERE false",
-        "UPDATE project_memberships SET role = 'owner' WHERE false",
         "UPDATE projects SET slug = slug WHERE false",
         "UPDATE login_throttle SET key_hash = key_hash WHERE false",
     ],
@@ -48,6 +46,8 @@ async def test_runtime_role_cannot(app_engine: AsyncEngine, sql: str) -> None:
         "UPDATE sessions SET revoked_at = now() WHERE false",
         "UPDATE projects SET name = name WHERE false",
         "UPDATE login_throttle SET attempts = 0 WHERE false",
+        "UPDATE project_memberships SET role = role WHERE false",
+        "DELETE FROM project_memberships WHERE false",
     ],
 )
 async def test_runtime_role_can_make_the_updates_the_service_needs(
@@ -55,3 +55,15 @@ async def test_runtime_role_can_make_the_updates_the_service_needs(
 ) -> None:
     async with app_engine.begin() as conn:
         await conn.execute(text(sql))
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "UPDATE project_memberships SET operator_id = operator_id WHERE false",
+        "UPDATE project_memberships SET project_id = project_id WHERE false",
+        "UPDATE project_memberships SET created_at = created_at WHERE false",
+    ],
+)
+async def test_runtime_role_cannot_repoint_a_membership(app_engine: AsyncEngine, sql: str) -> None:
+    await statement_fails(app_engine, sql)

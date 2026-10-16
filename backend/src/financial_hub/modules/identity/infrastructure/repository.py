@@ -6,7 +6,8 @@ drive behaviour (expiry, lockout, throttle windows) come from the caller's ``Clo
 digests computed by the caller: raw tokens, emails or addresses never reach these tables as keys.
 """
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -130,6 +131,35 @@ _INSERT_MEMBERSHIP = text(
     INSERT INTO public.project_memberships (operator_id, project_id, role)
     VALUES (:operator_id, :project_id, :role)
     """
+)
+
+
+_PROJECT_MEMBERS_SQL = """
+    SELECT m.operator_id, o.email, o.display_name, m.role, m.created_at
+    FROM public.project_memberships m
+    JOIN public.operators o ON o.id = m.operator_id
+    WHERE m.project_id = :project_id
+    ORDER BY m.created_at, m.operator_id
+"""
+_PROJECT_MEMBERS = text(_PROJECT_MEMBERS_SQL)
+# FOR UPDATE OF m: serialises concurrent member changes of one project (last-owner invariant).
+_PROJECT_MEMBERS_FOR_UPDATE = text(_PROJECT_MEMBERS_SQL + " FOR UPDATE OF m")
+_SET_MEMBERSHIP_ROLE = text(
+    """
+    UPDATE public.project_memberships SET role = :role
+    WHERE operator_id = :operator_id AND project_id = :project_id
+    """
+)
+_DELETE_MEMBERSHIP = text(
+    "DELETE FROM public.project_memberships WHERE operator_id = :operator_id "
+    "AND project_id = :project_id"
+)
+_ACTIVE_OPERATORS = text(
+    _SELECT_OPERATOR + " WHERE status = 'active' ORDER BY lower(display_name), id LIMIT :limit"
+)
+_MEMBERSHIPS_OF = text(
+    "SELECT operator_id, project_id, role FROM public.project_memberships "
+    "WHERE operator_id = ANY(:operator_ids)"
 )
 
 
@@ -346,3 +376,72 @@ async def insert_membership(
         _INSERT_MEMBERSHIP,
         {"operator_id": operator_id, "project_id": project_id, "role": role.value},
     )
+
+
+@dataclass(frozen=True, slots=True)
+class MemberRow:
+    operator_id: UUID
+    email: str
+    display_name: str
+    role: Role
+    added_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorMembership:
+    operator_id: UUID
+    project_id: UUID
+    role: Role
+
+
+def _member(row: RowMapping) -> MemberRow:
+    return MemberRow(
+        operator_id=row["operator_id"],
+        email=row["email"],
+        display_name=row["display_name"],
+        role=Role(row["role"]),
+        added_at=row["created_at"],
+    )
+
+
+async def project_members(
+    session: AsyncSession, project_id: UUID, *, for_update: bool = False
+) -> list[MemberRow]:
+    """Members of a project, oldest first (``for_update`` locks the membership rows)."""
+    query = _PROJECT_MEMBERS_FOR_UPDATE if for_update else _PROJECT_MEMBERS
+    rows = (await session.execute(query, {"project_id": project_id})).mappings()
+    return [_member(row) for row in rows]
+
+
+async def set_membership_role(
+    session: AsyncSession, *, operator_id: UUID, project_id: UUID, role: Role
+) -> None:
+    await session.execute(
+        _SET_MEMBERSHIP_ROLE,
+        {"operator_id": operator_id, "project_id": project_id, "role": role.value},
+    )
+
+
+async def delete_membership(session: AsyncSession, *, operator_id: UUID, project_id: UUID) -> None:
+    await session.execute(
+        _DELETE_MEMBERSHIP, {"operator_id": operator_id, "project_id": project_id}
+    )
+
+
+async def list_active_operators(session: AsyncSession, *, limit: int) -> list[Operator]:
+    rows = (await session.execute(_ACTIVE_OPERATORS, {"limit": limit})).mappings()
+    return [_operator(row) for row in rows]
+
+
+async def memberships_of(
+    session: AsyncSession, operator_ids: Collection[UUID]
+) -> list[OperatorMembership]:
+    if not operator_ids:
+        return []
+    rows = (await session.execute(_MEMBERSHIPS_OF, {"operator_ids": list(operator_ids)})).mappings()
+    return [
+        OperatorMembership(
+            operator_id=row["operator_id"], project_id=row["project_id"], role=Role(row["role"])
+        )
+        for row in rows
+    ]

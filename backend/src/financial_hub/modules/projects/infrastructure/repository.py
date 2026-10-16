@@ -88,3 +88,8 @@ async def update_project(
     )
     row = (await session.execute(statement)).first()
     return None if row is None else _project(row)
+
+
+async def get_project_by_slug(session: AsyncSession, slug: str) -> Project | None:
+    row = (await session.execute(select(*_COLUMNS).where(projects.c.slug == slug))).first()
+    return None if row is None else _project(row)

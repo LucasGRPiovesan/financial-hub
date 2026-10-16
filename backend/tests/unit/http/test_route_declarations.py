@@ -4,6 +4,7 @@ import httpx
 import pytest
 from fastapi import APIRouter, FastAPI
 from fastapi.routing import APIRoute
+from pydantic import SecretStr
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
@@ -19,11 +20,14 @@ from financial_hub.platform.http.auth import (
     verify_route_declarations,
 )
 from financial_hub.platform.http.problems import register_exception_handlers
+from financial_hub.platform.settings import Settings
 
 EXPECTED = {
     ("GET", "/health/live"): ("public", None),
     ("GET", "/health/ready"): ("public", None),
     ("POST", "/v1/auth/login"): ("public", None),
+    ("GET", "/v1/auth/demo-operators"): ("public", None),
+    ("POST", "/v1/auth/demo-login"): ("public", None),
     ("POST", "/v1/auth/logout"): ("authenticated", None),
     ("GET", "/v1/auth/me"): ("authenticated", None),
     ("POST", "/v1/auth/password"): ("authenticated", None),
@@ -37,6 +41,10 @@ EXPECTED = {
         "permission",
         "api_keys:manage",
     ),
+    ("GET", "/v1/projects/{project_id}/members"): ("permission", "members:read"),
+    ("POST", "/v1/projects/{project_id}/members"): ("permission", "members:manage"),
+    ("PATCH", "/v1/projects/{project_id}/members/{operator_id}"): ("permission", "members:manage"),
+    ("DELETE", "/v1/projects/{project_id}/members/{operator_id}"): ("permission", "members:manage"),
     ("GET", "/v1/provider-catalog"): ("authenticated", None),
     ("POST", "/v1/projects/{project_id}/provider-accounts"): ("permission", "integrations:manage"),
     ("GET", "/v1/projects/{project_id}/provider-accounts"): ("permission", "integrations:read"),
@@ -55,6 +63,23 @@ EXPECTED = {
     ("POST", "/v1/projects/{project_id}/provider-accounts/{account_id}/deactivate"): (
         "permission",
         "integrations:manage",
+    ),
+    ("PUT", "/v1/projects/{project_id}/customers/{external_ref}"): (
+        "permission",
+        "customers:manage",
+    ),
+    ("GET", "/v1/projects/{project_id}/customers"): ("permission", "customers:read"),
+    ("GET", "/v1/projects/{project_id}/customers/by-ref/{external_ref}"): (
+        "permission",
+        "customers:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/customers/{customer_id}"): (
+        "permission",
+        "customers:read",
+    ),
+    ("POST", "/v1/projects/{project_id}/customers/{customer_id}/anonymize"): (
+        "permission",
+        "customers:manage",
     ),
     ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
     ("GET", "/v1/projects/{project_id}/audit-records"): ("permission", "audit:read"),
@@ -90,6 +115,20 @@ def test_every_app_route_is_declared() -> None:
     app = create_app()
     assert undeclared_routes(app) == []
     assert declared(app) == EXPECTED
+
+
+def test_demo_login_routes_are_public_and_registered_in_every_mode() -> None:
+    disabled = create_app()
+    enabled = create_app(
+        Settings(database_url=SecretStr("postgresql+psycopg://x/y"), demo_login=True)
+    )
+    for app in (disabled, enabled):
+        assert undeclared_routes(app) == []
+        verify_route_declarations(app)
+        assert declared(app) == EXPECTED
+        assert {"/v1/auth/demo-operators", "/v1/auth/demo-login"} <= set(app.openapi()["paths"])
+    assert EXPECTED["GET", "/v1/auth/demo-operators"] == ("public", None)
+    assert EXPECTED["POST", "/v1/auth/demo-login"] == ("public", None)
 
 
 def bare_app() -> FastAPI:
