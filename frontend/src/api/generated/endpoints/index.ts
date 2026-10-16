@@ -1,10 +1,5 @@
-export type { HTTPStatusCode1xx } from './api-keys/api-keys';
-export type { HTTPStatusCode2xx } from './api-keys/api-keys';
-export type { HTTPStatusCode3xx } from './api-keys/api-keys';
-export type { HTTPStatusCode4xx } from './api-keys/api-keys';
-export type { HTTPStatusCode5xx } from './api-keys/api-keys';
-export type { HTTPStatusCodes } from './api-keys/api-keys';
 export * from './api-keys/api-keys';
+export * from './audit/audit';
 export * from './auth/auth';
 export * from './default/default';
 export * from './events/events';

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCsrfToken } from "../../lib/api";
 import { THEME_STORAGE_KEY } from "../../lib/theme";
 import { expectNoAxeViolations } from "../../test/axe";
+import { overviewData } from "../../test/console-mocks";
 import { json, ME, mockApi, renderApp, resetApiState } from "../../test/harness";
 import { NAV_ITEMS } from "./nav";
 
@@ -27,6 +28,7 @@ const signedIn = {
   "GET /v1/auth/me": () => json(200, ME),
   "GET /health/live": () => json(200, { status: "live" }),
   "GET /health/ready": () => json(200, { status: "ready" }),
+  ...overviewData("p-1"),
 };
 
 describe("app shell", () => {
@@ -64,11 +66,13 @@ describe("app shell", () => {
       "Ledger",
       "Payments",
       "Billing",
-      "Integrations",
+      "Provider accounts",
       "Events",
       "Webhooks",
       "Reconciliation",
       "Audit",
+      "API keys",
+      "Members",
       "Settings",
     ]);
     expect(within(nav).getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");

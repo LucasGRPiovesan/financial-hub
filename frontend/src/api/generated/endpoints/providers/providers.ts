@@ -36,13 +36,6 @@ import type {
 import { apiMutator } from '../../../mutator';
 import type { ErrorType } from '../../../mutator';
 
-export type HTTPStatusCode1xx = 100 | 101 | 102 | 103;
-export type HTTPStatusCode2xx = 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207;
-export type HTTPStatusCode3xx = 300 | 301 | 302 | 303 | 304 | 305 | 307 | 308;
-export type HTTPStatusCode4xx = 400 | 401 | 402 | 403 | 404 | 405 | 406 | 407 | 408 | 409 | 410 | 411 | 412 | 413 | 414 | 415 | 416 | 417 | 418 | 419 | 420 | 421 | 422 | 423 | 424 | 426 | 428 | 429 | 431 | 451;
-export type HTTPStatusCode5xx = 500 | 501 | 502 | 503 | 504 | 505 | 507 | 511;
-export type HTTPStatusCodes = HTTPStatusCode1xx | HTTPStatusCode2xx | HTTPStatusCode3xx | HTTPStatusCode4xx | HTTPStatusCode5xx;
-
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -62,25 +55,6 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
-
-export type listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponse200 = {
-  data: PageProviderAccountOut
-  status: 200
-}
-
-export type listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponseSuccess = (listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponse200) & {
-  headers: Headers;
-};
-export type listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponseError = (listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponseDefault) & {
-  headers: Headers;
-};
-
-export type listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponse = (listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponseSuccess | listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponseError)
 
 export const getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetUrl = (projectId: string,
     params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams,) => {
@@ -102,9 +76,9 @@ export const getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetUrl = 
  * @summary List Provider Accounts
  */
 export const listProviderAccountsV1ProjectsProjectIdProviderAccountsGet = async (projectId: string,
-    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponse> => {
+    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<PageProviderAccountOut> => {
 
-  return apiMutator<listProviderAccountsV1ProjectsProjectIdProviderAccountsGetResponse>(getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetUrl(projectId,params),
+  return apiMutator<PageProviderAccountOut>(getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetUrl(projectId,params),
   {
     ...options,
     method: 'GET'
@@ -117,71 +91,85 @@ export const listProviderAccountsV1ProjectsProjectIdProviderAccountsGet = async 
 
 
 
-export const getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationKey = () => ['listProviderAccountsV1ProjectsProjectIdProviderAccountsGet'] as const;
-
-export const getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError,ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError,ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationVariables, TContext> => {
-
-const mutationKey = getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetQueryKey = (projectId: string,
+    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams,) => {
+    return [
+    `/v1/projects/${projectId}/provider-accounts`, ...(params ? [params] : [])
+    ] as const;
+    }
 
 
+export const getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetQueryOptions = <TData = Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError = ErrorType<Problem>>(projectId: string,
+    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetQueryKey(projectId,params);
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationVariables> = (props) => {
-          const {projectId,params} = props ?? {};
 
-          return  listProviderAccountsV1ProjectsProjectIdProviderAccountsGet(projectId,params,requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>> = ({ signal }) => listProviderAccountsV1ProjectsProjectIdProviderAccountsGet(projectId,params, { signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
+export type ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>>
+export type ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetQueryError = ErrorType<Problem>
 
-    export type ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationResult = NonNullable<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>>
 
-    export type ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationError = ErrorType<Problem>
-    export type ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationVariables = {projectId: string;params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams}
-
-    /**
+export function useListProviderAccountsV1ProjectsProjectIdProviderAccountsGet<TData = Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params: undefined |  ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListProviderAccountsV1ProjectsProjectIdProviderAccountsGet<TData = Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListProviderAccountsV1ProjectsProjectIdProviderAccountsGet<TData = Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary List Provider Accounts
  */
-export const useListProviderAccountsV1ProjectsProjectIdProviderAccountsGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError,ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>,
-        TError,
-        ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationVariables,
-        TContext
-      > => {
-      return useMutation(getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetMutationOptions(options), queryClient);
-    }
-    export type createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponse201 = {
-  data: ProviderAccountOut
-  status: 201
+
+export function useListProviderAccountsV1ProjectsProjectIdProviderAccountsGet<TData = Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListProviderAccountsV1ProjectsProjectIdProviderAccountsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProviderAccountsV1ProjectsProjectIdProviderAccountsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListProviderAccountsV1ProjectsProjectIdProviderAccountsGetQueryOptions(projectId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 201>
-}
 
-export type createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponseSuccess = (createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponse201) & {
-  headers: Headers;
-};
-export type createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponseError = (createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponseDefault) & {
-  headers: Headers;
-};
 
-export type createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponse = (createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponseSuccess | createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponseError)
+
+
 
 export const getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostUrl = (projectId: string,) => {
 
@@ -195,7 +183,7 @@ export const getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostUrl 
  * @summary Create Provider Account
  */
 export const createProviderAccountV1ProjectsProjectIdProviderAccountsPost = async (projectId: string,
-    createProviderAccountRequest: CreateProviderAccountRequest, options?: Parameters<typeof apiMutator>[1]): Promise<createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponse> => {
+    createProviderAccountRequest: CreateProviderAccountRequest, options?: Parameters<typeof apiMutator>[1]): Promise<ProviderAccountOut> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -211,7 +199,7 @@ export const createProviderAccountV1ProjectsProjectIdProviderAccountsPost = asyn
     }
     return headers;
   };
-return apiMutator<createProviderAccountV1ProjectsProjectIdProviderAccountsPostResponse>(getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostUrl(projectId),
+return apiMutator<ProviderAccountOut>(getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostUrl(projectId),
   {
     ...options,
     method: 'POST',
@@ -224,106 +212,54 @@ return apiMutator<createProviderAccountV1ProjectsProjectIdProviderAccountsPostRe
 
 
 
-export const getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostQueryKey = (projectId: string,
-    createProviderAccountRequest?: CreateProviderAccountRequest,) => {
-    return [
-    'POST', `/v1/projects/${projectId}/provider-accounts`, createProviderAccountRequest
-    ] as const;
-    }
+export const getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationKey = () => ['createProviderAccountV1ProjectsProjectIdProviderAccountsPost'] as const;
 
+export const getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError,CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError,CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationVariables, TContext> => {
 
-export const getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostQueryOptions = <TData = Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError = ErrorType<Problem>>(projectId: string,
-    createProviderAccountRequest: CreateProviderAccountRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostQueryKey(projectId,createProviderAccountRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>> = ({ signal }) => createProviderAccountV1ProjectsProjectIdProviderAccountsPost(projectId,createProviderAccountRequest, { signal, ...requestOptions });
+const mutationKey = getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostQueryResult = NonNullable<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>>
-export type CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostQueryError = ErrorType<Problem>
+          return  createProviderAccountV1ProjectsProjectIdProviderAccountsPost(projectId,data,requestOptions)
+        }
 
 
-export function useCreateProviderAccountV1ProjectsProjectIdProviderAccountsPost<TData = Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createProviderAccountRequest: CreateProviderAccountRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>,
-          TError,
-          Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCreateProviderAccountV1ProjectsProjectIdProviderAccountsPost<TData = Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createProviderAccountRequest: CreateProviderAccountRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>,
-          TError,
-          Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCreateProviderAccountV1ProjectsProjectIdProviderAccountsPost<TData = Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createProviderAccountRequest: CreateProviderAccountRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationResult = NonNullable<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>>
+    export type CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationBody = CreateProviderAccountRequest
+    export type CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationError = ErrorType<Problem>
+    export type CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationVariables = {projectId: string;data: CreateProviderAccountRequest}
+
+    /**
  * @summary Create Provider Account
  */
-
-export function useCreateProviderAccountV1ProjectsProjectIdProviderAccountsPost<TData = Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createProviderAccountRequest: CreateProviderAccountRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostQueryOptions(projectId,createProviderAccountRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponse200 = {
-  data: ProviderAccountOut
-  status: 200
-}
-
-export type getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponseSuccess = (getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponse200) & {
-  headers: Headers;
-};
-export type getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponseError = (getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponseDefault) & {
-  headers: Headers;
-};
-
-export type getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponse = (getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponseSuccess | getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponseError)
-
-export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetUrl = (projectId: string,
+export const useCreateProviderAccountV1ProjectsProjectIdProviderAccountsPost = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>, TError,CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createProviderAccountV1ProjectsProjectIdProviderAccountsPost>>,
+        TError,
+        CreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateProviderAccountV1ProjectsProjectIdProviderAccountsPostMutationOptions(options), queryClient);
+    }
+    export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetUrl = (projectId: string,
     accountId: string,) => {
 
 
@@ -336,9 +272,9 @@ export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGe
  * @summary Get Provider Account
  */
 export const getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet = async (projectId: string,
-    accountId: string, options?: Parameters<typeof apiMutator>[1]): Promise<getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponse> => {
+    accountId: string, options?: Parameters<typeof apiMutator>[1]): Promise<ProviderAccountOut> => {
 
-  return apiMutator<getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetResponse>(getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetUrl(projectId,accountId),
+  return apiMutator<ProviderAccountOut>(getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetUrl(projectId,accountId),
   {
     ...options,
     method: 'GET'
@@ -351,71 +287,85 @@ export const getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet =
 
 
 
-export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationKey = () => ['getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet'] as const;
-
-export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError,GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError,GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationVariables, TContext> => {
-
-const mutationKey = getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetQueryKey = (projectId: string,
+    accountId: string,) => {
+    return [
+    `/v1/projects/${projectId}/provider-accounts/${accountId}`
+    ] as const;
+    }
 
 
+export const getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError = ErrorType<Problem>>(projectId: string,
+    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetQueryKey(projectId,accountId);
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationVariables> = (props) => {
-          const {projectId,accountId} = props ?? {};
 
-          return  getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet(projectId,accountId,requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>> = ({ signal }) => getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet(projectId,accountId, { signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && accountId !== null && accountId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
+export type GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>>
+export type GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetQueryError = ErrorType<Problem>
 
-    export type GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationResult = NonNullable<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>>
 
-    export type GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationError = ErrorType<Problem>
-    export type GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationVariables = {projectId: string;accountId: string}
-
-    /**
+export function useGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet<TData = Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    accountId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet<TData = Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet<TData = Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary Get Provider Account
  */
-export const useGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError,GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>,
-        TError,
-        GetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationVariables,
-        TContext
-      > => {
-      return useMutation(getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetMutationOptions(options), queryClient);
-    }
-    export type activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponse200 = {
-  data: ProviderAccountOut
-  status: 200
+
+export function useGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet<TData = Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdGetQueryOptions(projectId,accountId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
 
-export type activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponseSuccess = (activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponse200) & {
-  headers: Headers;
-};
-export type activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponseError = (activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponseDefault) & {
-  headers: Headers;
-};
 
-export type activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponse = (activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponseSuccess | activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponseError)
+
+
 
 export const getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostUrl = (projectId: string,
     accountId: string,) => {
@@ -430,9 +380,9 @@ export const getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccoun
  * @summary Activate Provider Account
  */
 export const activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost = async (projectId: string,
-    accountId: string, options?: Parameters<typeof apiMutator>[1]): Promise<activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponse> => {
+    accountId: string, options?: Parameters<typeof apiMutator>[1]): Promise<ProviderAccountOut> => {
 
-  return apiMutator<activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostResponse>(getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostUrl(projectId,accountId),
+  return apiMutator<ProviderAccountOut>(getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostUrl(projectId,accountId),
   {
     ...options,
     method: 'POST'
@@ -445,106 +395,54 @@ export const activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountId
 
 
 
-export const getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostQueryKey = (projectId: string,
-    accountId: string,) => {
-    return [
-    'POST', `/v1/projects/${projectId}/provider-accounts/${accountId}/activate`
-    ] as const;
-    }
+export const getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationKey = () => ['activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost'] as const;
 
+export const getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError,ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError,ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationVariables, TContext> => {
 
-export const getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostQueryOptions = <TData = Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError = ErrorType<Problem>>(projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostQueryKey(projectId,accountId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>> = ({ signal }) => activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost(projectId,accountId, { signal, ...requestOptions });
+const mutationKey = getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationVariables> = (props) => {
+          const {projectId,accountId} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && accountId !== null && accountId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostQueryResult = NonNullable<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>>
-export type ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostQueryError = ErrorType<Problem>
+          return  activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost(projectId,accountId,requestOptions)
+        }
 
 
-export function useActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost<TData = Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>,
-          TError,
-          Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost<TData = Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>,
-          TError,
-          Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost<TData = Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationResult = NonNullable<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>>
+
+    export type ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationError = ErrorType<Problem>
+    export type ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationVariables = {projectId: string;accountId: string}
+
+    /**
  * @summary Activate Provider Account
  */
-
-export function useActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost<TData = Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostQueryOptions(projectId,accountId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponse200 = {
-  data: ProviderAccountOut
-  status: 200
-}
-
-export type replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponseSuccess = (replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponse200) & {
-  headers: Headers;
-};
-export type replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponseError = (replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponseDefault) & {
-  headers: Headers;
-};
-
-export type replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponse = (replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponseSuccess | replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponseError)
-
-export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutUrl = (projectId: string,
+export const useActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>, TError,ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof activateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePost>>,
+        TError,
+        ActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdActivatePostMutationOptions(options), queryClient);
+    }
+    export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutUrl = (projectId: string,
     accountId: string,) => {
 
 
@@ -558,7 +456,7 @@ export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAcc
  */
 export const replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut = async (projectId: string,
     accountId: string,
-    replaceCredentialsRequest: ReplaceCredentialsRequest, options?: Parameters<typeof apiMutator>[1]): Promise<replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponse> => {
+    replaceCredentialsRequest: ReplaceCredentialsRequest, options?: Parameters<typeof apiMutator>[1]): Promise<ProviderAccountOut> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -574,7 +472,7 @@ export const replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccoun
     }
     return headers;
   };
-return apiMutator<replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutResponse>(getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutUrl(projectId,accountId),
+return apiMutator<ProviderAccountOut>(getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutUrl(projectId,accountId),
   {
     ...options,
     method: 'PUT',
@@ -587,112 +485,54 @@ return apiMutator<replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsA
 
 
 
-export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutQueryKey = (projectId: string,
-    accountId: string,
-    replaceCredentialsRequest?: ReplaceCredentialsRequest,) => {
-    return [
-    'PUT', `/v1/projects/${projectId}/provider-accounts/${accountId}/credentials`, replaceCredentialsRequest
-    ] as const;
-    }
+export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationKey = () => ['replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut'] as const;
 
+export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError,ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError,ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationVariables, TContext> => {
 
-export const getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutQueryOptions = <TData = Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError = ErrorType<Problem>>(projectId: string,
-    accountId: string,
-    replaceCredentialsRequest: ReplaceCredentialsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutQueryKey(projectId,accountId,replaceCredentialsRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>> = ({ signal }) => replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut(projectId,accountId,replaceCredentialsRequest, { signal, ...requestOptions });
+const mutationKey = getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationVariables> = (props) => {
+          const {projectId,accountId,data} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && accountId !== null && accountId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutQueryResult = NonNullable<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>>
-export type ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutQueryError = ErrorType<Problem>
+          return  replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut(projectId,accountId,data,requestOptions)
+        }
 
 
-export function useReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut<TData = Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string,
-    replaceCredentialsRequest: ReplaceCredentialsRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>,
-          TError,
-          Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut<TData = Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string,
-    replaceCredentialsRequest: ReplaceCredentialsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>,
-          TError,
-          Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut<TData = Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string,
-    replaceCredentialsRequest: ReplaceCredentialsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationResult = NonNullable<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>>
+    export type ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationBody = ReplaceCredentialsRequest
+    export type ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationError = ErrorType<Problem>
+    export type ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationVariables = {projectId: string;accountId: string;data: ReplaceCredentialsRequest}
+
+    /**
  * @summary Replace Provider Credentials
  */
-
-export function useReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut<TData = Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string,
-    replaceCredentialsRequest: ReplaceCredentialsRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutQueryOptions(projectId,accountId,replaceCredentialsRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponse200 = {
-  data: ProviderAccountOut
-  status: 200
-}
-
-export type deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponseSuccess = (deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponse200) & {
-  headers: Headers;
-};
-export type deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponseError = (deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponseDefault) & {
-  headers: Headers;
-};
-
-export type deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponse = (deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponseSuccess | deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponseError)
-
-export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostUrl = (projectId: string,
+export const useReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>, TError,ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof replaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPut>>,
+        TError,
+        ReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceProviderCredentialsV1ProjectsProjectIdProviderAccountsAccountIdCredentialsPutMutationOptions(options), queryClient);
+    }
+    export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostUrl = (projectId: string,
     accountId: string,) => {
 
 
@@ -705,9 +545,9 @@ export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAcco
  * @summary Deactivate Provider Account
  */
 export const deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost = async (projectId: string,
-    accountId: string, options?: Parameters<typeof apiMutator>[1]): Promise<deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponse> => {
+    accountId: string, options?: Parameters<typeof apiMutator>[1]): Promise<ProviderAccountOut> => {
 
-  return apiMutator<deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostResponse>(getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostUrl(projectId,accountId),
+  return apiMutator<ProviderAccountOut>(getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostUrl(projectId,accountId),
   {
     ...options,
     method: 'POST'
@@ -720,106 +560,54 @@ export const deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccount
 
 
 
-export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostQueryKey = (projectId: string,
-    accountId: string,) => {
-    return [
-    'POST', `/v1/projects/${projectId}/provider-accounts/${accountId}/deactivate`
-    ] as const;
-    }
+export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationKey = () => ['deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost'] as const;
 
+export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError,DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError,DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationVariables, TContext> => {
 
-export const getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostQueryOptions = <TData = Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError = ErrorType<Problem>>(projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostQueryKey(projectId,accountId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>> = ({ signal }) => deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost(projectId,accountId, { signal, ...requestOptions });
+const mutationKey = getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationVariables> = (props) => {
+          const {projectId,accountId} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && accountId !== null && accountId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostQueryResult = NonNullable<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>>
-export type DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostQueryError = ErrorType<Problem>
+          return  deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost(projectId,accountId,requestOptions)
+        }
 
 
-export function useDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost<TData = Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>,
-          TError,
-          Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost<TData = Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>,
-          TError,
-          Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost<TData = Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>>
+
+    export type DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationError = ErrorType<Problem>
+    export type DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationVariables = {projectId: string;accountId: string}
+
+    /**
  * @summary Deactivate Provider Account
  */
-
-export function useDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost<TData = Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostQueryOptions(projectId,accountId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type getProviderCatalogV1ProviderCatalogGetResponse200 = {
-  data: CatalogEntryOut[]
-  status: 200
-}
-
-export type getProviderCatalogV1ProviderCatalogGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type getProviderCatalogV1ProviderCatalogGetResponseSuccess = (getProviderCatalogV1ProviderCatalogGetResponse200) & {
-  headers: Headers;
-};
-export type getProviderCatalogV1ProviderCatalogGetResponseError = (getProviderCatalogV1ProviderCatalogGetResponseDefault) & {
-  headers: Headers;
-};
-
-export type getProviderCatalogV1ProviderCatalogGetResponse = (getProviderCatalogV1ProviderCatalogGetResponseSuccess | getProviderCatalogV1ProviderCatalogGetResponseError)
-
-export const getGetProviderCatalogV1ProviderCatalogGetUrl = () => {
+export const useDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>, TError,DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePost>>,
+        TError,
+        DeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeactivateProviderAccountV1ProjectsProjectIdProviderAccountsAccountIdDeactivatePostMutationOptions(options), queryClient);
+    }
+    export const getGetProviderCatalogV1ProviderCatalogGetUrl = () => {
 
 
 
@@ -830,9 +618,9 @@ export const getGetProviderCatalogV1ProviderCatalogGetUrl = () => {
 /**
  * @summary Get Provider Catalog
  */
-export const getProviderCatalogV1ProviderCatalogGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<getProviderCatalogV1ProviderCatalogGetResponse> => {
+export const getProviderCatalogV1ProviderCatalogGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<CatalogEntryOut[]> => {
 
-  return apiMutator<getProviderCatalogV1ProviderCatalogGetResponse>(getGetProviderCatalogV1ProviderCatalogGetUrl(),
+  return apiMutator<CatalogEntryOut[]>(getGetProviderCatalogV1ProviderCatalogGetUrl(),
   {
     ...options,
     method: 'GET'
@@ -845,50 +633,77 @@ export const getProviderCatalogV1ProviderCatalogGet = async ( options?: Paramete
 
 
 
-export const getGetProviderCatalogV1ProviderCatalogGetMutationKey = () => ['getProviderCatalogV1ProviderCatalogGet'] as const;
-
-export const getGetProviderCatalogV1ProviderCatalogGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError,void, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError,void, TContext> => {
-
-const mutationKey = getGetProviderCatalogV1ProviderCatalogGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getGetProviderCatalogV1ProviderCatalogGetQueryKey = () => {
+    return [
+    `/v1/provider-catalog`
+    ] as const;
+    }
 
 
+export const getGetProviderCatalogV1ProviderCatalogGetQueryOptions = <TData = Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError = ErrorType<Problem>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProviderCatalogV1ProviderCatalogGetQueryKey();
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, void> = () => {
 
-
-          return  getProviderCatalogV1ProviderCatalogGet(requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>> = ({ signal }) => getProviderCatalogV1ProviderCatalogGet({ signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GetProviderCatalogV1ProviderCatalogGetMutationResult = NonNullable<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>>
-
-    export type GetProviderCatalogV1ProviderCatalogGetMutationError = ErrorType<Problem>
+export type GetProviderCatalogV1ProviderCatalogGetQueryResult = NonNullable<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>>
+export type GetProviderCatalogV1ProviderCatalogGetQueryError = ErrorType<Problem>
 
 
-    /**
+export function useGetProviderCatalogV1ProviderCatalogGet<TData = Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError = ErrorType<Problem>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>,
+          TError,
+          Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProviderCatalogV1ProviderCatalogGet<TData = Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>,
+          TError,
+          Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProviderCatalogV1ProviderCatalogGet<TData = Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary Get Provider Catalog
  */
-export const useGetProviderCatalogV1ProviderCatalogGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError,void, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getGetProviderCatalogV1ProviderCatalogGetMutationOptions(options), queryClient);
-    }
+
+export function useGetProviderCatalogV1ProviderCatalogGet<TData = Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProviderCatalogV1ProviderCatalogGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProviderCatalogV1ProviderCatalogGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

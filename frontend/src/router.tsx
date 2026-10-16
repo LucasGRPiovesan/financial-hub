@@ -14,8 +14,12 @@ import { safeRedirectTarget } from "./features/auth/redirect";
 import { AppShell } from "./features/shell/app-shell";
 import { NAV_ITEMS } from "./features/shell/nav";
 import { isApiError } from "./lib/api";
+import { ApiKeysPage } from "./routes/api-keys";
+import { IntegrationsPage } from "./routes/integrations";
+import { MembersPage } from "./routes/members";
 import { OverviewPage } from "./routes/overview";
 import { PlaceholderPage } from "./routes/placeholder";
+import { ProjectsPage } from "./routes/projects";
 import { PendingShell, RouteError } from "./routes/route-states";
 
 export interface RouterContext {
@@ -71,7 +75,16 @@ function buildRouteTree() {
   });
 
   const overviewRoute = createRoute({ getParentRoute: () => appRoute, path: "/", component: OverviewPage });
-  const placeholderRoutes = NAV_ITEMS.filter((item) => item.to !== "/").map((item) =>
+  const screens: Record<string, () => React.JSX.Element> = {
+    "/projects": ProjectsPage,
+    "/api-keys": ApiKeysPage,
+    "/members": MembersPage,
+    "/integrations": IntegrationsPage,
+  };
+  const screenRoutes = Object.entries(screens).map(([path, component]) =>
+    createRoute({ getParentRoute: () => appRoute, path, component }),
+  );
+  const placeholderRoutes = NAV_ITEMS.filter((item) => item.to !== "/" && !(item.to in screens)).map((item) =>
     createRoute({
       getParentRoute: () => appRoute,
       path: item.to,
@@ -81,7 +94,7 @@ function buildRouteTree() {
     }),
   );
 
-  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...placeholderRoutes])]);
+  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, ...placeholderRoutes])]);
 }
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {

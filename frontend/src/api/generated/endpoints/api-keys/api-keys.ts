@@ -35,13 +35,6 @@ import type {
 import { apiMutator } from '../../../mutator';
 import type { ErrorType } from '../../../mutator';
 
-export type HTTPStatusCode1xx = 100 | 101 | 102 | 103;
-export type HTTPStatusCode2xx = 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207;
-export type HTTPStatusCode3xx = 300 | 301 | 302 | 303 | 304 | 305 | 307 | 308;
-export type HTTPStatusCode4xx = 400 | 401 | 402 | 403 | 404 | 405 | 406 | 407 | 408 | 409 | 410 | 411 | 412 | 413 | 414 | 415 | 416 | 417 | 418 | 419 | 420 | 421 | 422 | 423 | 424 | 426 | 428 | 429 | 431 | 451;
-export type HTTPStatusCode5xx = 500 | 501 | 502 | 503 | 504 | 505 | 507 | 511;
-export type HTTPStatusCodes = HTTPStatusCode1xx | HTTPStatusCode2xx | HTTPStatusCode3xx | HTTPStatusCode4xx | HTTPStatusCode5xx;
-
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -61,25 +54,6 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
-
-export type listApiKeysV1ProjectsProjectIdApiKeysGetResponse200 = {
-  data: PageApiKeyOut
-  status: 200
-}
-
-export type listApiKeysV1ProjectsProjectIdApiKeysGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type listApiKeysV1ProjectsProjectIdApiKeysGetResponseSuccess = (listApiKeysV1ProjectsProjectIdApiKeysGetResponse200) & {
-  headers: Headers;
-};
-export type listApiKeysV1ProjectsProjectIdApiKeysGetResponseError = (listApiKeysV1ProjectsProjectIdApiKeysGetResponseDefault) & {
-  headers: Headers;
-};
-
-export type listApiKeysV1ProjectsProjectIdApiKeysGetResponse = (listApiKeysV1ProjectsProjectIdApiKeysGetResponseSuccess | listApiKeysV1ProjectsProjectIdApiKeysGetResponseError)
 
 export const getListApiKeysV1ProjectsProjectIdApiKeysGetUrl = (projectId: string,
     params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams,) => {
@@ -101,9 +75,9 @@ export const getListApiKeysV1ProjectsProjectIdApiKeysGetUrl = (projectId: string
  * @summary List Api Keys
  */
 export const listApiKeysV1ProjectsProjectIdApiKeysGet = async (projectId: string,
-    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<listApiKeysV1ProjectsProjectIdApiKeysGetResponse> => {
+    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<PageApiKeyOut> => {
 
-  return apiMutator<listApiKeysV1ProjectsProjectIdApiKeysGetResponse>(getListApiKeysV1ProjectsProjectIdApiKeysGetUrl(projectId,params),
+  return apiMutator<PageApiKeyOut>(getListApiKeysV1ProjectsProjectIdApiKeysGetUrl(projectId,params),
   {
     ...options,
     method: 'GET'
@@ -116,71 +90,85 @@ export const listApiKeysV1ProjectsProjectIdApiKeysGet = async (projectId: string
 
 
 
-export const getListApiKeysV1ProjectsProjectIdApiKeysGetMutationKey = () => ['listApiKeysV1ProjectsProjectIdApiKeysGet'] as const;
-
-export const getListApiKeysV1ProjectsProjectIdApiKeysGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError,ListApiKeysV1ProjectsProjectIdApiKeysGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError,ListApiKeysV1ProjectsProjectIdApiKeysGetMutationVariables, TContext> => {
-
-const mutationKey = getListApiKeysV1ProjectsProjectIdApiKeysGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getListApiKeysV1ProjectsProjectIdApiKeysGetQueryKey = (projectId: string,
+    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams,) => {
+    return [
+    `/v1/projects/${projectId}/api-keys`, ...(params ? [params] : [])
+    ] as const;
+    }
 
 
+export const getListApiKeysV1ProjectsProjectIdApiKeysGetQueryOptions = <TData = Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError = ErrorType<Problem>>(projectId: string,
+    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListApiKeysV1ProjectsProjectIdApiKeysGetQueryKey(projectId,params);
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, ListApiKeysV1ProjectsProjectIdApiKeysGetMutationVariables> = (props) => {
-          const {projectId,params} = props ?? {};
 
-          return  listApiKeysV1ProjectsProjectIdApiKeysGet(projectId,params,requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>> = ({ signal }) => listApiKeysV1ProjectsProjectIdApiKeysGet(projectId,params, { signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
+export type ListApiKeysV1ProjectsProjectIdApiKeysGetQueryResult = NonNullable<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>>
+export type ListApiKeysV1ProjectsProjectIdApiKeysGetQueryError = ErrorType<Problem>
 
-    export type ListApiKeysV1ProjectsProjectIdApiKeysGetMutationResult = NonNullable<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>>
 
-    export type ListApiKeysV1ProjectsProjectIdApiKeysGetMutationError = ErrorType<Problem>
-    export type ListApiKeysV1ProjectsProjectIdApiKeysGetMutationVariables = {projectId: string;params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams}
-
-    /**
+export function useListApiKeysV1ProjectsProjectIdApiKeysGet<TData = Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params: undefined |  ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>,
+          TError,
+          Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListApiKeysV1ProjectsProjectIdApiKeysGet<TData = Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>,
+          TError,
+          Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListApiKeysV1ProjectsProjectIdApiKeysGet<TData = Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary List Api Keys
  */
-export const useListApiKeysV1ProjectsProjectIdApiKeysGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError,ListApiKeysV1ProjectsProjectIdApiKeysGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>,
-        TError,
-        ListApiKeysV1ProjectsProjectIdApiKeysGetMutationVariables,
-        TContext
-      > => {
-      return useMutation(getListApiKeysV1ProjectsProjectIdApiKeysGetMutationOptions(options), queryClient);
-    }
-    export type createApiKeyV1ProjectsProjectIdApiKeysPostResponse201 = {
-  data: CreatedApiKeyOut
-  status: 201
+
+export function useListApiKeysV1ProjectsProjectIdApiKeysGet<TData = Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListApiKeysV1ProjectsProjectIdApiKeysGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeysV1ProjectsProjectIdApiKeysGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListApiKeysV1ProjectsProjectIdApiKeysGetQueryOptions(projectId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type createApiKeyV1ProjectsProjectIdApiKeysPostResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 201>
-}
 
-export type createApiKeyV1ProjectsProjectIdApiKeysPostResponseSuccess = (createApiKeyV1ProjectsProjectIdApiKeysPostResponse201) & {
-  headers: Headers;
-};
-export type createApiKeyV1ProjectsProjectIdApiKeysPostResponseError = (createApiKeyV1ProjectsProjectIdApiKeysPostResponseDefault) & {
-  headers: Headers;
-};
 
-export type createApiKeyV1ProjectsProjectIdApiKeysPostResponse = (createApiKeyV1ProjectsProjectIdApiKeysPostResponseSuccess | createApiKeyV1ProjectsProjectIdApiKeysPostResponseError)
+
+
 
 export const getCreateApiKeyV1ProjectsProjectIdApiKeysPostUrl = (projectId: string,) => {
 
@@ -194,7 +182,7 @@ export const getCreateApiKeyV1ProjectsProjectIdApiKeysPostUrl = (projectId: stri
  * @summary Create Api Key
  */
 export const createApiKeyV1ProjectsProjectIdApiKeysPost = async (projectId: string,
-    createApiKeyRequest: CreateApiKeyRequest, options?: Parameters<typeof apiMutator>[1]): Promise<createApiKeyV1ProjectsProjectIdApiKeysPostResponse> => {
+    createApiKeyRequest: CreateApiKeyRequest, options?: Parameters<typeof apiMutator>[1]): Promise<CreatedApiKeyOut> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -210,7 +198,7 @@ export const createApiKeyV1ProjectsProjectIdApiKeysPost = async (projectId: stri
     }
     return headers;
   };
-return apiMutator<createApiKeyV1ProjectsProjectIdApiKeysPostResponse>(getCreateApiKeyV1ProjectsProjectIdApiKeysPostUrl(projectId),
+return apiMutator<CreatedApiKeyOut>(getCreateApiKeyV1ProjectsProjectIdApiKeysPostUrl(projectId),
   {
     ...options,
     method: 'POST',
@@ -223,106 +211,54 @@ return apiMutator<createApiKeyV1ProjectsProjectIdApiKeysPostResponse>(getCreateA
 
 
 
-export const getCreateApiKeyV1ProjectsProjectIdApiKeysPostQueryKey = (projectId: string,
-    createApiKeyRequest?: CreateApiKeyRequest,) => {
-    return [
-    'POST', `/v1/projects/${projectId}/api-keys`, createApiKeyRequest
-    ] as const;
-    }
+export const getCreateApiKeyV1ProjectsProjectIdApiKeysPostMutationKey = () => ['createApiKeyV1ProjectsProjectIdApiKeysPost'] as const;
 
+export const getCreateApiKeyV1ProjectsProjectIdApiKeysPostMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError,CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError,CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationVariables, TContext> => {
 
-export const getCreateApiKeyV1ProjectsProjectIdApiKeysPostQueryOptions = <TData = Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError = ErrorType<Problem>>(projectId: string,
-    createApiKeyRequest: CreateApiKeyRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getCreateApiKeyV1ProjectsProjectIdApiKeysPostQueryKey(projectId,createApiKeyRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>> = ({ signal }) => createApiKeyV1ProjectsProjectIdApiKeysPost(projectId,createApiKeyRequest, { signal, ...requestOptions });
+const mutationKey = getCreateApiKeyV1ProjectsProjectIdApiKeysPostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type CreateApiKeyV1ProjectsProjectIdApiKeysPostQueryResult = NonNullable<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>>
-export type CreateApiKeyV1ProjectsProjectIdApiKeysPostQueryError = ErrorType<Problem>
+          return  createApiKeyV1ProjectsProjectIdApiKeysPost(projectId,data,requestOptions)
+        }
 
 
-export function useCreateApiKeyV1ProjectsProjectIdApiKeysPost<TData = Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createApiKeyRequest: CreateApiKeyRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>,
-          TError,
-          Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCreateApiKeyV1ProjectsProjectIdApiKeysPost<TData = Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createApiKeyRequest: CreateApiKeyRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>,
-          TError,
-          Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCreateApiKeyV1ProjectsProjectIdApiKeysPost<TData = Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createApiKeyRequest: CreateApiKeyRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationResult = NonNullable<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>>
+    export type CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationBody = CreateApiKeyRequest
+    export type CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationError = ErrorType<Problem>
+    export type CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationVariables = {projectId: string;data: CreateApiKeyRequest}
+
+    /**
  * @summary Create Api Key
  */
-
-export function useCreateApiKeyV1ProjectsProjectIdApiKeysPost<TData = Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    createApiKeyRequest: CreateApiKeyRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCreateApiKeyV1ProjectsProjectIdApiKeysPostQueryOptions(projectId,createApiKeyRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponse200 = {
-  data: ApiKeyOut
-  status: 200
-}
-
-export type revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponseSuccess = (revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponse200) & {
-  headers: Headers;
-};
-export type revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponseError = (revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponseDefault) & {
-  headers: Headers;
-};
-
-export type revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponse = (revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponseSuccess | revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponseError)
-
-export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostUrl = (projectId: string,
+export const useCreateApiKeyV1ProjectsProjectIdApiKeysPost = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>, TError,CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createApiKeyV1ProjectsProjectIdApiKeysPost>>,
+        TError,
+        CreateApiKeyV1ProjectsProjectIdApiKeysPostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateApiKeyV1ProjectsProjectIdApiKeysPostMutationOptions(options), queryClient);
+    }
+    export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostUrl = (projectId: string,
     keyId: string,) => {
 
 
@@ -335,9 +271,9 @@ export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostUrl = (proj
  * @summary Revoke Api Key
  */
 export const revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost = async (projectId: string,
-    keyId: string, options?: Parameters<typeof apiMutator>[1]): Promise<revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponse> => {
+    keyId: string, options?: Parameters<typeof apiMutator>[1]): Promise<ApiKeyOut> => {
 
-  return apiMutator<revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostResponse>(getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostUrl(projectId,keyId),
+  return apiMutator<ApiKeyOut>(getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostUrl(projectId,keyId),
   {
     ...options,
     method: 'POST'
@@ -350,83 +286,50 @@ export const revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost = async (proj
 
 
 
-export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostQueryKey = (projectId: string,
-    keyId: string,) => {
-    return [
-    'POST', `/v1/projects/${projectId}/api-keys/${keyId}/revoke`
-    ] as const;
-    }
+export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationKey = () => ['revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost'] as const;
 
+export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError,RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError,RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationVariables, TContext> => {
 
-export const getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostQueryOptions = <TData = Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError = ErrorType<Problem>>(projectId: string,
-    keyId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostQueryKey(projectId,keyId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>> = ({ signal }) => revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost(projectId,keyId, { signal, ...requestOptions });
+const mutationKey = getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationVariables> = (props) => {
+          const {projectId,keyId} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && keyId !== null && keyId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostQueryResult = NonNullable<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>>
-export type RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostQueryError = ErrorType<Problem>
+          return  revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost(projectId,keyId,requestOptions)
+        }
 
 
-export function useRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost<TData = Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    keyId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>,
-          TError,
-          Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost<TData = Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    keyId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>,
-          TError,
-          Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost<TData = Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    keyId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationResult = NonNullable<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>>
+
+    export type RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationError = ErrorType<Problem>
+    export type RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationVariables = {projectId: string;keyId: string}
+
+    /**
  * @summary Revoke Api Key
  */
-
-export function useRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost<TData = Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError = ErrorType<Problem>>(
- projectId: string,
-    keyId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostQueryOptions(projectId,keyId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>, TError,RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof revokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePost>>,
+        TError,
+        RevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeApiKeyV1ProjectsProjectIdApiKeysKeyIdRevokePostMutationOptions(options), queryClient);
+    }

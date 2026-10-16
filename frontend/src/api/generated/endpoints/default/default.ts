@@ -5,13 +5,18 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
-  useMutation
+  useQuery
 } from '@tanstack/react-query';
 import type {
-  MutationFunction,
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   QueryClient,
-  UseMutationOptions,
-  UseMutationResult
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
+  UseQueryOptions,
+  UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
@@ -22,36 +27,25 @@ import type {
 import { apiMutator } from '../../../mutator';
 import type { ErrorType } from '../../../mutator';
 
-export type HTTPStatusCode1xx = 100 | 101 | 102 | 103;
-export type HTTPStatusCode2xx = 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207;
-export type HTTPStatusCode3xx = 300 | 301 | 302 | 303 | 304 | 305 | 307 | 308;
-export type HTTPStatusCode4xx = 400 | 401 | 402 | 403 | 404 | 405 | 406 | 407 | 408 | 409 | 410 | 411 | 412 | 413 | 414 | 415 | 416 | 417 | 418 | 419 | 420 | 421 | 422 | 423 | 424 | 426 | 428 | 429 | 431 | 451;
-export type HTTPStatusCode5xx = 500 | 501 | 502 | 503 | 504 | 505 | 507 | 511;
-export type HTTPStatusCodes = HTTPStatusCode1xx | HTTPStatusCode2xx | HTTPStatusCode3xx | HTTPStatusCode4xx | HTTPStatusCode5xx;
-
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export type liveHealthLiveGetResponse200 = {
-  data: LiveHealthLiveGet200
-  status: 200
-}
-
-export type liveHealthLiveGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type liveHealthLiveGetResponseSuccess = (liveHealthLiveGetResponse200) & {
-  headers: Headers;
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
 };
-export type liveHealthLiveGetResponseError = (liveHealthLiveGetResponseDefault) & {
-  headers: Headers;
-};
-
-export type liveHealthLiveGetResponse = (liveHealthLiveGetResponseSuccess | liveHealthLiveGetResponseError)
 
 export const getLiveHealthLiveGetUrl = () => {
 
@@ -64,9 +58,9 @@ export const getLiveHealthLiveGetUrl = () => {
 /**
  * @summary Live
  */
-export const liveHealthLiveGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<liveHealthLiveGetResponse> => {
+export const liveHealthLiveGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<LiveHealthLiveGet200> => {
 
-  return apiMutator<liveHealthLiveGetResponse>(getLiveHealthLiveGetUrl(),
+  return apiMutator<LiveHealthLiveGet200>(getLiveHealthLiveGetUrl(),
   {
     ...options,
     method: 'GET'
@@ -79,71 +73,79 @@ export const liveHealthLiveGet = async ( options?: Parameters<typeof apiMutator>
 
 
 
-export const getLiveHealthLiveGetMutationKey = () => ['liveHealthLiveGet'] as const;
-
-export const getLiveHealthLiveGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError,void, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError,void, TContext> => {
-
-const mutationKey = getLiveHealthLiveGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getLiveHealthLiveGetQueryKey = () => {
+    return [
+    `/health/live`
+    ] as const;
+    }
 
 
+export const getLiveHealthLiveGetQueryOptions = <TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<Problem>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof liveHealthLiveGet>>, void> = () => {
 
-
-          return  liveHealthLiveGet(requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveHealthLiveGet>>> = ({ signal }) => liveHealthLiveGet({ signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
-
-    export type LiveHealthLiveGetMutationResult = NonNullable<Awaited<ReturnType<typeof liveHealthLiveGet>>>
-
-    export type LiveHealthLiveGetMutationError = ErrorType<Problem>
+export type LiveHealthLiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof liveHealthLiveGet>>>
+export type LiveHealthLiveGetQueryError = ErrorType<Problem>
 
 
-    /**
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<Problem>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof liveHealthLiveGet>>,
+          TError,
+          Awaited<ReturnType<typeof liveHealthLiveGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof liveHealthLiveGet>>,
+          TError,
+          Awaited<ReturnType<typeof liveHealthLiveGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary Live
  */
-export const useLiveHealthLiveGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError,void, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof liveHealthLiveGet>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getLiveHealthLiveGetMutationOptions(options), queryClient);
-    }
-    export type readyHealthReadyGetResponse200 = {
-  data: unknown
-  status: 200
+
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLiveHealthLiveGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type readyHealthReadyGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
 
-export type readyHealthReadyGetResponseSuccess = (readyHealthReadyGetResponse200) & {
-  headers: Headers;
-};
-export type readyHealthReadyGetResponseError = (readyHealthReadyGetResponseDefault) & {
-  headers: Headers;
-};
 
-export type readyHealthReadyGetResponse = (readyHealthReadyGetResponseSuccess | readyHealthReadyGetResponseError)
+
+
 
 export const getReadyHealthReadyGetUrl = () => {
 
@@ -156,9 +158,9 @@ export const getReadyHealthReadyGetUrl = () => {
 /**
  * @summary Ready
  */
-export const readyHealthReadyGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<readyHealthReadyGetResponse> => {
+export const readyHealthReadyGet = async ( options?: Parameters<typeof apiMutator>[1]): Promise<unknown> => {
 
-  return apiMutator<readyHealthReadyGetResponse>(getReadyHealthReadyGetUrl(),
+  return apiMutator<unknown>(getReadyHealthReadyGetUrl(),
   {
     ...options,
     method: 'GET'
@@ -171,50 +173,77 @@ export const readyHealthReadyGet = async ( options?: Parameters<typeof apiMutato
 
 
 
-export const getReadyHealthReadyGetMutationKey = () => ['readyHealthReadyGet'] as const;
-
-export const getReadyHealthReadyGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError,void, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError,void, TContext> => {
-
-const mutationKey = getReadyHealthReadyGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getReadyHealthReadyGetQueryKey = () => {
+    return [
+    `/health/ready`
+    ] as const;
+    }
 
 
+export const getReadyHealthReadyGetQueryOptions = <TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<Problem>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof readyHealthReadyGet>>, void> = () => {
 
-
-          return  readyHealthReadyGet(requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyHealthReadyGet>>> = ({ signal }) => readyHealthReadyGet({ signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ReadyHealthReadyGetMutationResult = NonNullable<Awaited<ReturnType<typeof readyHealthReadyGet>>>
-
-    export type ReadyHealthReadyGetMutationError = ErrorType<Problem>
+export type ReadyHealthReadyGetQueryResult = NonNullable<Awaited<ReturnType<typeof readyHealthReadyGet>>>
+export type ReadyHealthReadyGetQueryError = ErrorType<Problem>
 
 
-    /**
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<Problem>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof readyHealthReadyGet>>,
+          TError,
+          Awaited<ReturnType<typeof readyHealthReadyGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof readyHealthReadyGet>>,
+          TError,
+          Awaited<ReturnType<typeof readyHealthReadyGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary Ready
  */
-export const useReadyHealthReadyGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError,void, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof readyHealthReadyGet>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getReadyHealthReadyGetMutationOptions(options), queryClient);
-    }
+
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReadyHealthReadyGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

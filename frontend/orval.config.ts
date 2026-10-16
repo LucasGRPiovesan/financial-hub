@@ -14,7 +14,9 @@ export default defineConfig({
       prettier: false,
       override: {
         mutator: { path: "./src/api/mutator.ts", name: "apiMutator" },
-        query: { useQuery: true, useMutation: true },
+        // Defaults per verb: GET -> useQuery, everything else -> useMutation. The mutator returns the
+        // parsed body, so the generated types must not wrap it in a {data, status} envelope.
+        fetch: { includeHttpResponseReturnType: false },
       },
     },
   },

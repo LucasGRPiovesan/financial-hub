@@ -1,19 +1,145 @@
+import { Link } from "@tanstack/react-router";
+
 import { PageHeader } from "../components/page-header";
-import { ScopeBadge } from "../components/scope-badge";
+import { Badge } from "../components/ui/badge";
+import { buttonVariants } from "../components/ui/button-variants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Skeleton } from "../components/ui/skeleton";
+import { useApiKeys, useProviderAccounts, useTrialBalance } from "../features/console/api";
+import { NoProjectState } from "../features/console/no-project";
+import { useProject } from "../features/console/use-project";
+import { errorText } from "../features/console/errors";
 import { HealthIndicator } from "../features/health/health-indicator";
-import { SCOPE_DESCRIPTIONS, SCOPES } from "../lib/scope";
+import { StreamStatusIndicator } from "../lib/realtime/stream-status";
+
+// Widened to string: the route tree is assembled at runtime, so its paths are not literal types.
+const LINKS: Record<"apikeys" | "integrations" | "projects" | "members", string> = {
+  apikeys: "/api-keys",
+  integrations: "/integrations",
+  projects: "/projects",
+  members: "/members",
+};
+
+function Count({ value, hasMore }: { value: number; hasMore: boolean }) {
+  return (
+    <p className="figures text-3xl font-semibold">
+      {value}
+      {hasMore ? "+" : ""}
+    </p>
+  );
+}
+
+function CardBody({ pending, error, children }: { pending: boolean; error: unknown; children: React.ReactNode }) {
+  if (pending) return <Skeleton className="h-8 w-24" aria-label="Loading" role="status" />;
+  if (error) return <p className="text-sm text-danger">{errorText(error)}</p>;
+  return <>{children}</>;
+}
 
 export function OverviewPage() {
+  const { membership, can, stream } = useProject();
+  const projectId = membership?.project_id ?? null;
+  const mayKeys = can("api_keys:manage");
+  const mayAccounts = can("integrations:read");
+  const mayLedger = can("ledger:read");
+  const balance = useTrialBalance(mayLedger ? projectId : null);
+  const keys = useApiKeys(projectId, mayKeys);
+  const accounts = useProviderAccounts(projectId, mayAccounts);
+
+  if (!membership) {
+    return (
+      <>
+        <PageHeader title="Overview" description="The state of your active project." scope="implemented" />
+        <NoProjectState />
+      </>
+    );
+  }
+
+  const activeKeys = keys.data?.data.filter((key) => key.status === "active").length ?? 0;
+  const activeAccounts = accounts.data?.data.filter((account) => account.status === "active").length ?? 0;
+
   return (
     <>
-      <PageHeader
-        title="Overview"
-        description="Status of this environment and how to read the capability labels used throughout the console."
-        scope="implemented"
-      />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <PageHeader title="Overview" description="The state of your active project." scope="implemented" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ledger</CardTitle>
+            <CardDescription>Trial balance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!mayLedger ? (
+              <p className="text-sm text-ink-muted">Not available for your role.</p>
+            ) : (
+              <CardBody pending={balance.isPending} error={balance.error}>
+                {balance.data && balance.data.totals.length === 0 ? (
+                  <p className="text-sm text-ink-muted">No entries yet.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1">
+                    {balance.data?.totals.map((total) => (
+                      <li key={total.currency} className="flex items-center gap-2 text-sm">
+                        <span className="font-mono">{total.currency}</span>
+                        <Badge tone={total.balanced ? "success" : "danger"}>
+                          {total.balanced ? "Balanced" : "Not balanced"}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardBody>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Active API keys</CardTitle>
+            <CardDescription>
+              <Link to={LINKS.apikeys} className={buttonVariants({ variant: "link", size: "sm" })}>
+                Manage API keys
+              </Link>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!mayKeys ? (
+              <p className="text-sm text-ink-muted">Not available for your role.</p>
+            ) : (
+              <CardBody pending={keys.isPending} error={keys.error}>
+                <Count value={activeKeys} hasMore={keys.data?.has_more ?? false} />
+              </CardBody>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Active provider accounts</CardTitle>
+            <CardDescription>
+              <Link to={LINKS.integrations} className={buttonVariants({ variant: "link", size: "sm" })}>
+                Manage provider accounts
+              </Link>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!mayAccounts ? (
+              <p className="text-sm text-ink-muted">Not available for your role.</p>
+            ) : (
+              <CardBody pending={accounts.isPending} error={accounts.error}>
+                <Count value={activeAccounts} hasMore={accounts.data?.has_more ?? false} />
+              </CardBody>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Realtime</CardTitle>
+            <CardDescription>Live updates for this project.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StreamStatusIndicator status={stream.status} />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Environment</CardTitle>
@@ -23,30 +149,29 @@ export function OverviewPage() {
             <HealthIndicator />
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle>Capability labels</CardTitle>
-            <CardDescription>Every feature says how real it is.</CardDescription>
+            <CardTitle>Quick links</CardTitle>
           </CardHeader>
-          <CardContent className="px-2 py-2">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Label</TableHead>
-                  <TableHead>Meaning</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {SCOPES.map((scope) => (
-                  <TableRow key={scope}>
-                    <TableCell>
-                      <ScopeBadge scope={scope} />
-                    </TableCell>
-                    <TableCell className="text-ink-muted">{SCOPE_DESCRIPTIONS[scope]}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent>
+            <ul className="flex flex-col gap-1 text-sm">
+              <li>
+                <Link to={LINKS.projects} className="underline">
+                  Projects
+                </Link>
+              </li>
+              <li>
+                <Link to={LINKS.members} className="underline">
+                  Members
+                </Link>
+              </li>
+              <li>
+                <Link to={LINKS.integrations} className="underline">
+                  Provider accounts
+                </Link>
+              </li>
+            </ul>
           </CardContent>
         </Card>
       </div>

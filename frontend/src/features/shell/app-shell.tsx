@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { DialogDescription, DialogTitle, Sheet, SheetContent, SheetTrigger } from "../../components/ui/dialog";
 import { meQueryOptions } from "../auth/auth-api";
+import { ProjectProvider } from "../console/project-context";
 import { BrandMark, SidebarNav } from "./sidebar-nav";
 import { OperatorMenu, ProjectSwitcher, ThemeMenu } from "./top-bar";
 
@@ -14,6 +15,7 @@ export function AppShell() {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
+    <ProjectProvider memberships={me.memberships}>
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
       <a
         href="#main"
@@ -59,5 +61,6 @@ export function AppShell() {
         </main>
       </div>
     </div>
+    </ProjectProvider>
   );
 }

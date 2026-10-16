@@ -5,13 +5,18 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
-  useMutation
+  useQuery
 } from '@tanstack/react-query';
 import type {
-  MutationFunction,
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   QueryClient,
-  UseMutationOptions,
-  UseMutationResult
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
+  UseQueryOptions,
+  UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
@@ -22,36 +27,25 @@ import type {
 import { apiMutator } from '../../../mutator';
 import type { ErrorType } from '../../../mutator';
 
-export type HTTPStatusCode1xx = 100 | 101 | 102 | 103;
-export type HTTPStatusCode2xx = 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207;
-export type HTTPStatusCode3xx = 300 | 301 | 302 | 303 | 304 | 305 | 307 | 308;
-export type HTTPStatusCode4xx = 400 | 401 | 402 | 403 | 404 | 405 | 406 | 407 | 408 | 409 | 410 | 411 | 412 | 413 | 414 | 415 | 416 | 417 | 418 | 419 | 420 | 421 | 422 | 423 | 424 | 426 | 428 | 429 | 431 | 451;
-export type HTTPStatusCode5xx = 500 | 501 | 502 | 503 | 504 | 505 | 507 | 511;
-export type HTTPStatusCodes = HTTPStatusCode1xx | HTTPStatusCode2xx | HTTPStatusCode3xx | HTTPStatusCode4xx | HTTPStatusCode5xx;
-
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export type streamV1ProjectsProjectIdStreamGetResponse200 = {
-  data: void
-  status: 200
-}
-
-export type streamV1ProjectsProjectIdStreamGetResponseDefault = {
-  data: Problem
-  status: Exclude<HTTPStatusCodes, 200>
-}
-
-export type streamV1ProjectsProjectIdStreamGetResponseSuccess = (streamV1ProjectsProjectIdStreamGetResponse200) & {
-  headers: Headers;
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
 };
-export type streamV1ProjectsProjectIdStreamGetResponseError = (streamV1ProjectsProjectIdStreamGetResponseDefault) & {
-  headers: Headers;
-};
-
-export type streamV1ProjectsProjectIdStreamGetResponse = (streamV1ProjectsProjectIdStreamGetResponseSuccess | streamV1ProjectsProjectIdStreamGetResponseError)
 
 export const getStreamV1ProjectsProjectIdStreamGetUrl = (projectId: string,
     params?: StreamV1ProjectsProjectIdStreamGetParams,) => {
@@ -73,9 +67,9 @@ export const getStreamV1ProjectsProjectIdStreamGetUrl = (projectId: string,
  * @summary Stream
  */
 export const streamV1ProjectsProjectIdStreamGet = async (projectId: string,
-    params?: StreamV1ProjectsProjectIdStreamGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<streamV1ProjectsProjectIdStreamGetResponse> => {
+    params?: StreamV1ProjectsProjectIdStreamGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<void> => {
 
-  return apiMutator<streamV1ProjectsProjectIdStreamGetResponse>(getStreamV1ProjectsProjectIdStreamGetUrl(projectId,params),
+  return apiMutator<void>(getStreamV1ProjectsProjectIdStreamGetUrl(projectId,params),
   {
     ...options,
     method: 'GET'
@@ -88,50 +82,83 @@ export const streamV1ProjectsProjectIdStreamGet = async (projectId: string,
 
 
 
-export const getStreamV1ProjectsProjectIdStreamGetMutationKey = () => ['streamV1ProjectsProjectIdStreamGet'] as const;
-
-export const getStreamV1ProjectsProjectIdStreamGetMutationOptions = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError,StreamV1ProjectsProjectIdStreamGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
-): UseMutationOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError,StreamV1ProjectsProjectIdStreamGetMutationVariables, TContext> => {
-
-const mutationKey = getStreamV1ProjectsProjectIdStreamGetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+export const getStreamV1ProjectsProjectIdStreamGetQueryKey = (projectId: string,
+    params?: StreamV1ProjectsProjectIdStreamGetParams,) => {
+    return [
+    `/v1/projects/${projectId}/stream`, ...(params ? [params] : [])
+    ] as const;
+    }
 
 
+export const getStreamV1ProjectsProjectIdStreamGetQueryOptions = <TData = Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError = ErrorType<Problem>>(projectId: string,
+    params?: StreamV1ProjectsProjectIdStreamGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStreamV1ProjectsProjectIdStreamGetQueryKey(projectId,params);
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, StreamV1ProjectsProjectIdStreamGetMutationVariables> = (props) => {
-          const {projectId,params} = props ?? {};
 
-          return  streamV1ProjectsProjectIdStreamGet(projectId,params,requestOptions)
-        }
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>> = ({ signal }) => streamV1ProjectsProjectIdStreamGet(projectId,params, { signal, ...requestOptions });
 
 
 
 
 
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-  return  { mutationFn, ...mutationOptions }}
+export type StreamV1ProjectsProjectIdStreamGetQueryResult = NonNullable<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>>
+export type StreamV1ProjectsProjectIdStreamGetQueryError = ErrorType<Problem>
 
-    export type StreamV1ProjectsProjectIdStreamGetMutationResult = NonNullable<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>>
 
-    export type StreamV1ProjectsProjectIdStreamGetMutationError = ErrorType<Problem>
-    export type StreamV1ProjectsProjectIdStreamGetMutationVariables = {projectId: string;params?: StreamV1ProjectsProjectIdStreamGetParams}
-
-    /**
+export function useStreamV1ProjectsProjectIdStreamGet<TData = Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params: undefined |  StreamV1ProjectsProjectIdStreamGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>,
+          TError,
+          Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamV1ProjectsProjectIdStreamGet<TData = Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: StreamV1ProjectsProjectIdStreamGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>,
+          TError,
+          Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamV1ProjectsProjectIdStreamGet<TData = Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: StreamV1ProjectsProjectIdStreamGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
  * @summary Stream
  */
-export const useStreamV1ProjectsProjectIdStreamGet = <TError = ErrorType<Problem>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError,StreamV1ProjectsProjectIdStreamGetMutationVariables, TContext>, request?: SecondParameter<typeof apiMutator>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>,
-        TError,
-        StreamV1ProjectsProjectIdStreamGetMutationVariables,
-        TContext
-      > => {
-      return useMutation(getStreamV1ProjectsProjectIdStreamGetMutationOptions(options), queryClient);
-    }
+
+export function useStreamV1ProjectsProjectIdStreamGet<TData = Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: StreamV1ProjectsProjectIdStreamGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamV1ProjectsProjectIdStreamGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getStreamV1ProjectsProjectIdStreamGetQueryOptions(projectId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

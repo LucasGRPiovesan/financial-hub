@@ -3,12 +3,14 @@ import {
   BookOpenText,
   CreditCard,
   FolderKanban,
+  KeyRound,
   LayoutDashboard,
   Plug,
   Receipt,
   Scale,
   ScrollText,
   Settings,
+  UserCog,
   Users,
   Webhook,
   type LucideIcon,
@@ -42,7 +44,7 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
       to: "/projects",
       label: "Projects",
       icon: FolderKanban,
-      scope: "planned",
+      scope: "implemented",
       summary: "Create projects and manage which operators can access them.",
     },
     {
@@ -79,9 +81,9 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
   [
     {
       to: "/integrations",
-      label: "Integrations",
+      label: "Provider accounts",
       icon: Plug,
-      scope: "planned",
+      scope: "sandbox",
       summary: "Connect payment providers and check their health.",
     },
     {
@@ -116,6 +118,20 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
     },
   ],
   [
+    {
+      to: "/api-keys",
+      label: "API keys",
+      icon: KeyRound,
+      scope: "implemented",
+      summary: "Create and revoke the keys your backend uses to call the API.",
+    },
+    {
+      to: "/members",
+      label: "Members",
+      icon: UserCog,
+      scope: "planned",
+      summary: "See who can access the project and what each role allows.",
+    },
     {
       to: "/settings",
       label: "Settings",
