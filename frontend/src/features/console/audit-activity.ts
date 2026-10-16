@@ -16,11 +16,50 @@ export interface ActivityLine {
 
 type Side = "before" | "after";
 
+/** The marker the backend writes in place of personal data; it is never shown to people. */
+const REDACTED = "[redacted]";
+
+/** Actions whose sentence takes no data; the rest are handled in `sentenceFor`. */
+const PLAIN_ACTIONS = {
+  "refund.requested": "activity.refundRequested",
+  "payment.created": "activity.paymentCreated",
+  "payment.status_changed": "activity.paymentStatusChanged",
+  "operator.login_succeeded": "activity.operatorLoginSucceeded",
+  "operator.login_failed": "activity.operatorLoginFailed",
+  "operator.login_locked": "activity.operatorLoginLocked",
+  "operator.logout": "activity.operatorLogout",
+  "operator.password_changed": "activity.operatorPasswordChanged",
+} as const satisfies Record<string, MessageKey>;
+
+/** Every audit action the backend records, each with a dedicated sentence in every language. */
+export const KNOWN_ACTIONS: readonly string[] = [
+  "member.added",
+  "member.role_changed",
+  "member.removed",
+  "customer.created",
+  "customer.updated",
+  "customer.anonymized",
+  "api_key.created",
+  "api_key.revoked",
+  "project.created",
+  "project.updated",
+  "provider_account.created",
+  "provider_account.credentials_replaced",
+  "provider_account.activated",
+  "provider_account.disabled",
+  "provider_account.status_changed",
+  ...Object.keys(PLAIN_ACTIONS),
+];
+
+function isPlainAction(action: string): action is keyof typeof PLAIN_ACTIONS {
+  return Object.hasOwn(PLAIN_ACTIONS, action);
+}
+
 function field(record: AuditRecordOut, side: Side, key: string): string | null {
   const section = record.diff?.[side];
   if (typeof section !== "object" || section === null) return null;
   const value = (section as Record<string, unknown>)[key];
-  return typeof value === "string" && value.trim() !== "" ? value : null;
+  return typeof value === "string" && value.trim() !== "" && value.trim().toLowerCase() !== REDACTED ? value : null;
 }
 
 /** "member.role_changed" -> "Member role changed": the English fallback for actions without a dedicated sentence. */
@@ -39,7 +78,7 @@ function sentenceFor(record: AuditRecordOut, names: OperatorNames): string {
   const { action } = record;
   const target = record.target_id ? names.get(record.target_id) : undefined;
   const name = field(record, "after", "name") ?? field(record, "before", "name");
-  const named = <K extends "customerCreated" | "customerUpdated" | "apiKeyCreated" | "apiKeyRevoked" | "projectCreated">(
+  const named = <K extends "customerCreated" | "customerUpdated" | "apiKeyCreated" | "apiKeyRevoked" | "projectCreated" | "projectUpdated">(
     kind: K,
   ): string => (name ? t(`activity.${kind}Named`, { name }) : t(`activity.${kind}`));
 
@@ -73,7 +112,10 @@ function sentenceFor(record: AuditRecordOut, names: OperatorNames): string {
       return named("apiKeyRevoked");
     case "project.created":
       return named("projectCreated");
+    case "project.updated":
+      return named("projectUpdated");
     default: {
+      if (isPlainAction(action)) return t(PLAIN_ACTIONS[action]);
       if (action.startsWith("provider_account.")) {
         const kind = action.slice("provider_account.".length);
         const key = `activity.providerAccount.${camelKey(kind)}`;

@@ -139,7 +139,7 @@ describe("Overview screen", () => {
       [`GET /v1/projects/p-2/customers${CUSTOMERS}`]: () => json(200, page([])),
     });
     renderApp("/");
-    expect(await screen.findByText(/No entries yet/)).toBeInTheDocument();
+    expect(await screen.findByText("No entries yet")).toBeInTheDocument();
     expect(calls.some((call) => call.key.includes("api-keys"))).toBe(false);
     expect(calls.some((call) => call.key.includes("audit-records"))).toBe(false);
     expect(screen.getAllByText("Not available for your role.").length).toBeGreaterThanOrEqual(2);

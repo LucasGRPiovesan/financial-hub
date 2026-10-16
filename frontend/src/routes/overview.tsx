@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Scale } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { AuditRecordOut, TrialBalanceTotalOut } from "../api/generated/model";
@@ -191,9 +192,19 @@ export function OverviewPage() {
       </div>
     );
   } else if (balance.error) ledger = <p className="px-5 py-4 text-sm text-danger">{errorText(balance.error)}</p>;
-  else if (balance.data.totals.length === 0) ledger = <p className="px-5 py-4 text-sm text-ink-muted">
-      {t("overview.trial.empty")}
-    </p>;
+  else if (balance.data.totals.length === 0) {
+    ledger = (
+      <div className="flex items-center gap-4 px-5 py-6">
+        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-ink-muted">
+          <Scale className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t("overview.trial.empty")}</p>
+          <p className="text-sm text-ink-muted">{t("overview.trial.emptyHint")}</p>
+        </div>
+      </div>
+    );
+  }
   else ledger = <TrialBalanceTable totals={balance.data.totals} />;
 
   let activity: ReactNode;
@@ -220,7 +231,7 @@ export function OverviewPage() {
     <>
       <PageHeader title={t("overview.title")} description={t("overview.description")} />
 
-      <section aria-label={t("overview.keyFigures")} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label={t("overview.keyFigures")} className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           title={t("overview.stats.apiKeys.title")}
           href={LINKS.apikeys}
@@ -263,8 +274,8 @@ export function OverviewPage() {
         />
       </section>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Card className="overflow-hidden">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>{t("overview.trial.title")}</CardTitle>
             <CardDescription>{t("overview.trial.description")}</CardDescription>
@@ -272,7 +283,7 @@ export function OverviewPage() {
           {ledger}
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>{t("overview.activity.title")}</CardTitle>
             <CardDescription>{t("overview.activity.description")}</CardDescription>
@@ -281,7 +292,7 @@ export function OverviewPage() {
         </Card>
       </div>
 
-      <section aria-label={t("overview.system")} className="mt-4 grid gap-4 sm:grid-cols-2">
+      <section aria-label={t("overview.system")} className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="flex flex-col gap-2">
             <h2 className="text-sm font-medium text-ink-muted">{t("overview.realtime")}</h2>

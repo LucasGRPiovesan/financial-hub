@@ -15,6 +15,9 @@ interface DemoPickerProps {
   onPick: (operator: DemoOperatorOut) => void;
 }
 
+/** Project chips shown per operator; the rest collapse into a "+N" counter so one card never grows unbounded. */
+const MAX_CHIPS = 3;
+
 /** "Ana Souza" -> "AS"; one word gives one letter. */
 function initials(displayName: string): string {
   return displayName
@@ -57,12 +60,17 @@ export function DemoPicker({ operators, pendingId, disabled, onPick }: DemoPicke
                   </p>
                   {operator.memberships.length > 0 ? (
                     <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1" aria-label={t("auth.projectsOf", { name: operator.display_name })}>
-                      {operator.memberships.map((membership) => (
-                        <li key={membership.project_id} className="flex min-w-0 items-center gap-1.5 text-xs">
-                          <span className="max-w-32 truncate text-ink-muted">{membership.project_name}</span>
+                      {operator.memberships.slice(0, MAX_CHIPS).map((membership) => (
+                        <li key={membership.project_id} className="flex min-w-0 max-w-full items-center gap-1.5 text-xs">
+                          <span className="max-w-32 truncate text-ink-muted" title={membership.project_name}>
+                            {membership.project_name}
+                          </span>
                           <Badge tone={roleTone(membership.role)}>{tLoose("roles", membership.role)}</Badge>
                         </li>
                       ))}
+                      {operator.memberships.length > MAX_CHIPS ? (
+                        <li className="text-xs text-ink-muted">+{operator.memberships.length - MAX_CHIPS}</li>
+                      ) : null}
                     </ul>
                   ) : (
                     <p className="mt-1.5 text-xs text-ink-muted">{t("auth.noProjects")}</p>
@@ -71,7 +79,7 @@ export function DemoPicker({ operators, pendingId, disabled, onPick }: DemoPicke
               </div>
               <Button
                 size="md"
-                className={cn("shrink-0 sm:w-44", pending && "disabled:opacity-100")}
+                className={cn("shrink-0 sm:min-w-28", pending && "disabled:opacity-100")}
                 disabled={disabled}
                 aria-label={pending ? undefined : t("auth.continueAs", { name: operator.display_name })}
                 onClick={() => onPick(operator)}
@@ -83,7 +91,7 @@ export function DemoPicker({ operators, pendingId, disabled, onPick }: DemoPicke
                   </>
                 ) : (
                   <>
-                    <span className="truncate">{t("auth.continueAs", { name: operator.display_name.split(/\s+/)[0] ?? "" })}</span>
+                    {t("auth.signIn")}
                     <ArrowRight aria-hidden="true" />
                   </>
                 )}

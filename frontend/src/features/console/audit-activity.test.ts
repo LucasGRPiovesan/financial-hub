@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { AuditRecordOut } from "../../api/generated/model";
-import { describeActivity, humanizeAction } from "./audit-activity";
+import { setLocale } from "../../lib/locale";
+import { describeActivity, humanizeAction, KNOWN_ACTIONS } from "./audit-activity";
 
 const NAMES = new Map([
   ["opr_ana", "Ana Owner"],
@@ -51,7 +52,11 @@ describe("describeActivity sentences", () => {
     ["provider account added", { action: "provider_account.created" }, "Provider account added"],
     ["provider account disabled", { action: "provider_account.disabled" }, "Provider account disabled"],
     ["provider account unknown verb", { action: "provider_account.rotated" }, "Provider account updated"],
-    ["unknown action", { action: "project.updated" }, "Project updated"],
+    ["project updated", { action: "project.updated" }, "Project updated"],
+    ["refund requested", { action: "refund.requested" }, "Refund requested"],
+    ["unknown action", { action: "thing.happened" }, "Thing happened"],
+    ["redacted name is never shown", { action: "customer.created", diff: { after: { name: "[redacted]" } } }, "Customer created"],
+    ["redacted name, other entity", { action: "api_key.revoked", diff: { before: { name: "[REDACTED]" } } }, "API key revoked"],
     ["non-string diff values are ignored", { action: "customer.created", diff: { after: { name: 42 } } }, "Customer created"],
   ])("%s", (_label, overrides, sentence) => {
     expect(describeActivity(record(overrides), NAMES).sentence).toBe(sentence);
@@ -85,5 +90,27 @@ describe("humanizeAction", () => {
     ["", "Activity recorded"],
   ])("%j -> %j", (action, text) => {
     expect(humanizeAction(action)).toBe(text);
+  });
+});
+
+describe("pt-BR parity", () => {
+  it("has a dedicated phrase for every known action in both languages", () => {
+    for (const locale of ["en-US", "pt-BR"] as const) {
+      setLocale(locale);
+      for (const action of KNOWN_ACTIONS) {
+        const sentence = describeActivity(record({ action, diff: null }), NAMES).sentence;
+        expect(sentence, `${locale} ${action}`).not.toContain(action);
+        expect(sentence, `${locale} ${action}`).not.toMatch(/^(Action recorded|Ação registrada)/);
+        expect(sentence, `${locale} ${action}`).not.toBe(humanizeAction(action) + "!");
+      }
+    }
+  });
+
+  it("renders Portuguese sentences and hides redacted names", () => {
+    setLocale("pt-BR");
+    expect(describeActivity(record({ action: "refund.requested" }), NAMES).sentence).toBe("Reembolso solicitado");
+    expect(describeActivity(record({ action: "customer.created", diff: { after: { name: "[redacted]" } } }), NAMES).sentence).toBe(
+      "Cliente criado",
+    );
   });
 });

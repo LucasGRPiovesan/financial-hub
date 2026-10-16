@@ -69,7 +69,7 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
       to: "/payments",
       labelKey: "nav.payments.label",
       icon: CreditCard,
-      scope: "planned",
+      scope: "sandbox",
       summaryKey: "nav.payments.summary",
     },
     {

@@ -15,10 +15,12 @@ export type Permission =
   | "ledger:read"
   | "customers:read"
   | "customers:manage"
+  | "payments:read"
+  | "payments:refund"
   | "audit:read";
 
 /** What every role may read. */
-const READ: readonly Permission[] = ["members:read", "integrations:read", "ledger:read", "customers:read"];
+const READ: readonly Permission[] = ["members:read", "integrations:read", "ledger:read", "customers:read", "payments:read"];
 const CONFIGURATION: readonly Permission[] = [
   "projects:manage",
   "members:manage",
@@ -27,9 +29,9 @@ const CONFIGURATION: readonly Permission[] = [
 ];
 
 const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
-  owner: [...READ, "audit:read", ...CONFIGURATION, "customers:manage"],
+  owner: [...READ, "audit:read", ...CONFIGURATION, "customers:manage", "payments:refund"],
   admin: [...READ, "audit:read", ...CONFIGURATION, "customers:manage"],
-  finance: [...READ, "audit:read", "customers:manage"],
+  finance: [...READ, "audit:read", "customers:manage", "payments:refund"],
   viewer: READ,
 };
 

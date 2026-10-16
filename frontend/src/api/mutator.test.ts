@@ -32,6 +32,17 @@ describe("apiMutator", () => {
     expect(lastInit().headers["X-CSRF-Token"]).toBeUndefined();
   });
 
+  it("forwards the Idempotency-Key header and nothing else", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(new Response("{}", { status: 200 })));
+    await apiMutator("/v1/x", {
+      method: "post",
+      body: "{}",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": "k-1", "X-Other": "no" },
+    });
+    expect(lastInit().headers["Idempotency-Key"]).toBe("k-1");
+    expect(lastInit().headers["X-Other"]).toBeUndefined();
+  });
+
   it("parses problem+json into an ApiProblem", async () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(

@@ -4,7 +4,8 @@
 # seeds the demo workspace (idempotent), then runs the suite in the pinned Playwright container.
 # Usage: scripts/e2e.sh [playwright test args], e.g. scripts/e2e.sh --grep "API keys".
 # Reuses existing images (nothing is built unless an image is missing); one run at a time, host-wide.
-# E2E_KEEP_UP=1 leaves the stack running afterwards (faster reruns); the database volume is always kept.
+# E2E_KEEP_UP=1 leaves the stack and its database running afterwards (faster reruns); otherwise the
+# stack is removed with its database volume, so every run starts freshly migrated and freshly seeded.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 
@@ -23,7 +24,7 @@ run_e2e() {
     status=1
     dc logs --no-color --tail 80 api web || true
   fi
-  [[ "${E2E_KEEP_UP:-}" == 1 ]] || dc --profile e2e down --remove-orphans >/dev/null 2>&1 || true
+  [[ "${E2E_KEEP_UP:-}" == 1 ]] || { dc --profile e2e down --remove-orphans && docker volume rm "${E2E_PROJECT}_db-data"; } >/dev/null 2>&1 || true
   echo
   echo "Playwright HTML report: $PWD/e2e/playwright-report/index.html"
   return "$status"

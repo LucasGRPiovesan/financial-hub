@@ -120,6 +120,16 @@ keeps its action row pinned to the bottom, so no form is ever taller than the sc
   .../customers/{external_ref}` with client-side CPF/CNPJ check-digit validation, anonymize behind a type-the-reference
   confirmation. The upsert is deliberately not a TanStack mutation so the typed document is never held in the mutation
   cache; the field is cleared after every submit.
+- **Payments.** `/payments` (list) and `/payments/$paymentId` (detail), both lazy routes. The API's list takes only
+  `cursor`/`limit`, so the status/method/text filters narrow the pages already loaded (the UI says so); customer names
+  come from one cached `GET /customers/{id}` per distinct id. Amounts stay integer minor units (`Money`, BigInt parsing
+  in `features/payments/refund-amount.ts`, never floats). The refund dialog sends `POST .../refunds` with a fresh
+  `Idempotency-Key` per attempt (the key is regenerated when the operator edits the request); the mutator forwards that
+  one header only. `payments:refund` is owner and finance only, mirroring the backend. The API exposes no per-state
+  history, so the detail "timeline" is what the record dates: creation, each refund, last update. Accessible names the
+  e2e suite uses (pt-BR): table `Pagamentos`, link `Abrir cobrança <id>`, button `Estornar cobrança`, dialog `Estornar
+  cobrança`, fields `Estorno parcial`, `Valor a estornar (R$)`, `Motivo (opcional)`, button `Confirmar estorno`, table
+  `Estornos`.
 - **API keys.** The plaintext key is kept out of every query/mutation cache (`features/console/api.ts`).
 - **Code splitting.** Screens are `React.lazy` routes (via `lazyRouteComponent`); the initial chunk is ~466 kB (was
   ~539 kB) with login and the shell eager.

@@ -19,12 +19,14 @@ import { BootScreen, RouteError } from "./routes/route-states";
 
 // Screens load on demand so the first paint ships only the shell, sign-in and the router.
 const OverviewPage = lazyRouteComponent(() => import("./routes/overview"), "OverviewPage");
+const PaymentDetailPage = lazyRouteComponent(() => import("./routes/payments-detail"), "PaymentDetailPage");
 const PlaceholderPage = lazyRouteComponent(() => import("./routes/placeholder"), "PlaceholderPage");
 const SCREENS = {
   "/projects": lazyRouteComponent(() => import("./routes/projects"), "ProjectsPage"),
   "/api-keys": lazyRouteComponent(() => import("./routes/api-keys"), "ApiKeysPage"),
   "/members": lazyRouteComponent(() => import("./routes/members"), "MembersPage"),
   "/customers": lazyRouteComponent(() => import("./routes/customers"), "CustomersPage"),
+  "/payments": lazyRouteComponent(() => import("./routes/payments"), "PaymentsPage"),
   "/integrations": lazyRouteComponent(() => import("./routes/integrations"), "IntegrationsPage"),
 };
 
@@ -90,6 +92,7 @@ function buildRouteTree() {
   const screenRoutes = Object.entries(screens).map(([path, component]) =>
     createRoute({ getParentRoute: () => appRoute, path, component }),
   );
+  const paymentDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/payments/$paymentId", component: PaymentDetailPage });
   const placeholderRoutes = NAV_ITEMS.filter((item) => item.to !== "/" && !(item.to in screens)).map((item) =>
     createRoute({
       getParentRoute: () => appRoute,
@@ -100,7 +103,7 @@ function buildRouteTree() {
     }),
   );
 
-  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, ...placeholderRoutes])]);
+  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, paymentDetailRoute, ...placeholderRoutes])]);
 }
 
 /**

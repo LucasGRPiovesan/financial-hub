@@ -13,11 +13,19 @@ function parseBody(body: RequestInit["body"]): unknown {
   throw new TypeError("apiMutator only supports JSON request bodies");
 }
 
+/** Only the idempotency key is forwarded from the generated call; every other header is owned by apiFetch. */
+function forwardedHeaders(headers: RequestInit["headers"]): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  const key = new Headers(headers).get("Idempotency-Key");
+  return key === null ? undefined : { "Idempotency-Key": key };
+}
+
 export function apiMutator<T>(url: string, options: RequestInit = {}): Promise<T> {
   return apiFetch<T>(url, {
     method: (options.method ?? "GET").toUpperCase() as Method,
     body: parseBody(options.body),
     signal: options.signal ?? undefined,
+    headers: forwardedHeaders(options.headers),
   });
 }
 

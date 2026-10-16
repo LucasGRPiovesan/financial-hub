@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDateTime, formatRelative, parseIsoInstant } from "./datetime";
+import { formatCalendarDate, formatDateTime, formatRelative, parseIsoInstant } from "./datetime";
 
 describe("formatDateTime", () => {
   it("renders an ISO UTC instant in the requested zone with a zone label", () => {
@@ -38,5 +38,16 @@ describe("formatRelative", () => {
   it("collapses the last seconds into 'now'", () => {
     expect(formatRelative("2026-10-10T11:59:40Z", now, "en-US")).toBe("now");
     expect(formatRelative("2026-10-10T12:00:20Z", now, "en-US")).toBe("now");
+  });
+});
+
+describe("formatCalendarDate", () => {
+  it("formats a calendar date without shifting it across time zones", () => {
+    expect(formatCalendarDate("2026-01-05", "en-US")).toBe("Jan 5, 2026");
+    expect(formatCalendarDate("2026-12-31", "pt-BR")).toMatch(/^31 de dez.? de 2026$/);
+  });
+
+  it("rejects values that are not ISO calendar dates", () => {
+    expect(() => formatCalendarDate("2026-01-05T00:00:00Z", "pt-BR")).toThrow(RangeError);
   });
 });

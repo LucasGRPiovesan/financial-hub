@@ -37,7 +37,8 @@ E2E_KEEP_UP=1 bash scripts/e2e.sh           # leave the stack up for faster reru
 (`financial-hub-e2e`, its own database, ephemeral host ports; the dev stack and its data are never touched,
 and the operators that backend tests leave in the dev database cannot crowd the demo picker). It then runs
 `seed-demo` (idempotent), runs the suite in the pinned `mcr.microsoft.com/playwright` image (service `e2e`,
-profile `e2e`), and stops the stack. It prints the report path: `e2e/playwright-report/index.html`; traces,
+profile `e2e`), then stops the stack and drops its database volume, so every run starts from an empty
+database (`E2E_KEEP_UP=1` keeps both). It prints the report path: `e2e/playwright-report/index.html`; traces,
 screenshots and videos of failures are under `e2e/test-results/`. Open a trace with
 `npx playwright show-trace <trace.zip>` (or <https://trace.playwright.dev>).
 

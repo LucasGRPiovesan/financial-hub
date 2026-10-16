@@ -108,6 +108,8 @@ export interface ApiRequestInit {
   /** JSON-serialised when present. */
   body?: unknown;
   signal?: AbortSignal;
+  /** Extra request headers (e.g. `Idempotency-Key`); the console's own Accept/Content-Type/CSRF headers win. */
+  headers?: Record<string, string>;
   /** Set false for requests whose 401 is an expected outcome (login, the route guard's session probe). */
   redirectOn401?: boolean;
 }
@@ -163,7 +165,7 @@ async function toApiError(response: Response): Promise<ApiError> {
 
 export async function apiFetch<T = void>(path: string, init: ApiRequestInit = {}): Promise<T> {
   const method = init.method ?? "GET";
-  const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
+  const headers: Record<string, string> = { ...init.headers, Accept: "application/json, application/problem+json" };
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
   if (UNSAFE_METHODS.has(method) && csrfToken !== null) headers["X-CSRF-Token"] = csrfToken;
 

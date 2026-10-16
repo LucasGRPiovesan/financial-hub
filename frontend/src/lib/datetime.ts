@@ -71,3 +71,11 @@ export function formatRelative(iso: string, now: Date = new Date(), locale: stri
   }
   return formatter.format(Math.trunc(deltaSeconds / 60), "minute");
 }
+
+/** A calendar date ("2026-11-05", no time or zone) in the console locale, e.g. "5 de nov. de 2026"; never shifted by a zone. */
+export function formatCalendarDate(isoDate: string, locale: string = defaultLocale()): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) throw new RangeError(`Invalid ISO date: ${JSON.stringify(isoDate)}`);
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }).format(date);
+}
