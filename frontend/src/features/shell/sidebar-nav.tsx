@@ -44,6 +44,13 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
                 >
                   <item.icon className="size-4 shrink-0" aria-hidden="true" />
                   {item.label}
+                  {item.scope === "planned" ? (
+                    <span
+                      aria-hidden="true"
+                      data-planned=""
+                      className="ml-auto rounded-xs border border-dotted border-chrome-line px-1 text-2xs leading-4 font-normal text-chrome-muted after:content-['Soon']"
+                    />
+                  ) : null}
                 </Link>
               </li>
             ))}

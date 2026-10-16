@@ -38,7 +38,7 @@ export function MembersPage() {
   if (!membership) {
     return (
       <>
-        <PageHeader title="Members" description="Who can access this project, and what each role allows." scope="implemented" />
+        <PageHeader title="Members" description="Who can access this project, and what each role allows." />
         <NoProjectState />
       </>
     );
@@ -84,7 +84,6 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
     <PageHeader
       title="Members"
       description="Who can access this project, and what each role allows."
-      scope="implemented"
       actions={
         <GatedButton allowed={mayManage} reason={deniedReason("members:manage", role)} onClick={() => setAdding(true)}>
           <Plus aria-hidden="true" />

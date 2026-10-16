@@ -15,7 +15,7 @@ import { safeRedirectTarget } from "./features/auth/redirect";
 import { AppShell } from "./features/shell/app-shell";
 import { NAV_ITEMS } from "./features/shell/nav";
 import { isApiError } from "./lib/api";
-import { PendingShell, RouteError } from "./routes/route-states";
+import { BootScreen, RouteError } from "./routes/route-states";
 
 // Screens load on demand so the first paint ships only the shell, sign-in and the router.
 const OverviewPage = lazyRouteComponent(() => import("./routes/overview"), "OverviewPage");
@@ -45,6 +45,9 @@ function buildRouteTree() {
       const target = safeRedirectTarget(search.redirect);
       return target ? { redirect: target } : {};
     },
+    pendingComponent: BootScreen,
+    pendingMs: 0,
+    pendingMinMs: 0,
     beforeLoad: async ({ context }) => {
       // Already signed in: skip the form.
       const signedIn = await context.queryClient.ensureQueryData(meQueryOptions).then(
@@ -77,7 +80,9 @@ function buildRouteTree() {
       }
     },
     component: AppShell,
-    pendingComponent: PendingShell,
+    pendingComponent: BootScreen,
+    pendingMs: 0,
+    pendingMinMs: 0,
   });
 
   const overviewRoute = createRoute({ getParentRoute: () => appRoute, path: "/", component: OverviewPage });

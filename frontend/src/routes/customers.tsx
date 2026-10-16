@@ -27,7 +27,7 @@ export function CustomersPage() {
   if (!membership) {
     return (
       <>
-        <PageHeader title="Customers" description={DESCRIPTION} scope="implemented" />
+        <PageHeader title="Customers" description={DESCRIPTION} />
         <NoProjectState />
       </>
     );
@@ -35,7 +35,7 @@ export function CustomersPage() {
   if (!can("customers:read")) {
     return (
       <>
-        <PageHeader title="Customers" description={DESCRIPTION} scope="implemented" />
+        <PageHeader title="Customers" description={DESCRIPTION} />
         <EmptyState icon={UserRound} title="No access to customers" description={deniedReason("customers:read", membership.role)} />
       </>
     );
@@ -84,7 +84,6 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
     <PageHeader
       title="Customers"
       description={DESCRIPTION}
-      scope="implemented"
       actions={
         <GatedButton allowed={mayManage} reason={deniedReason("customers:manage", role)} onClick={startCreate}>
           <Plus aria-hidden="true" />
@@ -96,7 +95,7 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
 
   const filterForm = (
     <form onSubmit={applyFilter} role="search" aria-label="Filter customers" className="mb-4 flex flex-wrap items-end gap-2">
-      <div className="w-40">
+      <div className="w-52">
         <label htmlFor="customer-filter-by" className="mb-1 block text-sm font-medium">
           Filter by
         </label>

@@ -94,6 +94,35 @@ describe("app shell", () => {
     await expectNoAxeViolations(container);
   });
 
+  it("shows a boot skeleton instead of a blank screen while the session loads", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mockApi({
+      ...signedIn,
+      "GET /v1/auth/me": async () => {
+        await gate;
+        return json(200, ME);
+      },
+    });
+    renderApp("/");
+    expect(await screen.findByRole("status", { name: "Loading Financial Hub" })).toBeInTheDocument();
+    release();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Loading Financial Hub" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the Implemented badge off page headers but marks planned areas in the sidebar", async () => {
+    mockApi(signedIn);
+    renderApp("/");
+    await screen.findByRole("heading", { name: "Overview" });
+    expect(screen.queryByText("Implemented")).not.toBeInTheDocument();
+    // The marker is generated content, so link names stay exactly the section labels.
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(nav.querySelectorAll("[data-planned]")).toHaveLength(NAV_ITEMS.filter((item) => item.scope === "planned").length);
+  });
+
   it("switches between the operator's projects and remembers the choice", async () => {
     mockApi(signedIn);
     const user = userEvent.setup();

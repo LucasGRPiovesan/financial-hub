@@ -165,7 +165,35 @@ describe("login page", () => {
   });
 });
 
+describe("sign-in product panel", () => {
+  beforeEach(resetApiState);
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("explains the product with capabilities and an evaluation footnote", async () => {
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: noDemo });
+    const { container } = renderApp("/login");
+    const panel = await screen.findByRole("complementary", { name: "About Financial Hub" });
+    expect(within(panel).getByRole("heading", { name: /double-entry ledger/i })).toBeInTheDocument();
+    for (const title of ["Double-entry ledger", "Idempotent payments", "Signed webhooks and live events", "Audit trail"]) {
+      expect(within(panel).getByText(title)).toBeInTheDocument();
+    }
+    expect(within(panel).getByText(/Evaluation environment/)).toBeInTheDocument();
+    expect(panel).toHaveClass("hidden", "lg:flex");
+    await expectNoAxeViolations(container);
+  });
+});
+
 describe("demo operator picker", () => {
+  beforeEach(resetApiState);
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows initials avatars", async () => {
+    mockApi({ "GET /v1/auth/me": unauthenticated, [DEMO]: () => json(200, { operators: DEMO_OPERATORS }) });
+    renderApp("/login");
+    expect(await screen.findByText("AS")).toBeInTheDocument();
+    expect(screen.getByText("BL")).toBeInTheDocument();
+  });
+
   beforeEach(resetApiState);
   afterEach(() => vi.unstubAllGlobals());
 

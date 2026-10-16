@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { CircleAlert, LogIn } from "lucide-react";
+import { CircleAlert, CreditCard, LogIn, Scale, ScrollText, Webhook } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import type { DemoOperatorOut } from "../../api/generated/model";
@@ -13,6 +13,13 @@ import { BrandMark } from "../shell/sidebar-nav";
 import { demoLogin, demoOperatorsQueryOptions, login, meQueryOptions } from "./auth-api";
 import { DemoPicker } from "./demo-picker";
 import { safeRedirectTarget } from "./redirect";
+
+const CAPABILITIES = [
+  { icon: Scale, title: "Double-entry ledger", text: "Every entry balances to the cent. Money is stored as integers, never floats." },
+  { icon: CreditCard, title: "Idempotent payments", text: "Retries are safe behind a provider abstraction, tested against the Asaas sandbox." },
+  { icon: Webhook, title: "Signed webhooks and live events", text: "Verified provider callbacks, an outbox for delivery and realtime updates." },
+  { icon: ScrollText, title: "Audit trail", text: "Who changed what, and when, for members, customers, keys and accounts." },
+] as const;
 
 type FailureKind = "credentials" | "rate-limit" | "network" | "other";
 
@@ -114,27 +121,37 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]">
       <aside
-        aria-hidden="true"
-        className="relative hidden overflow-hidden bg-chrome p-12 lg:flex lg:flex-col lg:justify-between"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(to bottom, transparent 0, transparent 35px, var(--color-chrome-line) 35px, var(--color-chrome-line) 36px)",
-        }}
+        aria-label="About Financial Hub"
+        className="relative hidden bg-chrome px-12 py-10 lg:flex lg:flex-col lg:justify-between"
       >
         <BrandMark />
         <div className="max-w-md">
-          <p className="text-2xl leading-tight font-semibold tracking-tight text-chrome-ink">
-            Every movement of money, accounted for twice.
-          </p>
+          <h2 className="text-xl leading-tight font-semibold tracking-tight text-chrome-ink">
+            A payments back office built on a double-entry ledger.
+          </h2>
           <p className="mt-3 text-sm text-chrome-muted">
-            The operator console for Financial Hub: ledger, payments, billing and reconciliation in one place.
+            Financial Hub is the operator console for projects that take payments: ledger, customers, provider accounts and
+            API keys in one place.
           </p>
+          <ul className="mt-8 flex flex-col gap-5">
+            {CAPABILITIES.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="flex items-start gap-3">
+                <Icon className="mt-0.5 size-4 shrink-0 text-chrome-brass" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium text-chrome-ink">{title}</p>
+                  <p className="text-xs text-chrome-muted">{text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="absolute inset-y-0 left-12 w-px bg-chrome-brass/50" />
+        <p className="border-t border-chrome-line pt-4 text-xs text-chrome-muted">
+          Evaluation environment. Sandbox providers only; no real money moves.
+        </p>
       </aside>
 
-      <main className="flex items-center justify-center bg-canvas px-5 py-12">
-        <div className="w-full max-w-sm">
+      <main className="flex items-center justify-center bg-canvas px-5 py-8">
+        <div className="w-full max-w-md">
           <BrandMark className="mb-8 lg:hidden [&>span:last-child]:text-ink" />
           <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
           <p className="mt-1 text-sm text-ink-muted">

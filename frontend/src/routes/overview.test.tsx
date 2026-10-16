@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { expectNoAxeViolations } from "../test/axe";
-import { apiKey, AUDIT, customer, CUSTOMERS, LIST, member, overviewData, page, problem } from "../test/console-mocks";
+import { apiKey, AUDIT, auditRecord, customer, CUSTOMERS, LIST, member, overviewData, page, problem } from "../test/console-mocks";
 import { json, ME, mockApi, renderApp, resetApiState } from "../test/harness";
 
 const health = {
@@ -21,10 +21,26 @@ describe("Overview screen", () => {
     expect(screen.getByText("BRL")).toBeInTheDocument();
     // one active key, provider account, member and customer
     expect(screen.getAllByText("1")).toHaveLength(4);
-    expect(await screen.findByText("api_key.created")).toBeInTheDocument();
+    expect(await screen.findByText("API key created")).toBeInTheDocument();
+    expect(screen.getByText(/by Ana Souza/)).toBeInTheDocument();
+    expect(screen.getByText("k-1 · op-1")).toHaveAttribute("title", "k-1 · op-1");
+    expect(screen.queryByText("Implemented")).not.toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Recent activity" })).toBeInTheDocument();
     expect(screen.getByText("Offline")).toBeInTheDocument(); // jsdom has no EventSource
     await expectNoAxeViolations(container);
+  });
+
+  it("caps recent activity at six rows", async () => {
+    const records = Array.from({ length: 8 }, (_, index) => auditRecord({ id: `au-${index}`, target_id: `k-${index}` }));
+    mockApi({
+      "GET /v1/auth/me": () => json(200, ME),
+      ...health,
+      ...overviewData("p-1"),
+      [`GET /v1/projects/p-1/audit-records${AUDIT}`]: () => json(200, page(records)),
+    });
+    renderApp("/");
+    const list = await screen.findByRole("list", { name: "Recent activity" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(6);
   });
 
   it("flags an unbalanced ledger and caps counts that have more pages", async () => {
@@ -123,7 +139,7 @@ describe("Overview screen", () => {
       [`GET /v1/projects/p-2/customers${CUSTOMERS}`]: () => json(200, page([])),
     });
     renderApp("/");
-    expect(await screen.findByText("No entries yet.")).toBeInTheDocument();
+    expect(await screen.findByText(/No entries yet/)).toBeInTheDocument();
     expect(calls.some((call) => call.key.includes("api-keys"))).toBe(false);
     expect(calls.some((call) => call.key.includes("audit-records"))).toBe(false);
     expect(screen.getAllByText("Not available for your role.").length).toBeGreaterThanOrEqual(2);

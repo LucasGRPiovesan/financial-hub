@@ -3,12 +3,36 @@ import { TriangleAlert } from "lucide-react";
 
 import { EmptyState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/skeleton";
+import { BrandMark } from "../features/shell/sidebar-nav";
 import { isApiError } from "../lib/api";
 
-export function PendingShell() {
+/** Shell silhouette shown while the session resolves on a hard load, so the screen is never blank. */
+export function BootScreen() {
   return (
-    <div className="p-8" role="status" aria-label="Loading">
-      <Skeleton className="h-8 w-48" />
+    <div role="status" aria-label="Loading Financial Hub" className="min-h-dvh lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="hidden h-dvh flex-col bg-chrome px-5 py-5 lg:flex">
+        <BrandMark />
+        <div aria-hidden="true" className="mt-8 flex flex-col gap-3">
+          {[0, 1, 2, 3, 4, 5].map((row) => (
+            <div key={row} className="h-4 rounded-sm bg-chrome-raised motion-safe:animate-pulse" style={{ width: `${55 + ((row * 17) % 35)}%` }} />
+          ))}
+        </div>
+      </aside>
+      <div className="flex min-w-0 flex-col" aria-hidden="true">
+        <div className="flex h-14 items-center gap-3 border-b border-line bg-surface px-5">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="ml-auto size-8 rounded-full" />
+        </div>
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-8">
+          <Skeleton className="h-7 w-48" />
+          <div className="ledger-rule mt-4 mb-6" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((card) => (
+              <Skeleton key={card} className="h-28 rounded-md" />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

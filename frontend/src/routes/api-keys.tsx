@@ -37,7 +37,6 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
     <PageHeader
       title="API keys"
       description="Credentials your backend uses to call the Financial Hub API for this project."
-      scope="implemented"
       actions={
         <GatedButton allowed={mayManage} reason={deniedReason("api_keys:manage", role)} onClick={() => setCreating(true)}>
           <Plus aria-hidden="true" />

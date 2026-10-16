@@ -32,7 +32,6 @@ export function ProjectsPage() {
       <PageHeader
         title="Projects"
         description="The projects you can access. Everything else in the console is scoped to the active one."
-        scope="implemented"
         actions={
           <Button onClick={() => setCreating(true)}>
             <Plus aria-hidden="true" />

@@ -111,3 +111,10 @@ keeps its action row pinned to the bottom, so no form is ever taller than the sc
 `scripts/web-test.sh` (vitest + Testing Library + axe). Prefer role/label queries; the e2e suite relies on the same
 accessible names (`Continue as <name>`, `Project: <name>`, `Operator menu: <name>`, `Theme: <mode>`, `Sign out`,
 nav labels, dialog field labels). Rename one only together with the e2e suite.
+
+### Polish notes (W9.10)
+
+- Page headers carry no "Implemented" badge; only non-default scopes (Sandbox) and planned areas are marked
+  (a dotted "Soon" tag in the sidebar, generated content so link names are unchanged).
+- A hard load shows `BootScreen` (shell silhouette, motion-safe pulse) instead of a blank page.
+- Recent activity text comes from `features/console/audit-activity.ts` (pure, table-tested), using only audit fields.

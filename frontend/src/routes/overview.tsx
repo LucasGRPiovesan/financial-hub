@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Skeleton } from "../components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { useApiKeys, useProviderAccounts, useTrialBalance } from "../features/console/api";
+import { useSession } from "../features/auth/use-session";
+import { describeActivity, type OperatorNames } from "../features/console/audit-activity";
 import { useRecentAudit } from "../features/console/audit-api";
 import { flattenCustomers, useCustomers } from "../features/console/customers-api";
 import { errorText } from "../features/console/errors";
@@ -117,18 +119,25 @@ function TrialBalanceTable({ totals }: { totals: TrialBalanceTotalOut[] }) {
   );
 }
 
-function describeActor(record: AuditRecordOut): string {
-  return record.actor_type === "operator" ? "An operator" : record.actor_type === "api_key" ? "An API key" : "The system";
-}
+const ACTIVITY_ROWS = 6;
 
-function ActivityItem({ record }: { record: AuditRecordOut }) {
+function ActivityItem({ record, names }: { record: AuditRecordOut; names: OperatorNames }) {
+  const line = describeActivity(record, names);
+  const ids = line.ids.join(" · ");
   return (
-    <li className="flex items-baseline justify-between gap-4 border-b border-line py-2.5 last:border-b-0">
+    <li className="flex items-start justify-between gap-4 border-b border-line py-2.5 last:border-b-0">
       <div className="min-w-0">
-        <p className="truncate font-mono text-sm">{record.action}</p>
+        <p className="truncate text-sm">{line.sentence}</p>
         <p className="truncate text-xs text-ink-muted">
-          {describeActor(record)} on {record.target_type}
-          {record.target_id ? <span className="font-mono"> {record.target_id}</span> : null}
+          by {line.actor}
+          {ids ? (
+            <>
+              {" "}
+              <span className="font-mono text-ink-faint" title={ids}>
+                {ids}
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
       <RelativeTime value={record.occurred_at} className="shrink-0 text-xs text-ink-muted" />
@@ -151,11 +160,16 @@ export function OverviewPage() {
   const members = useMembers(mayMembers ? projectId : null);
   const customers = useCustomers(projectId, null, mayCustomers);
   const audit = useRecentAudit(projectId, mayAudit);
+  const { operator } = useSession();
+  const names: OperatorNames = new Map([
+    [operator.id, operator.display_name],
+    ...(members.data?.data ?? []).map((member): [string, string] => [member.operator_id, member.display_name]),
+  ]);
 
   if (!membership) {
     return (
       <>
-        <PageHeader title="Overview" description={DESCRIPTION} scope="implemented" />
+        <PageHeader title="Overview" description={DESCRIPTION} />
         <NoProjectState />
       </>
     );
@@ -174,7 +188,9 @@ export function OverviewPage() {
       </div>
     );
   } else if (balance.error) ledger = <p className="px-5 py-4 text-sm text-danger">{errorText(balance.error)}</p>;
-  else if (balance.data.totals.length === 0) ledger = <p className="px-5 py-4 text-sm text-ink-muted">No entries yet.</p>;
+  else if (balance.data.totals.length === 0) ledger = <p className="px-5 py-4 text-sm text-ink-muted">
+      No entries yet. Posted ledger entries appear here as debit and credit totals per currency.
+    </p>;
   else ledger = <TrialBalanceTable totals={balance.data.totals} />;
 
   let activity: ReactNode;
@@ -190,8 +206,8 @@ export function OverviewPage() {
   else {
     activity = (
       <ul aria-label="Recent activity" className="px-5">
-        {audit.data.data.map((record) => (
-          <ActivityItem key={record.id} record={record} />
+        {audit.data.data.slice(0, ACTIVITY_ROWS).map((record) => (
+          <ActivityItem key={record.id} record={record} names={names} />
         ))}
       </ul>
     );
@@ -199,7 +215,7 @@ export function OverviewPage() {
 
   return (
     <>
-      <PageHeader title="Overview" description={DESCRIPTION} scope="implemented" />
+      <PageHeader title="Overview" description={DESCRIPTION} />
 
       <section aria-label="Key figures" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
@@ -244,7 +260,7 @@ export function OverviewPage() {
         />
       </section>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Trial balance</CardTitle>
