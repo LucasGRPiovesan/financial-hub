@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from financial_hub.modules.audit.api.routes import router as audit_router
 from financial_hub.modules.customers.api.routes import router as customers_router
+from financial_hub.modules.events.api.explorer import router as events_router
 from financial_hub.modules.events.api.stream import router as stream_router
 from financial_hub.modules.events.application.realtime import build_broker
 from financial_hub.modules.identity.api.routes import configure_identity
@@ -104,6 +105,7 @@ def create_app(
     app.include_router(provider_catalog_router)
     app.include_router(customers_router)
     app.include_router(stream_router)
+    app.include_router(events_router)
     app.include_router(ledger_router)
     app.include_router(audit_router)
 

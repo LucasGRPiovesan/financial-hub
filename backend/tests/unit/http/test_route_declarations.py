@@ -82,6 +82,20 @@ EXPECTED = {
         "customers:manage",
     ),
     ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
+    ("GET", "/v1/projects/{project_id}/events"): ("permission", "events:read"),
+    ("GET", "/v1/projects/{project_id}/events/{event_id}"): ("permission", "events:read"),
+    ("GET", "/v1/projects/{project_id}/events/{event_id}/causality"): (
+        "permission",
+        "events:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/events/{event_id}/deliveries"): (
+        "permission",
+        "events:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/correlations/{correlation_id}"): (
+        "permission",
+        "events:read",
+    ),
     ("GET", "/v1/projects/{project_id}/audit-records"): ("permission", "audit:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts"): ("permission", "ledger:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts/{account_id}"): (

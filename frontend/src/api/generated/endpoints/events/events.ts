@@ -20,6 +20,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CausalityOut,
+  CorrelationOut,
+  DeliveryOut,
+  EventDetailOut,
+  EventListOut,
+  ListProjectEventsV1ProjectsProjectIdEventsGetParams,
   Problem,
   StreamV1ProjectsProjectIdStreamGetParams
 } from '../../model';
@@ -46,6 +52,553 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetUrl = (projectId: string,
+    correlationId: string,) => {
+
+
+
+
+  return `/v1/projects/${projectId}/correlations/${correlationId}`
+}
+
+/**
+ * @summary Get Correlation Chain
+ */
+export const getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet = async (projectId: string,
+    correlationId: string, options?: Parameters<typeof apiMutator>[1]): Promise<CorrelationOut> => {
+
+  return apiMutator<CorrelationOut>(getGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetUrl(projectId,correlationId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetQueryKey = (projectId: string,
+    correlationId: string,) => {
+    return [
+    `/v1/projects/${projectId}/correlations/${correlationId}`
+    ] as const;
+    }
+
+
+export const getGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError = ErrorType<Problem>>(projectId: string,
+    correlationId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetQueryKey(projectId,correlationId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>> = ({ signal }) => getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet(projectId,correlationId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && correlationId !== null && correlationId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>>
+export type GetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetQueryError = ErrorType<Problem>
+
+
+export function useGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet<TData = Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    correlationId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet<TData = Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    correlationId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet<TData = Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    correlationId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Correlation Chain
+ */
+
+export function useGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet<TData = Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    correlationId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCorrelationChainV1ProjectsProjectIdCorrelationsCorrelationIdGetQueryOptions(projectId,correlationId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListProjectEventsV1ProjectsProjectIdEventsGetUrl = (projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/v1/projects/${projectId}/events?${stringifiedParams}` : `/v1/projects/${projectId}/events`
+}
+
+/**
+ * @summary List Project Events
+ */
+export const listProjectEventsV1ProjectsProjectIdEventsGet = async (projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams, options?: Parameters<typeof apiMutator>[1]): Promise<EventListOut> => {
+
+  return apiMutator<EventListOut>(getListProjectEventsV1ProjectsProjectIdEventsGetUrl(projectId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectEventsV1ProjectsProjectIdEventsGetQueryKey = (projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams,) => {
+    return [
+    `/v1/projects/${projectId}/events`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProjectEventsV1ProjectsProjectIdEventsGetQueryOptions = <TData = Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError = ErrorType<Problem>>(projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectEventsV1ProjectsProjectIdEventsGetQueryKey(projectId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>> = ({ signal }) => listProjectEventsV1ProjectsProjectIdEventsGet(projectId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListProjectEventsV1ProjectsProjectIdEventsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>>
+export type ListProjectEventsV1ProjectsProjectIdEventsGetQueryError = ErrorType<Problem>
+
+
+export function useListProjectEventsV1ProjectsProjectIdEventsGet<TData = Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params: undefined |  ListProjectEventsV1ProjectsProjectIdEventsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListProjectEventsV1ProjectsProjectIdEventsGet<TData = Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListProjectEventsV1ProjectsProjectIdEventsGet<TData = Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Project Events
+ */
+
+export function useListProjectEventsV1ProjectsProjectIdEventsGet<TData = Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    params?: ListProjectEventsV1ProjectsProjectIdEventsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectEventsV1ProjectsProjectIdEventsGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListProjectEventsV1ProjectsProjectIdEventsGetQueryOptions(projectId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetProjectEventV1ProjectsProjectIdEventsEventIdGetUrl = (projectId: string,
+    eventId: string,) => {
+
+
+
+
+  return `/v1/projects/${projectId}/events/${eventId}`
+}
+
+/**
+ * @summary Get Project Event
+ */
+export const getProjectEventV1ProjectsProjectIdEventsEventIdGet = async (projectId: string,
+    eventId: string, options?: Parameters<typeof apiMutator>[1]): Promise<EventDetailOut> => {
+
+  return apiMutator<EventDetailOut>(getGetProjectEventV1ProjectsProjectIdEventsEventIdGetUrl(projectId,eventId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProjectEventV1ProjectsProjectIdEventsEventIdGetQueryKey = (projectId: string,
+    eventId: string,) => {
+    return [
+    `/v1/projects/${projectId}/events/${eventId}`
+    ] as const;
+    }
+
+
+export const getGetProjectEventV1ProjectsProjectIdEventsEventIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError = ErrorType<Problem>>(projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProjectEventV1ProjectsProjectIdEventsEventIdGetQueryKey(projectId,eventId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>> = ({ signal }) => getProjectEventV1ProjectsProjectIdEventsEventIdGet(projectId,eventId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && eventId !== null && eventId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetProjectEventV1ProjectsProjectIdEventsEventIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>>
+export type GetProjectEventV1ProjectsProjectIdEventsEventIdGetQueryError = ErrorType<Problem>
+
+
+export function useGetProjectEventV1ProjectsProjectIdEventsEventIdGet<TData = Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProjectEventV1ProjectsProjectIdEventsEventIdGet<TData = Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProjectEventV1ProjectsProjectIdEventsEventIdGet<TData = Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Project Event
+ */
+
+export function useGetProjectEventV1ProjectsProjectIdEventsEventIdGet<TData = Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectEventV1ProjectsProjectIdEventsEventIdGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProjectEventV1ProjectsProjectIdEventsEventIdGetQueryOptions(projectId,eventId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetUrl = (projectId: string,
+    eventId: string,) => {
+
+
+
+
+  return `/v1/projects/${projectId}/events/${eventId}/causality`
+}
+
+/**
+ * @summary Get Event Causality
+ */
+export const getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet = async (projectId: string,
+    eventId: string, options?: Parameters<typeof apiMutator>[1]): Promise<CausalityOut> => {
+
+  return apiMutator<CausalityOut>(getGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetUrl(projectId,eventId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetQueryKey = (projectId: string,
+    eventId: string,) => {
+    return [
+    `/v1/projects/${projectId}/events/${eventId}/causality`
+    ] as const;
+    }
+
+
+export const getGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetQueryOptions = <TData = Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError = ErrorType<Problem>>(projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetQueryKey(projectId,eventId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>> = ({ signal }) => getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet(projectId,eventId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && eventId !== null && eventId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetQueryResult = NonNullable<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>>
+export type GetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetQueryError = ErrorType<Problem>
+
+
+export function useGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet<TData = Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>,
+          TError,
+          Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet<TData = Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>,
+          TError,
+          Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet<TData = Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Event Causality
+ */
+
+export function useGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet<TData = Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEventCausalityV1ProjectsProjectIdEventsEventIdCausalityGetQueryOptions(projectId,eventId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetUrl = (projectId: string,
+    eventId: string,) => {
+
+
+
+
+  return `/v1/projects/${projectId}/events/${eventId}/deliveries`
+}
+
+/**
+ * @summary Get Event Deliveries
+ */
+export const getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet = async (projectId: string,
+    eventId: string, options?: Parameters<typeof apiMutator>[1]): Promise<DeliveryOut[]> => {
+
+  return apiMutator<DeliveryOut[]>(getGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetUrl(projectId,eventId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetQueryKey = (projectId: string,
+    eventId: string,) => {
+    return [
+    `/v1/projects/${projectId}/events/${eventId}/deliveries`
+    ] as const;
+    }
+
+
+export const getGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetQueryOptions = <TData = Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError = ErrorType<Problem>>(projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetQueryKey(projectId,eventId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>> = ({ signal }) => getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet(projectId,eventId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && eventId !== null && eventId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetQueryResult = NonNullable<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>>
+export type GetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetQueryError = ErrorType<Problem>
+
+
+export function useGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet<TData = Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>,
+          TError,
+          Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet<TData = Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>,
+          TError,
+          Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet<TData = Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Event Deliveries
+ */
+
+export function useGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet<TData = Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError = ErrorType<Problem>>(
+ projectId: string,
+    eventId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGet>>, TError, TData>>, request?: SecondParameter<typeof apiMutator>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEventDeliveriesV1ProjectsProjectIdEventsEventIdDeliveriesGetQueryOptions(projectId,eventId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 export const getStreamV1ProjectsProjectIdStreamGetUrl = (projectId: string,
     params?: StreamV1ProjectsProjectIdStreamGetParams,) => {
