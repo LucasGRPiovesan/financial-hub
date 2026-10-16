@@ -271,6 +271,23 @@ async def get_provider_payment(
     return None if row is None else _provider_payment(row)
 
 
+async def find_intent_by_provider_payment(
+    session: AsyncSession, *, provider: str, provider_account_id: UUID, provider_payment_id: str
+) -> PaymentIntent | None:
+    """The intent behind a provider payment id on one account (routing an inbound webhook)."""
+    statement = (
+        select(_intents)
+        .join(_payments, _payments.c.payment_intent_id == _intents.c.id)
+        .where(
+            _payments.c.provider == provider,
+            _payments.c.provider_account_id == provider_account_id,
+            _payments.c.provider_payment_id == provider_payment_id,
+        )
+    )
+    row = (await session.execute(statement)).first()
+    return None if row is None else _intent(row)
+
+
 async def provider_payments_for(
     session: AsyncSession, intent_ids: Collection[UUID]
 ) -> Mapping[UUID, ProviderPayment]:

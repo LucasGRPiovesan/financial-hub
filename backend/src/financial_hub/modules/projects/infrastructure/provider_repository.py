@@ -106,6 +106,14 @@ async def get_account(
     return None if row is None else _account(row)
 
 
+async def find_account(session: AsyncSession, account_id: UUID) -> ProviderAccount | None:
+    """Any project's account by id: only for routing an inbound provider call, which the caller
+    authenticates before trusting the result (W4.4)."""
+    statement = select(*_COLUMNS).where(provider_accounts.c.id == account_id)
+    row = (await session.execute(statement)).first()
+    return None if row is None else _account(row)
+
+
 async def list_accounts(
     session: AsyncSession, project_id: UUID, *, cursor: Cursor | None, limit: int
 ) -> Sequence[ProviderAccount]:

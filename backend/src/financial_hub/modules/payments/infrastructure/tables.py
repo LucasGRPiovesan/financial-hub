@@ -1,6 +1,7 @@
-"""SQLAlchemy Core tables of payments, owned by migration ``0009_payments``."""
+"""SQLAlchemy Core tables of payments, owned by migrations ``0009_payments`` and
+``0011_provider_webhooks``."""
 
-from sqlalchemy import BigInteger, Column, Date, DateTime, LargeBinary, Table, Text
+from sqlalchemy import BigInteger, Column, Date, DateTime, Integer, LargeBinary, Table, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from financial_hub.platform.db import metadata
@@ -78,4 +79,37 @@ payment_attempts = Table(
     Column("outcome", JSONB(none_as_null=True)),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("completed_at", DateTime(timezone=True)),
+)
+
+provider_webhook_events = Table(
+    "provider_webhook_events",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("project_id", UUID(as_uuid=True), nullable=False),
+    Column("provider", Text, nullable=False),
+    Column("provider_account_id", UUID(as_uuid=True), nullable=False),
+    Column("provider_event_id", Text, nullable=False),
+    Column("event_type", Text, nullable=False),
+    Column("body", Text, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("outcome", Text),
+    Column("attempts", Integer, nullable=False),
+    Column("last_error", Text),
+    Column("received_at", DateTime(timezone=True), nullable=False),
+    Column("processed_at", DateTime(timezone=True)),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
+provider_customer_provisions = Table(
+    "provider_customer_provisions",
+    metadata,
+    Column("identity_id", UUID(as_uuid=True), primary_key=True),
+    Column("provider_account_id", UUID(as_uuid=True), primary_key=True),
+    Column("project_id", UUID(as_uuid=True), nullable=False),
+    Column("attempt_id", UUID(as_uuid=True), nullable=False),
+    Column("status", Text, nullable=False),
+    Column("lease_until", DateTime(timezone=True), nullable=False),
+    Column("failure_code", Text),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
 )

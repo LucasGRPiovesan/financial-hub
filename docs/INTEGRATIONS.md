@@ -98,20 +98,125 @@ Refund `status`: `PENDING → submitted`, `DONE → done`, `CANCELLED → cancel
   text is built by hand and responses are parsed with `parse_float=Decimal`); more than two decimals from Asaas is
   `Uncertain`.
 - **Timeouts.** connect 5 s, read 15 s; one short-lived client per call.
-- **Customers.** `create_customer` finds by `externalReference` first. The port carries no tax id yet, so the adapter
-  takes an optional `cpf_cnpj`; `PaymentService` does not provision Asaas customers, so a payment whose customer is
-  unknown at Asaas is `Rejected` (`customer_not_provisioned`). Known gap.
+- **Customers (W4.4).** Before the first charge on an account, `PaymentService` provisions the Asaas customer under the
+  same external-call protocol as charges: a lease row in `provider_customer_provisions` (fencing token, so two workers
+  never send concurrent creates), `externalReference` = the hub `cus_…` id, and `create_customer` looks that reference
+  up before it creates, so a lost answer or a crash converges on the customer Asaas already holds. The mapping is
+  stored in `provider_customers` and reused by every later charge. The CPF/CNPJ is decrypted by the customers module
+  only for the call (`customers.application.api.load_customer_contact`) and never logged; E.164 phones (`+55…`) are
+  sent as `mobilePhone` without the country code. A refused customer rejects the payment
+  (`customer_<asaas code>`); an unknown outcome leaves the payment `unknown` for the sweeper, which provisions again
+  (lookup first) and only then sends the charge. The charge is never sent without a linked customer.
 - **Live smoke test.** `tests/integration/payments/test_asaas_live.py` (`@pytest.mark.asaas_live`) is skipped unless
   `FH_ASAAS_API_KEY` is set.
 
+### Inbound Asaas webhooks and the sweeper (W4.4): what the code does
+
+`POST /v1/webhooks/asaas/{provider_account_id}` (`modules/payments/api/webhooks.py`) is public: no session, API key or
+CSRF. One URL per provider account, so the token and the project binding are per account.
+
+1. **Size.** A body over `FH_PAYMENTS_WEBHOOK_MAX_BODY_BYTES` (default 256 KiB) is `413` before it is read.
+2. **Auth.** The `asaas-access-token` header must equal the account's `webhook_token` credential (stored encrypted in
+   the provider-account vault with the API key; see below). The compare is constant-time over SHA-256 digests. An
+   unknown, disabled or non-Asaas account, a missing or wrong header, and a configured token shorter than 32
+   characters all get the same `401` problem (`Invalid webhook credentials.`; `instance` only echoes the path).
+3. **Inbox.** The raw body is stored in `provider_webhook_events` with dedup key (account, Asaas event `id`). A
+   redelivery inserts nothing, enqueues nothing and answers `200`. A body that is not a notification is `422`.
+4. **Fast `200`, async processing.** A new row publishes the internal `payments.webhook_received` event in the same
+   transaction (under the nil project id, so no customer endpoint or realtime stream sees it). The worker's
+   `payments.webhooks` handler queues an after-commit hook (no provider call inside the dispatcher's transaction).
+5. **Processing.** The body only names the payment: the hub finds the intent by the Asaas payment id (or the
+   `externalReference` `pi_…`), checks the binding (same project, provider and account as the token that
+   authenticated it), converges an unknown creation first, then **refetches** through `PaymentService.refresh`.
+   Amounts and statuses always come from the refetch, so a forged body, a replay or an out-of-order delivery cannot
+   move money (a late `PAYMENT_CREATED` after `PAYMENT_RECEIVED` refetches `RECEIVED` and changes nothing).
+
+| Notification | Action | Row status / outcome |
+|---|---|---|
+| every `PAYMENT_*` lifecycle event in the table above (created, authorized, risk analysis, confirmed, received, overdue, deleted, restored, updated, boleto cancelled, capture refused, refunds, chargebacks) | refetch | `processed` / `refreshed:<public status>` |
+| `PAYMENT_DUNNING_RECEIVED` | refetch (**deviation** from "`PAYMENT_DUNNING_*` ignored": the refetched status `DUNNING_RECEIVED` settles the payment) | `processed` |
+| `PAYMENT_ANTICIPATED`, `PAYMENT_DUNNING_REQUESTED`, `PAYMENT_BANK_SLIP_VIEWED`, `PAYMENT_CHECKOUT_VIEWED` | none | `ignored` / `ignored_event_type` |
+| a payment the hub does not know | none | `ignored` / `unknown_payment` |
+| `PAYMENT_RECEIVED_IN_CASH_UNDONE`, splits, transfers, any other or unknown type, or a payment event with no payment id | none | `parked` / `unsupported_event_type` |
+| the payment belongs to another account than the URL's | none (warning) | `parked` / `binding_mismatch` |
+| a creation the hub recorded as rejected | none (warning) | `parked` / `creation_rejected` |
+| refetch failed / creation still pending | retried by the sweeper | `failed` / `refetch_failed`, `creation_pending` |
+
+Today the refetch emits the existing `payment.status_changed` (and the ledger recipes of the transition); the finer
+canonical names in the mapping table above are the target, not separate events yet.
+
+**Sweeper.** The worker creates the internal schedule `payments.sweeper` (event `payments.sweep_due`) every
+`FH_PAYMENTS_SWEEPER_INTERVAL_SECONDS` (default 60; `FH_PAYMENTS_SWEEPER_ENABLED=false` disables it, the row is kept
+disabled). Each run resolves unknown/stuck creations and refunds (`resolve_pending`, at most
+`FH_PAYMENTS_SWEEPER_BATCH_SIZE`) and retries inbox rows left `received`/`failed` for more than
+`FH_PAYMENTS_WEBHOOK_RETRY_AFTER_SECONDS` (default 60), up to `FH_PAYMENTS_WEBHOOK_MAX_ATTEMPTS` (default 10; then
+the row stays `failed` for a person). Only the worker registers the schedule: test runs have no sweeper unless a test
+creates it.
+
+#### Pointing the Asaas sandbox at a local hub
+
+Asaas must reach the hub over public HTTPS, so expose the local API with a tunnel, for example
+`cloudflared tunnel --url http://localhost:8000` or `ngrok http 8000`, and note the public URL.
+
+1. Generate a token of at least 32 characters (`openssl rand -hex 32`) and store it on the provider account as the
+   `webhook_token` credential, next to `api_key` (console: provider account → credentials, or
+   `PUT /v1/projects/{project}/provider-accounts/{account}/credentials` with `{"credentials": {"api_key": "…",
+   "webhook_token": "…"}}`: a replace sends the whole set, so resend the API key too).
+2. In the Asaas sandbox (Integrações → Webhooks, or `POST /v3/webhooks`), create a webhook with URL
+   `https://<public-host>/v1/webhooks/asaas/<pa_… account id>`, the same token as *Token de autenticação*, API
+   version v3, sequential delivery, and **only the payment events** (`PAYMENT_*`). Customer and other event
+   families are not processed and their bodies would be stored with personal data.
+3. Pay a sandbox charge (Asaas sandbox: "Confirmar pagamento" on the charge) and watch the row move:
+   `SELECT event_type, status, outcome FROM provider_webhook_events ORDER BY received_at DESC LIMIT 5`. The worker
+   must be running (`docker compose up worker`) for rows to be processed.
+
+Asaas pauses a webhook queue after repeated non-2xx answers; fix the cause (token, URL) and resume it in the panel.
+Without a tunnel, post the fixture instead: `tests/integration/payments/webhooks.py` builds a notification from
+`tests/integration/payments/fixtures/asaas_payment_received.json` and doubles as a CLI
+(`FH_WEBHOOK_TOKEN=… python -m tests.integration.payments.webhooks --url http://localhost:8000 --account pa_…
+--payment pay_… --reference pi_…`; the token is read from the environment, never from the command line).
+
 ## 3. Outbound webhooks (hub → products)
 
-Follows the [Standard Webhooks](https://www.standardwebhooks.com/) specification:
-- Headers `webhook-id`, `webhook-timestamp`, `webhook-signature` (`v1,<base64 HMAC-SHA256(id.timestamp.body)>`).
-- Secrets `whsec_<base64>`; rotation keeps old + new secret valid for a grace window and sends both signatures.
-- Retries with exponential backoff + jitter (schedule approx. 5s, 5m, 30m, 2h, 5h, 10h, 10h); endpoint auto-disabled after sustained failure (all attempts failing for 5 days or 3 consecutive dead deliveries — configurable); manual replay per delivery or by time range.
-- Receivers must dedupe on `webhook-id` and reject timestamps outside ±5 minutes.
-- The Python SDK ships a `verify()` helper.
+Follows the [Standard Webhooks](https://www.standardwebhooks.com/) specification (signing tested
+against the specification's known vector). Code: `backend/src/financial_hub/modules/webhooks`.
+
+### What the code does (W6.3)
+
+- **Endpoints per project**: `POST/GET /v1/projects/{project_id}/webhook-endpoints`,
+  `GET/PATCH .../{endpoint_id}` (url, description, `event_types` filter: exact `payment.succeeded`,
+  prefix `payment.*` or `*`; `enabled`), `POST .../{endpoint_id}/disable`,
+  `POST .../{endpoint_id}/rotate-secret`, `POST .../{endpoint_id}/test` (publishes a `webhook.test`
+  event delivered to that endpoint only) and `GET .../{endpoint_id}/attempts`. Reading needs
+  `webhooks:read` (owner, admin, finance); every change needs `webhooks:manage` (owner, admin).
+  Both are operator-only (no API key scope). Create/update/rotate/disable are audited, never with
+  the secret.
+- **Secret**: `whsec_` + base64 of 32 random bytes, returned only by create and rotate
+  (`Cache-Control: no-store`; an idempotent replay answers `409` instead of repeating it), stored
+  AES-256-GCM sealed with `FH_ENCRYPTION_KEYS`. After a rotation the previous secret stays valid for
+  **24 h**: deliveries carry both signatures, space-separated (new first).
+- **Fan-out**: each endpoint is an `event_subscriptions` row of kind `webhook`, so the event log's
+  fan-out creates one delivery per matching enabled endpoint. A disabled endpoint gets no new
+  deliveries; ones queued before the disable wait (unsent) until it is enabled again.
+- **Request**: `POST` of the event envelope exactly as the event explorer shows it
+  (`GET /v1/projects/{project_id}/events/{event_id}`), `Content-Type: application/json`, headers
+  `webhook-id` (the event id, stable across retries: dedupe on it), `webhook-timestamp` (unix
+  seconds of this attempt) and `webhook-signature` (`v1,<base64 HMAC-SHA256(id.timestamp.body)>`).
+  Receivers should reject timestamps outside ±5 minutes.
+- **Outcome**: any 2xx is delivered; anything else (3xx included: redirects are never followed),
+  a timeout (10 s) or a connection error is a failed attempt. Each attempt stores status code,
+  latency and an error truncated to 2000 characters (`webhook_delivery_attempts`).
+- **Retries**: 8 attempts; the delay after attempt *n* is 30 s, 2 min, 10 min, 30 min, 2 h, 8 h,
+  24 h (each ±20% jitter, about 35 h in total), then the delivery is `dead`. Manual redelivery:
+  `POST /v1/projects/{project_id}/events/{event_id}/deliveries/{delivery_id}/retry`
+  (`webhooks:manage`). Endpoints are not auto-disabled yet.
+- **Sender**: runs in the worker (`FH_WEBHOOK_SENDER_ENABLED`, default on), claims due deliveries
+  with a fenced lease (`FH_WEBHOOK_BATCH_SIZE`, `FH_WEBHOOK_LEASE_SECONDS`,
+  `FH_WEBHOOK_POLL_INTERVAL_SECONDS`, `FH_WEBHOOK_TIMEOUT_SECONDS`).
+- **SSRF guard**: see docs/SECURITY.md, "Outbound webhooks". In dev/test only, `http` is allowed
+  and `FH_WEBHOOK_ALLOW_HOSTS` (comma-separated names or IP literals) may point at a private
+  address such as a local receiver; outside dev the setting is ignored and private targets are
+  always refused.
 
 ## 4. MCP
 

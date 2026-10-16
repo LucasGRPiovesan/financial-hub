@@ -1,4 +1,4 @@
-"""Worker process: event dispatcher + scheduler (ADR-0005), with a liveness heartbeat file.
+"""Worker process: event dispatcher, scheduler and webhook sender (ADR-0005), plus a heartbeat.
 
 SIGINT/SIGTERM set the stop event: the dispatcher releases leases it has not started, the
 scheduler gives up leadership, and the process exits well inside the compose grace period.
@@ -9,12 +9,26 @@ import signal
 from pathlib import Path
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from financial_hub.modules.events.application import build_runtime
+from financial_hub.modules.events.application import EventPublisher, build_runtime, handlers
+from financial_hub.modules.payments.application.api import (
+    PaymentService,
+    PaymentsSettings,
+    WebhookProcessor,
+    build_registry,
+    customers_contact_loader,
+    ensure_sweeper_schedule,
+    projects_credentials_loader,
+    register_payment_handlers,
+)
+from financial_hub.modules.webhooks.application.api import WebhookSettings, build_sender
+from financial_hub.platform.crypto.keyring import Keyring
 from financial_hub.platform.db import UnitOfWork, create_engine, create_session_factory
 from financial_hub.platform.logging import configure_logging
 from financial_hub.platform.settings import get_settings
 from financial_hub.platform.telemetry import configure_telemetry, instrument_engine
+from financial_hub.shared.clock import SystemClock
 
 HEARTBEAT_FILE = Path("/tmp/worker.heartbeat")  # noqa: S108 - container-local liveness marker
 HEARTBEAT_INTERVAL_SECONDS = 15
@@ -29,6 +43,26 @@ async def heartbeat(stop: asyncio.Event) -> None:
             await asyncio.wait_for(stop.wait(), timeout=HEARTBEAT_INTERVAL_SECONDS)
         except TimeoutError:
             continue
+
+
+def payment_processor(
+    session_factory: async_sessionmaker[AsyncSession],
+    publisher: EventPublisher,
+    clock: SystemClock,
+    settings: PaymentsSettings,
+) -> WebhookProcessor:
+    """Inbound webhooks and the sweeper (W4.4): the worker refetches, never the API request."""
+    app_settings = get_settings()
+    keyring = Keyring.from_settings(app_settings)
+    service = PaymentService(
+        session_factory,
+        clock=clock,
+        registry=build_registry(app_settings),
+        credentials=projects_credentials_loader(keyring),
+        contacts=customers_contact_loader(keyring),
+        publisher=publisher,
+    )
+    return WebhookProcessor(session_factory, service, clock=clock, settings=settings)
 
 
 async def run() -> None:
@@ -47,12 +81,28 @@ async def run() -> None:
     logger.info("worker.started")
     try:
         runtime = build_runtime(engine)
+        webhook_settings = WebhookSettings()
+        payments_settings = PaymentsSettings()
+        processor = payment_processor(
+            create_session_factory(engine), runtime.publisher, SystemClock(), payments_settings
+        )
+        register_payment_handlers(handlers, processor)
         async with UnitOfWork(create_session_factory(engine)) as uow:
             await runtime.sync_subscriptions(uow)
+            await ensure_sweeper_schedule(uow, payments_settings, SystemClock())
         async with asyncio.TaskGroup() as group:
             group.create_task(heartbeat(stop))
             group.create_task(runtime.dispatcher.run(stop))
             group.create_task(runtime.scheduler.run(stop))
+            if webhook_settings.sender_enabled:
+                sender = build_sender(
+                    create_session_factory(engine),
+                    settings=settings,
+                    keyring=Keyring.from_settings(settings),
+                    clock=SystemClock(),
+                    webhook_settings=webhook_settings,
+                )
+                group.create_task(sender.run(stop))
     finally:
         await engine.dispose()
         if telemetry is not None:

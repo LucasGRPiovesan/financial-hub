@@ -417,6 +417,27 @@ async def test_create_customer_omits_a_phone_that_is_not_ten_or_eleven_digits() 
     assert "mobilePhone" not in body_of(asaas.calls("POST", "customers")[0])
 
 
+@pytest.mark.parametrize(
+    ("phone", "sent"),
+    [
+        ("+5511987654321", "11987654321"),
+        ("+55 (21) 3456-7890", "2134567890"),
+        ("+1 415 555 0100", None),
+        ("11987654321", "11987654321"),
+    ],
+)
+async def test_create_customer_drops_the_brazilian_country_code(
+    phone: str, sent: str | None
+) -> None:
+    asaas = Asaas().on("GET", "customers", page())
+    asaas.on("POST", "customers", reply(body={"id": "cus_asaas_1"}))
+    request = ProviderCustomerRequest(external_reference="cus_1", name="A", phone=phone)
+
+    await asaas.provider().create_customer(request)
+
+    assert body_of(asaas.calls("POST", "customers")[0]).get("mobilePhone") == sent
+
+
 async def test_create_customer_with_two_existing_matches_is_uncertain(
     log: list[dict[str, Any]],
 ) -> None:

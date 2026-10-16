@@ -51,6 +51,7 @@ ADMIN_ONLY: Final = frozenset(
         Permission.INTEGRATIONS_READ.value,
         Permission.INTEGRATIONS_MANAGE.value,
         Permission.PROJECTS_MANAGE.value,
+        Permission.WEBHOOKS_READ.value,
         Permission.WEBHOOKS_MANAGE.value,
         Permission.AUDIT_READ.value,
     }

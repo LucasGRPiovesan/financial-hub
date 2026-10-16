@@ -71,7 +71,7 @@ async def ensure_internal_subscription(
 async def create_webhook_subscription(
     uow: UnitOfWork, *, project_id: UUID, endpoint_id: UUID, event_types: Sequence[str]
 ) -> UUID:
-    """A webhook subscription row. Its deliveries stay ``pending`` until the sender (task 6.x)."""
+    """A webhook subscription row; its deliveries are sent by the webhooks module's sender."""
     filters = _require_filters(event_types)
     await repository.lock_fanout_exclusive(uow.session, project_id)
     return await repository.insert_webhook_subscription(
@@ -85,6 +85,18 @@ async def set_subscription_enabled(uow: UnitOfWork, subscription_id: UUID, enabl
         raise NotFound("subscription not found")
     await repository.lock_fanout_exclusive(uow.session, scope[0])
     await repository.set_subscription_enabled(uow.session, subscription_id, enabled)
+
+
+async def set_subscription_event_types(
+    uow: UnitOfWork, subscription_id: UUID, event_types: Sequence[str]
+) -> None:
+    """Replace a subscription's filters (atomic against fan-out, like enabling/disabling)."""
+    filters = _require_filters(event_types)
+    scope = await repository.subscription_scope(uow.session, subscription_id)
+    if scope is None:
+        raise NotFound("subscription not found")
+    await repository.lock_fanout_exclusive(uow.session, scope[0])
+    await repository.set_subscription_event_types(uow.session, subscription_id, filters)
 
 
 async def sync_handler_subscriptions(uow: UnitOfWork, handlers: HandlerRegistry) -> list[UUID]:

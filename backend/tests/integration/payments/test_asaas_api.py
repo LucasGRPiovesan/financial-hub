@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from financial_hub.modules.payments.application.registry import (
     ProviderRegistry,
+    customers_contact_loader,
     projects_credentials_loader,
 )
 from financial_hub.modules.payments.application.service import PaymentService
@@ -109,6 +110,7 @@ def service_for(s: Shop, registry: ProviderRegistry) -> PaymentService:
         clock=s.api.clock,
         registry=registry,
         credentials=projects_credentials_loader(s.api.app.state.keyring),
+        contacts=customers_contact_loader(s.api.app.state.keyring),
     )
 
 

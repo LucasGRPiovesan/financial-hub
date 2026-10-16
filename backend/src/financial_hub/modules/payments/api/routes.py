@@ -157,6 +157,7 @@ def _service(request: Request, audit: AuditContext | None = None) -> PaymentServ
         registry=_registry(request),
         # set by the composition root (main.py); absent only in tests that use the fake provider
         credentials=getattr(state, "payment_credentials", None),
+        contacts=getattr(state, "payment_contacts", None),
         audit=audit,
     )
 

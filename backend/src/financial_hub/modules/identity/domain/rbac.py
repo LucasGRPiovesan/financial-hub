@@ -43,6 +43,7 @@ class Permission(StrEnum):
     RECONCILIATION_MANAGE = "reconciliation:manage"
     INTEGRATIONS_READ = "integrations:read"
     INTEGRATIONS_MANAGE = "integrations:manage"
+    WEBHOOKS_READ = "webhooks:read"
     WEBHOOKS_MANAGE = "webhooks:manage"
     EVENTS_READ = "events:read"
     AUDIT_READ = "audit:read"
@@ -80,7 +81,7 @@ ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType
         Role.FINANCE: READ_PERMISSIONS
         | MONEY_MOVEMENT
         | {Permission.CUSTOMERS_MANAGE, Permission.METERING_MANAGE},
-        Role.VIEWER: READ_PERMISSIONS - {Permission.AUDIT_READ},
+        Role.VIEWER: READ_PERMISSIONS - {Permission.AUDIT_READ, Permission.WEBHOOKS_READ},
     }
 )
 

@@ -20,8 +20,10 @@ from financial_hub.modules.identity.application.service import PasswordHasher
 from financial_hub.modules.ledger.api.routes import router as ledger_router
 from financial_hub.modules.metering.api.routes import metrics_router, usage_router
 from financial_hub.modules.payments.api.routes import router as payments_router
+from financial_hub.modules.payments.api.webhooks import router as provider_webhooks_router
 from financial_hub.modules.payments.application.api import (
     build_registry,
+    customers_contact_loader,
     projects_credentials_loader,
 )
 from financial_hub.modules.projects.api.api_keys import router as api_keys_router
@@ -30,6 +32,9 @@ from financial_hub.modules.projects.api.members import router as members_router
 from financial_hub.modules.projects.api.providers import catalog_router as provider_catalog_router
 from financial_hub.modules.projects.api.providers import router as provider_accounts_router
 from financial_hub.modules.projects.api.routes import router as projects_router
+from financial_hub.modules.webhooks.api.routes import retry_router as webhook_retry_router
+from financial_hub.modules.webhooks.api.routes import router as webhooks_router
+from financial_hub.modules.webhooks.application.api import target_policy as webhook_target_policy
 from financial_hub.platform.db import create_engine, create_session_factory
 from financial_hub.platform.http.auth import public, verify_route_declarations
 from financial_hub.platform.http.headers import SecurityHeadersMiddleware
@@ -107,6 +112,9 @@ def create_app(
     # Payments never decrypts: it is handed a loader that the projects module backs (contract 5).
     app.state.payment_providers = build_registry(settings)
     app.state.payment_credentials = projects_credentials_loader(app.state.keyring)
+    # Customer provisioning (W4.4): customers decrypts the CPF/CNPJ, payments only passes it on.
+    app.state.payment_contacts = customers_contact_loader(app.state.keyring)
+    app.state.webhook_policy = webhook_target_policy(settings)
     app.include_router(projects_router)
     app.include_router(api_keys_router)
     app.include_router(members_router)
@@ -114,10 +122,13 @@ def create_app(
     app.include_router(provider_catalog_router)
     app.include_router(customers_router)
     app.include_router(payments_router)
+    app.include_router(provider_webhooks_router)
     app.include_router(metrics_router)
     app.include_router(usage_router)
     app.include_router(stream_router)
     app.include_router(events_router)
+    app.include_router(webhooks_router)
+    app.include_router(webhook_retry_router)
     app.include_router(ledger_router)
     app.include_router(audit_router)
 

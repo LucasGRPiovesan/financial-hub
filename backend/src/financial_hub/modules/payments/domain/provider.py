@@ -137,7 +137,14 @@ class PaymentProvider(Protocol):
     @property
     def name(self) -> str: ...
 
-    async def create_customer(self, request: ProviderCustomerRequest) -> ProviderCustomer: ...
+    async def create_customer(
+        self, request: ProviderCustomerRequest, *, cpf_cnpj: str | None = None
+    ) -> ProviderCustomer:
+        """The customer with ``request.external_reference``, created only if absent (idempotent).
+
+        ``cpf_cnpj`` is the decrypted tax id: sent to the provider, never logged or kept.
+        """
+        ...
 
     async def create_payment(self, request: CreatePaymentRequest) -> ProviderPaymentSnapshot: ...
 

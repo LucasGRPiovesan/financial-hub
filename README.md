@@ -55,9 +55,10 @@ Derivado do código e do histórico git (não do plano). Itens "Planejado" estã
 | Pagamentos lançam no razão (captura, ajuste de taxa, liquidação, reembolso) na mesma transação | Implementado | Receitas R1-R4, R2a, R2b, R8; [`ledger_postings.py`](backend/src/financial_hub/modules/payments/application/ledger_postings.py) |
 | Console React (visão geral, projetos, chaves, membros, clientes, integrações) | Implementado | Design em [docs/FRONTEND.md](docs/FRONTEND.md) |
 | Suíte E2E Playwright como usuário final | Implementado | Roda em CI na `main` |
-| Adapter Asaas Sandbox, webhooks de entrada, sweeper de resultado desconhecido | Planejado | Protocolo já definido no ADR-0012 |
+| Adapter Asaas Sandbox, webhooks de entrada, sweeper de resultado desconhecido | Sandbox | Só `api-sandbox.asaas.com`; cliente Asaas provisionado antes da cobrança; webhook `POST /v1/webhooks/asaas/{conta}` com token, dedup e refetch; sweeper periódico no worker ([INTEGRATIONS.md](docs/INTEGRATIONS.md) s2) |
 | Medição de uso (metering), cobrança, faturas, assinaturas, carteira | Planejado | Módulos ainda vazios; ADR-0007 |
-| Webhooks de saída, reconciliação, manifesto de integração | Planejado | ADR-0008, ADR-0013 |
+| Webhooks de saída (Standard Webhooks, rotação de segredo, retentativas, reenvio manual) | Implementado | Guarda contra SSRF; envio pelo worker ([INTEGRATIONS.md](docs/INTEGRATIONS.md) s3) |
+| Reconciliação, manifesto de integração | Planejado | ADR-0008, ADR-0013 |
 | Onboarding com IA e servidor MCP | Planejado | ADR-0009; a IA nunca movimenta dinheiro |
 | Stripe / Mercado Pago, FX multi-moeda | Planejado | A porta de provider já comporta novos adapters |
 

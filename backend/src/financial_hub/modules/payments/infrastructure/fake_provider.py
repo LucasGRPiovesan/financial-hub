@@ -97,6 +97,9 @@ class FakePaymentProvider:
         self._payments: dict[str, _Payment] = {}
         self._by_reference: dict[str, str] = {}
         self._customers: dict[str, str] = {}
+        self._customer_script: deque[FakeBehavior] = deque()
+        # the tax id each created customer was sent with (tests check it reached the provider)
+        self.customer_documents: dict[str, str | None] = {}
         self._sequence = 0
         self._hold: asyncio.Event | None = None
         self.held = asyncio.Event()
@@ -112,6 +115,9 @@ class FakePaymentProvider:
 
     def script_refunds(self, *behaviors: FakeRefundBehavior) -> None:
         self._refund_script.extend(behaviors)
+
+    def script_customers(self, *behaviors: FakeBehavior) -> None:
+        self._customer_script.extend(behaviors)
 
     def hold(self) -> asyncio.Event:
         """Pause the next create after it took effect, until the returned event is set."""
@@ -174,12 +180,36 @@ class FakePaymentProvider:
 
     # --- the port -------------------------------------------------------------------------------
 
-    async def create_customer(self, request: ProviderCustomerRequest) -> ProviderCustomer:
+    async def create_customer(
+        self, request: ProviderCustomerRequest, *, cpf_cnpj: str | None = None
+    ) -> ProviderCustomer:
+        """Like Asaas: an existing customer with this external reference is returned, not doubled.
+
+        Scripted with :meth:`script_customers` (``SUCCEED`` / ``REJECT`` / ``RETRYABLE`` /
+        ``TIMEOUT_BEFORE_COMMIT`` / ``TIMEOUT_AFTER_COMMIT``).
+        """
         self.calls.append("create_customer")
+        behavior = (
+            self._customer_script.popleft() if self._customer_script else FakeBehavior.SUCCEED
+        )
         provider_id = self._customers.get(request.external_reference)
-        if provider_id is None:
-            provider_id = self._customers[request.external_reference] = self._next_id("cus")
+        if provider_id is not None:
+            return ProviderCustomer(provider_customer_id=provider_id)
+        if behavior is FakeBehavior.REJECT:
+            raise ProviderRejected("invalid_customer", "the fake provider rejected the customer")
+        if behavior is FakeBehavior.RETRYABLE:
+            raise ProviderRetryable("rate_limited")
+        if behavior is FakeBehavior.TIMEOUT_BEFORE_COMMIT:
+            raise ProviderUncertain("timeout")
+        provider_id = self._customers[request.external_reference] = self._next_id("cus")
+        self.customer_documents[provider_id] = cpf_cnpj
+        if behavior is FakeBehavior.TIMEOUT_AFTER_COMMIT:
+            raise ProviderUncertain("timeout")
         return ProviderCustomer(provider_customer_id=provider_id)
+
+    @property
+    def customer_count(self) -> int:
+        return len(self._customers)
 
     async def create_payment(self, request: CreatePaymentRequest) -> ProviderPaymentSnapshot:
         self.calls.append("create_payment")

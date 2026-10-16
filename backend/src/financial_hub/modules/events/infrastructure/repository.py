@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from financial_hub.modules.events.domain import (
     ClaimedDelivery,
+    ClaimedWebhookDelivery,
     DeliveryStatus,
     Event,
     EventCursor,
@@ -648,3 +649,92 @@ async def advance_schedule(session: AsyncSession, schedule_id: UUID, next_due_at
 
 def _rowcount(result: Any) -> int:
     return int(result.rowcount)
+
+
+# --- webhook deliveries (claimed by the webhooks module's sender, W6.3) -----------------------
+
+_CLAIM_WEBHOOK = text(
+    "".join(
+        (
+            """
+    WITH due AS (
+        SELECT d.id FROM public.event_deliveries d
+        JOIN public.event_subscriptions s ON s.id = d.subscription_id
+        WHERE s.kind = 'webhook' AND s.enabled
+          AND ((d.status IN ('pending', 'retry_scheduled') AND d.next_attempt_at <= :now)
+               OR (d.status = 'leased' AND d.lease_until < :now))
+        ORDER BY d.next_attempt_at, d.id
+        LIMIT :limit
+        FOR UPDATE OF d SKIP LOCKED
+    )
+    UPDATE public.event_deliveries d
+    SET status = 'leased', lease_token = pg_catalog.gen_random_uuid(),
+        lease_until = :lease_until, attempts = d.attempts + 1, updated_at = now()
+    FROM due, public.events e, public.event_subscriptions s
+    WHERE d.id = due.id AND e.id = d.event_id AND s.id = d.subscription_id
+    RETURNING d.id AS delivery_id, d.subscription_id, s.endpoint_id, d.lease_token,
+              d.lease_until, d.attempts, e.recorded_at, """,
+            _EVENT_COLUMNS,
+        )
+    )
+)
+_WEBHOOK_DELIVERY_ENDPOINT = text(
+    """
+    SELECT s.endpoint_id FROM public.event_deliveries d
+    JOIN public.event_subscriptions s ON s.id = d.subscription_id
+    WHERE d.id = :id AND d.event_id = :event_id AND d.project_id = :project_id
+      AND s.kind = 'webhook'
+    """
+)
+_SET_SUBSCRIPTION_EVENT_TYPES = text(
+    """
+    UPDATE public.event_subscriptions
+    SET event_types = CAST(:event_types AS text[]), updated_at = now()
+    WHERE id = :id
+    """
+)
+
+
+async def claim_webhook_deliveries(
+    session: AsyncSession, *, now: datetime, lease_until: datetime, limit: int
+) -> list[ClaimedWebhookDelivery]:
+    """Lease due (or lease-expired) deliveries of *enabled* webhook subscriptions."""
+    if limit < 1:
+        return []
+    result = await session.execute(
+        _CLAIM_WEBHOOK, {"now": now, "lease_until": lease_until, "limit": limit}
+    )
+    claimed = [
+        ClaimedWebhookDelivery(
+            id=row["delivery_id"],
+            event=_event(row),
+            recorded_at=row["recorded_at"],
+            subscription_id=row["subscription_id"],
+            endpoint_id=row["endpoint_id"],
+            lease_token=row["lease_token"],
+            lease_until=row["lease_until"],
+            attempts=row["attempts"],
+        )
+        for row in result.mappings()
+    ]
+    claimed.sort(key=lambda c: (c.event.txid, c.event.id, c.id))
+    return claimed
+
+
+async def webhook_delivery_endpoint(
+    session: AsyncSession, *, project_id: UUID, event_id: UUID, delivery_id: UUID
+) -> UUID | None:
+    """Endpoint id of a webhook delivery of ``event_id`` in the project; ``None`` otherwise."""
+    result = await session.execute(
+        _WEBHOOK_DELIVERY_ENDPOINT,
+        {"id": delivery_id, "event_id": event_id, "project_id": project_id},
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_subscription_event_types(
+    session: AsyncSession, subscription_id: UUID, event_types: Sequence[str]
+) -> None:
+    await session.execute(
+        _SET_SUBSCRIPTION_EVENT_TYPES, {"id": subscription_id, "event_types": list(event_types)}
+    )

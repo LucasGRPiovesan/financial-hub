@@ -98,6 +98,8 @@ EXPECTED = {
         "permission",
         "payments:refund",
     ),
+    # Inbound provider webhooks (W4.4): authenticated by the account's webhook token instead.
+    ("POST", "/v1/webhooks/asaas/{provider_account_id}"): ("public", None),
     ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
     ("GET", "/v1/projects/{project_id}/events"): ("permission", "events:read"),
     ("GET", "/v1/projects/{project_id}/events/{event_id}"): ("permission", "events:read"),
@@ -112,6 +114,37 @@ EXPECTED = {
     ("GET", "/v1/projects/{project_id}/correlations/{correlation_id}"): (
         "permission",
         "events:read",
+    ),
+    # Outbound webhooks (W6.3): operator-only permissions, no API key scope grants them.
+    ("POST", "/v1/projects/{project_id}/webhook-endpoints"): ("permission", "webhooks:manage"),
+    ("GET", "/v1/projects/{project_id}/webhook-endpoints"): ("permission", "webhooks:read"),
+    ("GET", "/v1/projects/{project_id}/webhook-endpoints/{endpoint_id}"): (
+        "permission",
+        "webhooks:read",
+    ),
+    ("PATCH", "/v1/projects/{project_id}/webhook-endpoints/{endpoint_id}"): (
+        "permission",
+        "webhooks:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/webhook-endpoints/{endpoint_id}/disable"): (
+        "permission",
+        "webhooks:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/webhook-endpoints/{endpoint_id}/rotate-secret"): (
+        "permission",
+        "webhooks:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/webhook-endpoints/{endpoint_id}/test"): (
+        "permission",
+        "webhooks:manage",
+    ),
+    ("GET", "/v1/projects/{project_id}/webhook-endpoints/{endpoint_id}/attempts"): (
+        "permission",
+        "webhooks:read",
+    ),
+    ("POST", "/v1/projects/{project_id}/events/{event_id}/deliveries/{delivery_id}/retry"): (
+        "permission",
+        "webhooks:manage",
     ),
     ("GET", "/v1/projects/{project_id}/audit-records"): ("permission", "audit:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts"): ("permission", "ledger:read"),

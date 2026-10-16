@@ -281,6 +281,7 @@ forbidden_modules = ["financial_hub.platform.crypto.unseal"]
 ignore_imports = [
     "financial_hub.modules.projects.infrastructure.credentials_vault -> financial_hub.platform.crypto.unseal",
     "financial_hub.modules.customers.infrastructure.document_vault -> financial_hub.platform.crypto.unseal",
+    "financial_hub.modules.webhooks.infrastructure.secret_vault -> financial_hub.platform.crypto.unseal",
 ]
 allow_indirect_imports = true
 
@@ -381,6 +382,44 @@ forbidden_modules = [
     "financial_hub.modules.metering.application.service",
     "financial_hub.modules.metering.application.events",
 ]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. webhooks is reached by other modules only through application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.customers",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.events",
+    "financial_hub.modules.audit",
+    "financial_hub.modules.payments",
+    "financial_hub.modules.metering",
+    "financial_hub.workers",
+]
+forbidden_modules = [
+    "financial_hub.modules.webhooks.api",
+    "financial_hub.modules.webhooks.domain",
+    "financial_hub.modules.webhooks.infrastructure",
+    "financial_hub.modules.webhooks.application.config",
+    "financial_hub.modules.webhooks.application.events",
+    "financial_hub.modules.webhooks.application.sender",
+    "financial_hub.modules.webhooks.application.service",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "5. webhook signing secrets are decrypted only by the webhooks secret vault"
+type = "forbidden"
+source_modules = [
+    "financial_hub.main",
+    "financial_hub.workers",
+    "financial_hub.modules.webhooks.api",
+    "financial_hub.modules.webhooks.application.service",
+    "financial_hub.modules.webhooks.domain",
+]
+forbidden_modules = ["financial_hub.modules.webhooks.infrastructure.secret_vault"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

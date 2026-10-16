@@ -13,6 +13,7 @@ from uuid import UUID
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from financial_hub.modules.customers.application.api import CustomerContact, load_customer_contact
 from financial_hub.modules.payments.domain import (
     FAKE_PROVIDER,
     PaymentProvider,
@@ -31,6 +32,8 @@ from financial_hub.platform.settings import Settings
 type ProviderFactory = Callable[[UUID, ProviderCredentials], PaymentProvider]
 # Loads one account's decrypted credentials on the caller's session (``None``: not available).
 type CredentialsLoader = Callable[[AsyncSession, UUID, UUID], Awaitable[ProviderCredentials | None]]
+# Loads an identity's contact and decrypted CPF/CNPJ for provisioning (``None``: not available).
+type ContactLoader = Callable[[AsyncSession, UUID, UUID], Awaitable[CustomerContact | None]]
 
 
 class ProviderRegistry:
@@ -111,5 +114,22 @@ def projects_credentials_loader(keyring: Keyring) -> CredentialsLoader:
         if loaded is None:
             return None
         return ProviderCredentials({**loaded.values, "environment": loaded.environment})
+
+    return load
+
+
+def customers_contact_loader(keyring: Keyring) -> ContactLoader:
+    """A :class:`ContactLoader` backed by the customers module's single document door (W4.4).
+
+    The document is decrypted by customers (import-linter contract 5) and handed to the caller,
+    which passes it to the provider's create-customer call and drops it.
+    """
+
+    async def load(
+        session: AsyncSession, project_id: UUID, identity_id: UUID
+    ) -> CustomerContact | None:
+        return await load_customer_contact(
+            session, keyring, project_id=project_id, identity_id=identity_id
+        )
 
     return load

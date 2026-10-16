@@ -12,17 +12,21 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from financial_hub.modules.customers.infrastructure import repository
+from financial_hub.modules.customers.infrastructure import contact_loader, repository
+from financial_hub.modules.customers.infrastructure.contact_loader import CustomerContact
+from financial_hub.platform.crypto.keyring import Keyring
 from financial_hub.shared.clock import Clock
 from financial_hub.shared.errors import Conflict, NotFound
 from financial_hub.shared.ids import IdPrefix, InvalidIdError, format_id, parse_id
 
 __all__ = [
     "CustomerAccountOwner",
+    "CustomerContact",
     "customer_account_owner",
     "find_identity_by_provider_customer",
     "get_provider_customer",
     "link_provider_customer",
+    "load_customer_contact",
     "resolve_customer_identity",
 ]
 
@@ -86,6 +90,19 @@ async def get_provider_customer(
     if not await repository.identity_in_project(session, project_id, identity_id):
         return None
     return await repository.get_provider_customer(session, identity_id, provider_account_id)
+
+
+async def load_customer_contact(
+    session: AsyncSession, keyring: Keyring, *, project_id: UUID, identity_id: UUID
+) -> CustomerContact | None:
+    """What a provider needs to register the identity, with its CPF/CNPJ decrypted (W4.4).
+
+    The one door to the document for provider callers: only the composition root wires it into
+    payments, and the caller passes the document to the provider call and drops it (never logged).
+    """
+    return await contact_loader.load_contact(
+        session, keyring, project_id=project_id, identity_id=identity_id
+    )
 
 
 async def find_identity_by_provider_customer(

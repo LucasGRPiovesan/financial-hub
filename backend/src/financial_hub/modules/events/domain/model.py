@@ -172,3 +172,17 @@ class ClaimedDelivery:
     lease_token: UUID
     lease_until: datetime
     attempts: int
+
+
+@dataclass(frozen=True, slots=True)
+class ClaimedWebhookDelivery:
+    """A webhook delivery leased by the webhook sender (same fencing as ``ClaimedDelivery``)."""
+
+    id: UUID
+    event: Event
+    recorded_at: datetime
+    subscription_id: UUID
+    endpoint_id: UUID
+    lease_token: UUID
+    lease_until: datetime
+    attempts: int

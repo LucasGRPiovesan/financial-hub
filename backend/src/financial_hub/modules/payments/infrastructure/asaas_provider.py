@@ -395,9 +395,11 @@ class AsaasPaymentProvider:
     ) -> ProviderCustomer:
         """Find the customer by ``externalReference`` first; create it only if absent.
 
-        ``cpf_cnpj`` is optional because the port does not carry a tax id yet (Asaas needs one to
-        issue charges; without it the create is refused with the Asaas error code).
-        Notifications are disabled: Asaas would otherwise e-mail/SMS the customer.
+        ``cpf_cnpj`` is the identity's decrypted document, passed by the service right before the
+        call (W4.4); it only travels in the request body and is never logged. Without one Asaas
+        refuses the create with its error code. The lookup first is what makes a retry after an
+        unknown outcome safe (no duplicate customer). Notifications are disabled: Asaas would
+        otherwise e-mail/SMS the customer.
         """
         found = await self._find("customers", request.external_reference, "customer")
         if found:
@@ -409,8 +411,9 @@ class AsaasPaymentProvider:
         }
         if request.email:
             fields["email"] = request.email
-        if request.phone and len(_DIGITS.sub("", request.phone)) in (10, 11):
-            fields["mobilePhone"] = _DIGITS.sub("", request.phone)
+        phone = _national_phone(request.phone)
+        if phone is not None:
+            fields["mobilePhone"] = phone
         if cpf_cnpj:
             fields["cpfCnpj"] = cpf_cnpj
         data = await self._call("POST", "customers", body=_json_text(fields, {}), write=True)
@@ -511,6 +514,21 @@ def _snapshot(payload: Mapping[str, Any]) -> ProviderPaymentSnapshot:
         return payment_snapshot(payload)
     except _InvalidResponse:
         raise ProviderUncertain("invalid_response") from None
+
+
+def _national_phone(phone: str | None) -> str | None:
+    """A Brazilian number as Asaas takes it (DDD + number, 10 or 11 digits), else ``None``.
+
+    Customers store phones in E.164 (``+5511987654321``): the country code is dropped.
+    """
+    if not phone:
+        return None
+    digits = _DIGITS.sub("", phone)
+    if phone.lstrip().startswith("+"):
+        if not digits.startswith("55"):
+            return None
+        digits = digits[2:]
+    return digits if len(digits) in (10, 11) else None
 
 
 def _customer(payload: Mapping[str, Any]) -> ProviderCustomer:

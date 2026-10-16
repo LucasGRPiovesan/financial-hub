@@ -1,0 +1,27 @@
+{
+  "id": "evt_05b708f961d739ea7eba7e4db318f621&368604920",
+  "event": "PAYMENT_RECEIVED",
+  "dateCreated": "2026-10-16 16:45:03",
+  "account": {
+    "id": "47ed0d25-f9fb-4b35-b23a-d8895caf92b7",
+    "ownerId": null
+  },
+  "payment": {
+    "object": "payment",
+    "id": "pay_000001",
+    "dateCreated": "2026-10-16",
+    "customer": "cus_000005118001",
+    "value": 10.0,
+    "netValue": 9.01,
+    "originalValue": null,
+    "description": null,
+    "billingType": "PIX",
+    "status": "RECEIVED",
+    "dueDate": "2026-10-19",
+    "paymentDate": "2026-10-16",
+    "clientPaymentDate": "2026-10-16",
+    "externalReference": "pi_REPLACE",
+    "deleted": false,
+    "refunds": null
+  }
+}

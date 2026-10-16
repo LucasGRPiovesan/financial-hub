@@ -21,7 +21,7 @@ import asyncio
 import hashlib
 import json
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Final
 from uuid import UUID
@@ -39,7 +39,11 @@ from financial_hub.modules.payments.application.ledger_postings import (
     post_payment_changes,
     with_reported_net,
 )
-from financial_hub.modules.payments.application.registry import CredentialsLoader, ProviderRegistry
+from financial_hub.modules.payments.application.registry import (
+    ContactLoader,
+    CredentialsLoader,
+    ProviderRegistry,
+)
 from financial_hub.modules.payments.domain import (
     FAKE_PROVIDER,
     TERMINAL_REFUND_STATES,
@@ -56,6 +60,8 @@ from financial_hub.modules.payments.domain import (
     PaymentProvider,
     PaymentState,
     PaymentStatus,
+    ProviderCustomer,
+    ProviderCustomerRequest,
     ProviderDuplicate,
     ProviderError,
     ProviderPayment,
@@ -64,6 +70,7 @@ from financial_hub.modules.payments.domain import (
     ProviderRejected,
     ProviderUnavailable,
     ProviderUncertain,
+    ProvisionStatus,
     Refund,
     RefundExceedsRefundable,
     RefundRequest,
@@ -83,7 +90,7 @@ from financial_hub.modules.payments.domain import (
     validate_external_ref,
     validate_metadata,
 )
-from financial_hub.modules.payments.infrastructure import repository
+from financial_hub.modules.payments.infrastructure import repository, webhook_repository
 from financial_hub.modules.projects.application import api as projects_api
 from financial_hub.platform.db import UnitOfWork
 from financial_hub.platform.http.auth import ProjectScope
@@ -266,7 +273,7 @@ class NewPayment:
 class _Outcome:
     """What one provider call produced: a result, or the error that says what to assume."""
 
-    result: ProviderPaymentSnapshot | ProviderRefundSnapshot | None
+    result: ProviderPaymentSnapshot | ProviderRefundSnapshot | ProviderCustomer | None
     error: ProviderError | None
 
 
@@ -319,6 +326,7 @@ class PaymentService:
         clock: Clock,
         registry: ProviderRegistry,
         credentials: CredentialsLoader | None = None,
+        contacts: ContactLoader | None = None,
         audit: AuditContext | None = None,
         publisher: EventPublisher | None = None,
         ledger_hook: LedgerHook = post_payment_changes,
@@ -329,6 +337,8 @@ class PaymentService:
         self._clock = clock
         self._registry = registry
         self._credentials = credentials
+        # Without it the hub never provisions provider customers (the pre-W4.4 behaviour).
+        self._contacts = contacts
         self._audit = audit or AuditContext.system()
         self._publisher = publisher or EventPublisher(clock=clock, notifier=None)
         # Called in every transaction that records a payment or refund transition (PRO-42).
@@ -535,7 +545,9 @@ class PaymentService:
                 customer_id=format_id(IdPrefix.CUSTOMER, customer),
                 status=derive_status(intent, None, (), self.today()).value,
             )
-        await self._send_create(provider, intent, attempt_id, request)
+        ready = await self._with_customer(provider, intent, attempt_id, request)
+        if ready is not None:
+            await self._send_create(provider, intent, attempt_id, ready)
         return await self._load_view(project_id, intent_id)
 
     @staticmethod
@@ -583,6 +595,176 @@ class PaymentService:
                 created_at=now,
             ),
         )
+
+    # --- customer provisioning (W4.4) ---------------------------------------------------------
+
+    async def _with_customer(
+        self,
+        provider: PaymentProvider,
+        intent: PaymentIntent,
+        attempt_id: UUID,
+        request: CreatePaymentRequest,
+    ) -> CreatePaymentRequest | None:
+        """The request carrying the provider customer, provisioned first when there is none.
+
+        ``None`` when provisioning did not succeed: the payment's creation outcome is then already
+        recorded (``rejected``, or ``unknown`` for the resolver, which provisions again before it
+        re-sends). The charge is never sent without a customer the provider confirmed.
+        """
+        account_id = intent.provider_account_id
+        if request.provider_customer_id is not None or account_id is None or self._contacts is None:
+            return request
+        provisioned = await self._provision_customer(provider, intent, account_id)
+        if isinstance(provisioned, str):
+            return replace(request, provider_customer_id=provisioned)
+        rejected, code = provisioned
+        if rejected:
+            await self._record_rejected(intent, attempt_id, code)
+        else:
+            await self._record_unknown(intent, attempt_id, code)
+        return None
+
+    async def _provision_customer(
+        self, provider: PaymentProvider, intent: PaymentIntent, account_id: UUID
+    ) -> str | tuple[bool, str]:
+        """Create (or find) the identity's provider customer under the external-call protocol.
+
+        Transaction A takes the provisioning token (a lease while the call may be in flight) and
+        loads the contact; the call carries ``externalReference`` = the hub's ``cus_`` id, and the
+        adapter looks that reference up before creating, so a retry after a lost answer finds the
+        customer instead of doubling it; transaction B links the mapping under the token. Returns
+        the provider customer id, or ``(rejected, code)``. The decrypted document lives only in
+        this frame and the call; it is never logged.
+        """
+        loader = self._contacts
+        if loader is None:  # pragma: no cover - _with_customer checks it first
+            return False, "customer_contacts_unavailable"
+        token = new_uuid()
+        project_id, identity_id = intent.project_id, intent.customer_id
+        async with self._uow() as uow:
+            session = uow.session
+            now = self._clock.now()
+            claimed = await webhook_repository.claim_provision(
+                session,
+                identity_id=identity_id,
+                provider_account_id=account_id,
+                project_id=project_id,
+                attempt_id=token,
+                lease_until=now + self._lease,
+                now=now,
+            )
+            existing = await customers_api.get_provider_customer(
+                session,
+                project_id=project_id,
+                identity_id=identity_id,
+                provider_account_id=account_id,
+            )
+            if existing is not None:  # a concurrent provisioning (or a manual link) came first
+                if claimed:
+                    await webhook_repository.finish_provision(
+                        session,
+                        identity_id=identity_id,
+                        provider_account_id=account_id,
+                        attempt_id=token,
+                        status=ProvisionStatus.CREATED,
+                        failure_code=None,
+                        now=now,
+                    )
+                return existing
+            if not claimed:
+                return False, "customer_provisioning_in_flight"
+            contact = await loader(session, project_id, identity_id)
+        if contact is None:
+            await self._finish_provision(
+                intent, account_id, token, ProvisionStatus.REJECTED, "customer_unavailable"
+            )
+            return True, "customer_unavailable"
+        request = ProviderCustomerRequest(
+            external_reference=format_id(IdPrefix.CUSTOMER, identity_id),
+            name=contact.name,
+            email=contact.email,
+            phone=contact.phone,
+        )
+        outcome = await self._call(provider.create_customer(request, cpf_cnpj=contact.document))
+        del contact
+        if isinstance(outcome.result, ProviderCustomer):
+            return await self._record_provisioned(
+                intent, account_id, token, outcome.result.provider_customer_id
+            )
+        code = "unknown" if outcome.error is None else outcome.error.code
+        rejected = isinstance(outcome.error, ProviderRejected)
+        status = ProvisionStatus.REJECTED if rejected else ProvisionStatus.UNKNOWN
+        await self._finish_provision(intent, account_id, token, status, code)
+        logger.info(
+            "payments.customer_provisioning_failed",
+            customer_id=format_id(IdPrefix.CUSTOMER, identity_id),
+            provider_account_id=format_id(IdPrefix.PROVIDER_ACCOUNT, account_id),
+            rejected=rejected,
+            code=code[:100],
+        )
+        return rejected, f"customer_{code}"[:100]
+
+    async def _record_provisioned(
+        self, intent: PaymentIntent, account_id: UUID, token: UUID, provider_customer_id: str
+    ) -> str | tuple[bool, str]:
+        async with self._uow() as uow:
+            session = uow.session
+            try:
+                await customers_api.link_provider_customer(
+                    session,
+                    self._clock,
+                    project_id=intent.project_id,
+                    identity_id=intent.customer_id,
+                    provider_account_id=account_id,
+                    provider_customer_id=provider_customer_id,
+                )
+            except Conflict:
+                # The identity already maps to another customer on this account (linked by hand,
+                # or the provider answered with a different one): never guess which is right.
+                logger.warning(
+                    "payments.provider_customer_conflict",
+                    customer_id=format_id(IdPrefix.CUSTOMER, intent.customer_id),
+                    provider_account_id=format_id(IdPrefix.PROVIDER_ACCOUNT, account_id),
+                )
+                linked = None
+            else:
+                linked = provider_customer_id
+            await webhook_repository.finish_provision(
+                session,
+                identity_id=intent.customer_id,
+                provider_account_id=account_id,
+                attempt_id=token,
+                status=ProvisionStatus.CREATED if linked else ProvisionStatus.UNKNOWN,
+                failure_code=None if linked else "mapping_conflict",
+                now=self._clock.now(),
+            )
+        if linked is None:
+            return False, "customer_mapping_conflict"
+        logger.info(
+            "payments.customer_provisioned",
+            customer_id=format_id(IdPrefix.CUSTOMER, intent.customer_id),
+            provider_account_id=format_id(IdPrefix.PROVIDER_ACCOUNT, account_id),
+        )
+        return linked
+
+    async def _finish_provision(
+        self,
+        intent: PaymentIntent,
+        account_id: UUID,
+        token: UUID,
+        status: ProvisionStatus,
+        code: str,
+    ) -> None:
+        async with self._uow() as uow:
+            await webhook_repository.finish_provision(
+                uow.session,
+                identity_id=intent.customer_id,
+                provider_account_id=account_id,
+                attempt_id=token,
+                status=status,
+                failure_code=code,
+                now=self._clock.now(),
+            )
 
     async def _send_create(
         self,
@@ -793,7 +975,9 @@ class PaymentService:
             request = self._create_request(intent, provider_customer)
             await self._insert_attempt(session, intent, new_attempt, request, now)
         current = _with_creation(intent, CreationStatus.CREATE_REQUESTED, None, new_attempt)
-        await self._send_create(provider, current, new_attempt, request)
+        ready = await self._with_customer(provider, current, new_attempt, request)
+        if ready is not None:
+            await self._send_create(provider, current, new_attempt, ready)
 
     async def _creation_status(self, intent_id: UUID) -> CreationStatus | None:
         async with self._uow() as uow:

@@ -27,6 +27,7 @@ __all__ = [
     "active_provider_accounts",
     "load_provider_secrets",
     "project_names",
+    "provider_account_by_id",
     "provider_account_ref",
 ]
 
@@ -62,6 +63,18 @@ async def provider_account_ref(
 ) -> ProviderAccountRef | None:
     """The project's provider account ``account_id`` (``None`` if absent or another project's)."""
     account = await provider_repository.get_account(session, project_id, account_id)
+    return None if account is None else _ref(account)
+
+
+async def provider_account_by_id(
+    session: AsyncSession, account_id: UUID
+) -> ProviderAccountRef | None:
+    """Any project's provider account by id, to route an inbound provider webhook (W4.4).
+
+    Not project-scoped: the caller must authenticate the request (the account's webhook token)
+    before acting on it, and must treat an absent account exactly like a failed authentication.
+    """
+    account = await provider_repository.find_account(session, account_id)
     return None if account is None else _ref(account)
 
 

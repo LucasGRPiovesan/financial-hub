@@ -72,7 +72,11 @@ class EventPublisher:
         self._registry = registry
         self._metrics = metrics or EventsMetrics()
 
-    async def publish(self, uow: UnitOfWork, draft: EventDraft) -> Event:
+    async def publish(
+        self, uow: UnitOfWork, draft: EventDraft, *, only_subscription: UUID | None = None
+    ) -> Event:
+        """``only_subscription``: deliver to that one subscription instead of fanning out
+        (a webhook endpoint's test ping must not reach every ``*`` subscriber)."""
         event_type = self._registry.get(draft.type, draft.version)
         data = event_type.dump(draft.data)
         if draft.subject is not None and not 1 <= len(draft.subject) <= 255:
@@ -96,8 +100,10 @@ class EventPublisher:
             traceparent=traceparent,
             data=data,
         )
-        subscriptions = await repository.matching_subscriptions(
-            session, draft.project_id, event_type.name
+        subscriptions = (
+            await repository.matching_subscriptions(session, draft.project_id, event_type.name)
+            if only_subscription is None
+            else [only_subscription]
         )
         await repository.insert_deliveries(
             session,
