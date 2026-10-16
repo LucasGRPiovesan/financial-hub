@@ -10,3 +10,4 @@ export * from './metering/metering';
 export * from './payments/payments';
 export * from './projects/projects';
 export * from './providers/providers';
+export * from './webhooks/webhooks';
