@@ -52,6 +52,7 @@ Derivado do código e do histórico git (não do plano). Itens "Planejado" estã
 | Log de auditoria append-only, `Idempotency-Key`, rate limit em Postgres | Implementado | |
 | Clientes universais e identidades por projeto | Implementado | Documento (CPF/CNPJ) em cofre criptografado |
 | Pagamentos: estado ortogonal, porta de provider, chamadas externas com fencing, reembolsos | Implementado | **Com provider fake** (`fake_provider.py`) |
+| Pagamentos lançam no razão (captura, ajuste de taxa, liquidação, reembolso) na mesma transação | Implementado | Receitas R1-R4, R2a, R2b, R8; [`ledger_postings.py`](backend/src/financial_hub/modules/payments/application/ledger_postings.py) |
 | Console React (visão geral, projetos, chaves, membros, clientes, integrações) | Implementado | Design em [docs/FRONTEND.md](docs/FRONTEND.md) |
 | Suíte E2E Playwright como usuário final | Implementado | Roda em CI na `main` |
 | Adapter Asaas Sandbox, webhooks de entrada, sweeper de resultado desconhecido | Planejado | Protocolo já definido no ADR-0012 |

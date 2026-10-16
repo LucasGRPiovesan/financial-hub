@@ -1,5 +1,6 @@
 """Public API of the payments module for other modules (import-linter: only this file)."""
 
+from financial_hub.modules.payments.application.ledger_postings import post_payment_changes
 from financial_hub.modules.payments.application.registry import (
     CredentialsLoader,
     ProviderRegistry,
@@ -11,7 +12,6 @@ from financial_hub.modules.payments.application.service import (
     PaymentService,
     PaymentView,
     RefundView,
-    on_payment_confirmed,
 )
 
 __all__ = [
@@ -22,6 +22,6 @@ __all__ = [
     "ProviderRegistry",
     "RefundView",
     "build_registry",
-    "on_payment_confirmed",
+    "post_payment_changes",
     "projects_credentials_loader",
 ]

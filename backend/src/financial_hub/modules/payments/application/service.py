@@ -33,6 +33,12 @@ from financial_hub.modules.audit.application import Actor, AuditContext, AuditRe
 from financial_hub.modules.customers.application import api as customers_api
 from financial_hub.modules.events.application import EventDraft, EventPublisher
 from financial_hub.modules.payments.application import events as payment_events
+from financial_hub.modules.payments.application.ledger_postings import (
+    LedgerHook,
+    PaymentChange,
+    post_payment_changes,
+    with_reported_net,
+)
 from financial_hub.modules.payments.application.registry import CredentialsLoader, ProviderRegistry
 from financial_hub.modules.payments.domain import (
     FAKE_PROVIDER,
@@ -99,36 +105,6 @@ DEFAULT_CALL_TIMEOUT_SECONDS: Final = 30.0
 BRL_ONLY_METHODS: Final = frozenset({PaymentMethod.PIX, PaymentMethod.BOLETO})
 _UNRESOLVED: Final = (CreationStatus.CREATE_REQUESTED, CreationStatus.UNKNOWN)
 _OPEN_REFUND: Final = (RefundState.REQUESTED, RefundState.UNKNOWN)
-
-
-async def on_payment_confirmed(
-    session: AsyncSession, *, intent: PaymentIntent, payment: ProviderPayment, late: bool
-) -> None:
-    """Ledger hook, called in the transaction that records a capture (once per provider payment).
-
-    PRO-40 posts nothing. The settlement ledger (PRO-42) replaces this function and, in the same
-    transaction, applies the FINANCIAL_MODEL recipes with ``payment.state`` amounts:
-
-    - first capture of the intent (``late`` False): **R2** (``Dr provider_receivable`` gross /
-      ``Cr customer_receivable``; fee legs from ``captured_amount - net_amount``, adjusted later
-      by **R2a**) plus **R3** split allocation of the net over the sales lines;
-    - a late capture (``late`` True: the payment had failed or been canceled) or a second capture
-      of an already captured intent: **R2b** unapplied cash (``Cr customer_unapplied_cash``),
-      never R2/R3;
-    - settlement (``settlement_status`` -> ``settled``) applies **R4**; refunds ``done`` apply
-      **R8**; both are driven by the same state transitions recorded here.
-    """
-    logger.info(
-        "payments.confirmed",
-        payment_id=format_id(IdPrefix.PAYMENT_INTENT, intent.id),
-        project_id=str(intent.project_id),
-        late=late,
-        ledger="not_posted",
-        session_active=session.in_transaction(),
-    )
-
-
-type ConfirmedHook = Callable[..., Awaitable[None]]
 
 
 # --- views ---------------------------------------------------------------------------------------
@@ -345,7 +321,7 @@ class PaymentService:
         credentials: CredentialsLoader | None = None,
         audit: AuditContext | None = None,
         publisher: EventPublisher | None = None,
-        on_confirmed: ConfirmedHook = on_payment_confirmed,
+        ledger_hook: LedgerHook = post_payment_changes,
         lease: timedelta = DEFAULT_LEASE,
         call_timeout_seconds: float = DEFAULT_CALL_TIMEOUT_SECONDS,
     ) -> None:
@@ -355,7 +331,8 @@ class PaymentService:
         self._credentials = credentials
         self._audit = audit or AuditContext.system()
         self._publisher = publisher or EventPublisher(clock=clock, notifier=None)
-        self._on_confirmed = on_confirmed
+        # Called in every transaction that records a payment or refund transition (PRO-42).
+        self._ledger_hook = ledger_hook
         self._lease = lease
         self._call_timeout = call_timeout_seconds
 
@@ -687,8 +664,7 @@ class PaymentService:
             await self._status_changed(
                 uow, intent, before, derive_status(created, payment, (), today)
             )
-            if state.capture_status is CaptureStatus.CAPTURED:
-                await self._on_confirmed(session, intent=created, payment=payment, late=False)
+            await self._ledger_hook(uow, PaymentChange(created, payment, PaymentState(), now))
         return True
 
     async def _record_rejected(self, intent: PaymentIntent, attempt_id: UUID, code: str) -> None:
@@ -914,11 +890,12 @@ class PaymentService:
             refunds = list(await repository.refunds_of(session, [intent.id]))
             before = derive_status(intent, payment, refunds, today)
             state = apply_snapshot(payment.state, snapshot)
+            state = await with_reported_net(uow, intent, payment, state, snapshot.net_amount)
             if state != payment.state or snapshot.raw_status[:100] != payment.raw_status:
                 await repository.update_provider_payment(
                     session, payment.id, state=state, raw_status=snapshot.raw_status[:100], now=now
                 )
-            previous_capture = payment.state.capture_status
+            previous = payment.state
             payment = ProviderPayment(
                 id=payment.id,
                 payment_intent_id=payment.payment_intent_id,
@@ -931,15 +908,12 @@ class PaymentService:
                 created_at=payment.created_at,
                 updated_at=now,
             )
-            if (
-                previous_capture is not CaptureStatus.CAPTURED
-                and state.capture_status is CaptureStatus.CAPTURED
-            ):
-                late = previous_capture in (CaptureStatus.FAILED, CaptureStatus.CANCELED)
-                await self._on_confirmed(session, intent=intent, payment=payment, late=late)
             await self._sync_refunds(session, intent, payment, refunds, snapshot.refunds, now)
-            refunds = list(await repository.refunds_of(session, [intent.id]))
-            after = derive_status(intent, payment, refunds, today)
+            synced = list(await repository.refunds_of(session, [intent.id]))
+            await self._ledger_hook(
+                uow, PaymentChange(intent, payment, previous, now, refunds, synced)
+            )
+            after = derive_status(intent, payment, synced, today)
             await self._status_changed(uow, intent, before, after)
         return after
 
@@ -1023,7 +997,8 @@ class PaymentService:
                 raise PaymentNotRefundable("Only a captured payment can be refunded.")
             if payment.state.dispute_status in (DisputeStatus.OPEN, DisputeStatus.LOST):
                 raise PaymentNotRefundable("A disputed payment cannot be refunded.")
-            pairs = _pairs(await repository.refunds_of(session, [intent.id]))
+            existing = list(await repository.refunds_of(session, [intent.id]))
+            pairs = _pairs(existing)
             captured = payment.state.captured_amount
             value = refundable_amount(captured, pairs) if amount is None else amount
             if value == 0:
@@ -1053,6 +1028,10 @@ class PaymentService:
                 updated_at=now,
             )
             await repository.insert_refund(session, refund)
+            await self._ledger_hook(  # R8 step 1: the hold is booked before the provider call
+                uow,
+                PaymentChange(intent, payment, payment.state, now, existing, [*existing, refund]),
+            )
             request = RefundRequest(
                 provider_payment_id=payment.provider_payment_id,
                 external_reference=format_id(IdPrefix.REFUND, refund_id),
@@ -1232,9 +1211,12 @@ class PaymentService:
                 await repository.finish_attempt(
                     session, attempt_id, status=closed, outcome=outcome, now=now
                 )
-            refunds = list(await repository.refunds_of(session, [intent.id]))
+            recorded = list(await repository.refunds_of(session, [intent.id]))
+            await self._ledger_hook(
+                uow, PaymentChange(intent, payment, payment.state, now, refunds, recorded)
+            )
             await self._status_changed(
-                uow, intent, before, derive_status(intent, payment, refunds, today)
+                uow, intent, before, derive_status(intent, payment, recorded, today)
             )
         return True
 

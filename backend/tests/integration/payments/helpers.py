@@ -12,9 +12,15 @@ import httpx
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from financial_hub.modules.payments.application.ledger_postings import (
+    PaymentChange,
+    post_payment_changes,
+)
 from financial_hub.modules.payments.application.registry import ProviderRegistry
 from financial_hub.modules.payments.application.service import DUE_DATE_TZ, PaymentService
+from financial_hub.modules.payments.domain import CaptureStatus
 from financial_hub.modules.payments.infrastructure.fake_provider import FakePaymentProvider
+from financial_hub.platform.db import UnitOfWork
 from financial_hub.platform.http.auth import ProjectScope
 from financial_hub.shared.ids import IdPrefix, parse_id
 from tests.integration.identity.support import Api, Operator, logged_in
@@ -23,13 +29,17 @@ from tests.integration.projects.helpers import bearer, create_key, create_projec
 
 @dataclass
 class Confirmations:
-    """A ledger hook double: records each ``on_confirmed`` call."""
+    """Wraps the real ledger hook: records each capture it sees as ``(provider id, late)``."""
 
     calls: list[tuple[str, bool]] = field(default_factory=list[tuple[str, bool]])
 
-    async def __call__(self, session: Any, *, intent: Any, payment: Any, late: bool) -> None:
-        assert session.in_transaction()
-        self.calls.append((payment.provider_payment_id, late))
+    async def __call__(self, uow: UnitOfWork, change: PaymentChange) -> None:
+        assert uow.session.in_transaction()
+        before, after = change.before.capture_status, change.payment.state.capture_status
+        if before is not CaptureStatus.CAPTURED and after is CaptureStatus.CAPTURED:
+            late = before in (CaptureStatus.FAILED, CaptureStatus.CANCELED)
+            self.calls.append((change.payment.provider_payment_id, late))
+        await post_payment_changes(uow, change)
 
 
 @dataclass
@@ -61,7 +71,7 @@ class Shop:
             self.api.factory,
             clock=self.api.clock,
             registry=registry or ProviderRegistry(fake=self.fake),
-            on_confirmed=self.confirmations,
+            ledger_hook=self.confirmations,
         )
 
     def scope(self) -> ProjectScope:

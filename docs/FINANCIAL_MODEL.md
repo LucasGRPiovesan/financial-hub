@@ -192,6 +192,31 @@ Approved resolution of a break (ADR-0013): e.g. fee difference → R2a; unexplai
 ### Not supported
 `RECEIVED_IN_CASH` (payment marked as received outside the provider): rejected — the event is parked with an alert; no recipe moves money that never reached the provider.
 
+### Payment postings as implemented (PRO-42): resolved points
+The payment service books these recipes through `payments/application/ledger_postings.py` in the transaction that records
+each transition (creation, provider refresh/webhook, refund request, refund outcome). Postings derive only from the payment
+state before and after the transition, so every provider adapter reaches the same code.
+- **Standalone intents** (no invoice yet): the intent is its own invoice. R1 is booked at its first capture with key
+  `invoice:{intent}:finalized`, `B` = intent amount, `u` = 0. When billing creates intents from invoices, billing owns R1
+  and the payments hook must stop booking it.
+- **No split rules / no lines**: R3 allocates all of `B` to `platform_revenue` (no payees, `fee_bearer = proportional`).
+- **Net unknown at capture**: `F = 0` (`N = G`) until the provider reports a net, which then books R2a. R2a applies only to
+  a payment already captured; a net returning to a value already adjusted to (its key exists) is not booked again: the
+  payment keeps its previous net and the event is logged for reconciliation.
+- **R2b** applies to a late capture (the provider payment had failed or been canceled) and to a capture whose intent already
+  has R1 from another provider payment.
+- **R4** moves the booked net (`N` reported so far, else `G`).
+- **R8**: a hub refund books step 1 (pending, key `refund:{rf}:pending`) when it is requested and step 2 when it ends
+  (`done` → posted, `denied`/`cancelled` → archived). A refund made at the provider is imported as its own `Refund`
+  (`origin = provider`) and booked directly as posted under the same key. Settled or not is read at the refund transition.
+  A refund whose cumulative amount would exceed `G` is not booked; it is logged for reconciliation.
+- **`effective_at`** is when the hub records the transition, not the provider's event time.
+- **No provider account** (the fake provider): postings use a surrogate account id `uuid5(ns, "{provider}:{project}")`.
+- **Replays**: a fact whose idempotency key is already in the journal is skipped before booking, whatever its
+  `effective_at`, so redelivered webhooks, resolver re-runs and replayed transitions never post twice.
+- **Residues left for R12**: a refund before settlement followed by R4 of `N`, or an R2a after R4, leaves the difference on
+  `provider_receivable:{pa}` until reconciliation; the trial balance stays zero.
+
 ## 5. Worked example (HealthCheck consultation, 75/25 split, internal split)
 
 Consultation R$ 200.00 by PIX; Asaas fee R$ 1.99 (illustrative); `fee_bearer = proportional`; weights doctor 75, platform 25.

@@ -20,7 +20,9 @@ from financial_hub.modules.payments.application.registry import (
 from financial_hub.modules.payments.application.service import PaymentService
 from financial_hub.modules.payments.domain import CreationStatus
 from financial_hub.modules.payments.infrastructure.asaas_provider import asaas_factory
+from financial_hub.shared.ids import IdPrefix, parse_id
 from tests.integration.identity.support import Api, csrf, logged_in
+from tests.integration.ledger.support import Ledger
 from tests.integration.payments.helpers import Shop, intent_uuid, scalar, shop
 from tests.integration.projects.helpers import create_account
 
@@ -169,7 +171,9 @@ async def test_a_payment_is_created_at_asaas_with_the_accounts_credentials(api: 
     assert FAKE_KEY not in created.text
 
 
-async def test_a_payment_reported_received_is_captured_and_settled(api: Api) -> None:
+async def test_a_payment_reported_received_is_captured_and_settled(
+    api: Api, app_engine: AsyncEngine
+) -> None:
     asaas = SandboxAsaas()
     async with shop(api) as s:
         registry = wire(api, asaas)
@@ -179,10 +183,26 @@ async def test_a_payment_reported_received_is_captured_and_settled(api: Api) -> 
         remote["status"] = "RECEIVED"
         refreshed = await service_for(s, registry).refresh(intent_uuid(view["id"]))
         after = (await s.get(f"/{view['id']}")).json()
+        recipes = await scalar(
+            app_engine,
+            "SELECT string_agg(recipe || '/' || status, ',' ORDER BY recipe) FROM journal_entries "
+            "WHERE project_id = :p",
+            p=s.project_uuid,
+        )
+        settled_to = await scalar(
+            app_engine,
+            "SELECT provider_account_id FROM ledger_accounts WHERE project_id = :p "
+            "AND code LIKE 'provider_balance:%'",
+            p=s.project_uuid,
+        )
+        await Ledger(api.factory).assert_consistent(s.project_uuid)
 
     assert refreshed is not None and refreshed.value == "settled"
     assert after["status"] == "settled"
     assert after["captured_amount"] == after["amount"]
+    # the same ledger hook as the fake provider: R1-R3 then R4, on the real provider account
+    assert recipes == "R1/posted,R2/posted,R3/posted,R4/posted"
+    assert settled_to == parse_id(account_id, IdPrefix.PROVIDER_ACCOUNT)
 
 
 # --- a lost answer converges through the lookup ---------------------------------------------------

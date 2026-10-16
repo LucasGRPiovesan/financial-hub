@@ -10,7 +10,7 @@ R11), then the ledger accounts.
 """
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import assert_never, cast
 from uuid import UUID
 
@@ -96,6 +96,7 @@ from financial_hub.modules.ledger.domain.recipes import (
     dispute_opened_key,
     invoice_finalized_key,
     invoice_wallet_key,
+    payment_captured_key,
     payout_pending_key,
     refund_pending_key,
     split_blocked_key,
@@ -103,6 +104,32 @@ from financial_hub.modules.ledger.domain.recipes import (
 from financial_hub.platform.db import UnitOfWork
 from financial_hub.shared.errors import Conflict, NotFound
 from financial_hub.shared.money import Currency, Money
+
+type RefundRequestInput = (
+    RefundRequested
+    | ProviderSplitRefundRequested
+    | TopUpRefundRequested
+    | UnappliedCashRefundRequested
+)
+
+
+@dataclass(frozen=True, slots=True)
+class RefundFinished:
+    """R8 step 2 when step 1 may be missing; ``request`` carries the facts of step 1.
+
+    - the pending entry of the refund exists: same as :class:`RefundCompleted` (post or void it);
+    - no pending entry and ``DONE`` (a refund made at the provider and imported, or one requested
+      before its hold was booked): step 1 is booked **directly as posted**, under the same key
+      ``refund:{id}:pending``, so a later :class:`RefundCompleted` of it is a no-op;
+    - no pending entry and ``DENIED``/``CANCELLED``: nothing to book.
+    """
+
+    request: RefundRequestInput
+    outcome: RefundOutcome
+
+
+type LedgerInput = RecipeInput | RefundFinished
+"""What :func:`apply_recipes` accepts: the domain recipe inputs plus application-level inputs."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,7 +144,7 @@ class RecipeResult:
 
 async def apply_recipe(
     uow: UnitOfWork,
-    recipe_input: RecipeInput,
+    recipe_input: LedgerInput,
     *,
     context: RecipeContext,
     aggregate_lock: AggregateLock | None = None,
@@ -128,7 +155,7 @@ async def apply_recipe(
 
 async def apply_recipes(
     uow: UnitOfWork,
-    recipe_inputs: Sequence[RecipeInput],
+    recipe_inputs: Sequence[LedgerInput],
     *,
     context: RecipeContext,
     aggregate_lock: AggregateLock | None = None,
@@ -154,11 +181,101 @@ async def apply_recipes(
     return RecipeResult(tuple(entry for entry in written if entry is not None))
 
 
+async def booked_capture(uow: UnitOfWork, project_id: UUID, payment_id: UUID) -> RecipeCode | None:
+    """How the capture of ``payment_id`` was booked: ``R2`` (or ``R6``), ``R2b``, or not at all.
+
+    Later recipes of the payment depend on it (an R2b payment is refunded from unapplied cash).
+    """
+    ledger = LedgerService(uow)
+    for key in (payment_captured_key(payment_id), _unapplied_key(payment_id)):
+        entry = await ledger.find_entry_by_key(project_id, key)
+        if entry is not None:
+            return RecipeCode(entry.recipe)
+    return None
+
+
+async def fee_adjustment_booked(
+    uow: UnitOfWork, project_id: UUID, payment_id: UUID, net_value: Money
+) -> bool:
+    """Whether an R2a to ``net_value`` exists already (key ``payment:{id}:fee:{net}``).
+
+    A net value that comes back to an earlier value cannot be booked again under that key.
+    """
+    key = _fee_key(payment_id, net_value)
+    return await LedgerService(uow).find_entry_by_key(project_id, key) is not None
+
+
+def recipe_key(recipe_input: LedgerInput) -> str | None:
+    """Idempotency key of the entry a fact books (``None``: transitions or no single entry).
+
+    Only the facts that book one entry under a key derived from their own ids are mapped.
+    """
+    match recipe_input:
+        case InvoiceFinalized():
+            return invoice_finalized_key(recipe_input.invoice_id)
+        case PaymentCaptured() | TopUpCaptured():
+            return payment_captured_key(recipe_input.payment_id)
+        case FeeAdjusted():
+            return _fee_key(recipe_input.payment_id, recipe_input.net_value)
+        case UnappliedCashReceived():
+            return _unapplied_key(recipe_input.payment_id)
+        case SplitAllocated():
+            return f"payment:{recipe_input.payment_id}:split"  # build_r3's key
+        case PaymentSettled():
+            return f"payment:{recipe_input.payment_id}:settled"  # build_r4's key
+        case (
+            RefundRequested()
+            | ProviderSplitRefundRequested()
+            | TopUpRefundRequested()
+            | UnappliedCashRefundRequested()
+        ):
+            return refund_pending_key(recipe_input.refund_id)
+        case _:
+            return None
+
+
+async def unbooked(
+    uow: UnitOfWork, project_id: UUID, recipe_inputs: Sequence[LedgerInput]
+) -> list[LedgerInput]:
+    """``recipe_inputs`` without the facts whose entry is already booked (see :func:`recipe_key`).
+
+    For callers that derive facts from state transitions: a fact seen again (redelivery, re-run)
+    is skipped whatever its ``effective_at``, instead of failing as a reused key.
+    """
+    ledger = LedgerService(uow)
+    fresh: list[LedgerInput] = []
+    for recipe_input in recipe_inputs:
+        key = recipe_key(recipe_input)
+        if key is None or await ledger.find_entry_by_key(project_id, key) is None:
+            fresh.append(recipe_input)
+    return fresh
+
+
+def _fee_key(payment_id: UUID, net_value: Money) -> str:
+    return f"payment:{payment_id}:fee:{net_value.minor_units}"  # build_r2a's key
+
+
+def _unapplied_key(payment_id: UUID) -> str:
+    return f"payment:{payment_id}:unapplied"  # build_r2b's key
+
+
 # --- planning -------------------------------------------------------------------------------------
 
 
-async def _plan(ledger: LedgerService, ctx: RecipeContext, r: RecipeInput) -> Sequence[WriteItem]:
+async def _plan(ledger: LedgerService, ctx: RecipeContext, r: LedgerInput) -> Sequence[WriteItem]:
     match r:
+        case RefundFinished():
+            pending = await ledger.find_entry_by_key(
+                ctx.project_id, refund_pending_key(r.request.refund_id)
+            )
+            if pending is not None:
+                done = r.outcome is RefundOutcome.DONE
+                return [
+                    Transition(pending.id, EntryStatus.POSTED if done else EntryStatus.ARCHIVED)
+                ]
+            if r.outcome is not RefundOutcome.DONE:
+                return []
+            return [_as_posted(item) for item in await _plan(ledger, ctx, r.request)]
         case InvoiceFinalized():
             return build_r1(ctx, r)
         case WalletConsumed():
@@ -296,6 +413,21 @@ async def _plan(ledger: LedgerService, ctx: RecipeContext, r: RecipeInput) -> Se
             raise ReceivedInCashRejected("RECEIVED_IN_CASH is not supported")
         case _:  # pragma: no cover - exhaustive
             assert_never(r)
+
+
+def _as_posted(item: WriteItem) -> WriteItem:
+    """A step-1 refund item booked directly as posted (same key, same legs)."""
+    if isinstance(item, EntryDraft):
+        return replace(item, status=EntryStatus.POSTED)
+    if isinstance(item, DeferredEntry):
+        build = item.build
+
+        def posted(locked: Mapping[tuple[str, str], Account]) -> EntryDraft | None:
+            draft = build(locked)
+            return None if draft is None else replace(draft, status=EntryStatus.POSTED)
+
+        return DeferredEntry(item.idempotency_key, item.accounts, posted)
+    raise TypeError("a refund request plans entries, not transitions")  # pragma: no cover
 
 
 def _deferred(

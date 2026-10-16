@@ -265,4 +265,4 @@ def test_the_public_api_of_the_module() -> None:
     from financial_hub.modules.payments.application import api
 
     assert api.ProviderRegistry is ProviderRegistry and api.build_registry is build_registry
-    assert set(api.__all__) >= {"PaymentService", "NewPayment", "on_payment_confirmed"}
+    assert set(api.__all__) >= {"PaymentService", "NewPayment", "post_payment_changes"}
