@@ -32,6 +32,7 @@ export const STREAM_EVENT_TYPES: readonly string[] = [
   "payment.refunded",
   "schedule.due",
   "system.test",
+  "usage.recorded",
 ];
 
 export function keyFragmentFor(eventType: string): string {
@@ -47,10 +48,17 @@ export function keyHead(queryKey: QueryKey): string {
   return typeof head === "string" ? head : "";
 }
 
-/** Predicate over query keys: project-scoped queries whose path contains the event's fragment. */
+/** The Event Explorer lists every event of the project, whatever its type (detail queries are keyed `.../events/{id}`). */
+const EVENTS_LIST_HEAD = /\/events(\?|$)/;
+
+/**
+ * Predicate over query keys: project-scoped queries whose path contains the event's fragment, plus the events
+ * list (it shows every type).
+ */
 export function matchesEvent(queryKey: QueryKey, projectId: string, eventType: string): boolean {
   const head = keyHead(queryKey);
-  return head.includes(projectPathFragment(projectId)) && head.includes(keyFragmentFor(eventType));
+  if (!head.includes(projectPathFragment(projectId))) return false;
+  return head.includes(keyFragmentFor(eventType)) || EVENTS_LIST_HEAD.test(head);
 }
 
 /** Predicate over query keys: every query of the project (used on `resync`). */

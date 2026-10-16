@@ -123,6 +123,7 @@
   --animate-toast-in: toast-in 220ms var(--ease-out-quart);
   --animate-toast-out: toast-out var(--duration-fast) var(--ease-out-quart) forwards;
   --animate-rise-in: rise-in 240ms var(--ease-out-quart) both;
+  --animate-arrive: arrive 2400ms var(--ease-out-quart) both;
 
   @keyframes fade-in {
     from {
@@ -182,6 +183,11 @@
     from {
       opacity: 0;
       transform: translateY(6px);
+    }
+  }
+  @keyframes arrive {
+    from {
+      background-color: var(--color-primary-soft);
     }
   }
   @keyframes shimmer {

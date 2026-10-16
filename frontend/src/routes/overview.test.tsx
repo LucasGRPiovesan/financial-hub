@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { expectNoAxeViolations } from "../test/axe";
 import { apiKey, AUDIT, auditRecord, customer, CUSTOMERS, LIST, member, overviewData, page, problem } from "../test/console-mocks";
+import { payment } from "../test/payment-mocks";
 import { json, ME, mockApi, renderApp, resetApiState } from "../test/harness";
 
 const health = {
@@ -121,6 +122,32 @@ describe("Overview screen", () => {
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
   });
 
+  it("sums captured BRL of the last 30 days from integer minor units and links to Payments", async () => {
+    const recent = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    const old = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    mockApi({
+      "GET /v1/auth/me": () => json(200, ME),
+      ...health,
+      ...overviewData("p-1"),
+      "GET /v1/projects/p-1/payments?limit=25": () =>
+        json(
+          200,
+          page([
+            payment({ id: "a", captured_amount: 9007199254740990, created_at: recent }),
+            payment({ id: "b", captured_amount: 5, created_at: recent }),
+            payment({ id: "c", captured_amount: 777, created_at: old }),
+            payment({ id: "d", captured_amount: 500, currency: "USD", created_at: recent }),
+          ]),
+        ),
+    });
+    renderApp("/");
+    const total = await screen.findByTestId("payments-kpi-total");
+    // 9007199254740990 + 5 exceeds 2^53: exact only through BigInt
+    expect(total).toHaveTextContent(/90.071.992.547.409.95|90,071,992,547,409.95/);
+    expect(screen.getByText(/3 payments/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See payments" })).toHaveAttribute("href", "/payments");
+  });
+
   it("shows an empty state with Create project when there is no project", async () => {
     mockApi({ "GET /v1/auth/me": () => json(200, { ...ME, memberships: [] }), ...health });
     renderApp("/");
@@ -137,6 +164,7 @@ describe("Overview screen", () => {
       [`GET /v1/projects/p-2/provider-accounts${LIST}`]: () => json(200, page([])),
       "GET /v1/projects/p-2/members": () => json(200, { data: [member({ role: "viewer" })] }),
       [`GET /v1/projects/p-2/customers${CUSTOMERS}`]: () => json(200, page([])),
+      "GET /v1/projects/p-2/payments?limit=25": () => json(200, page([])),
     });
     renderApp("/");
     expect(await screen.findByText("No entries yet")).toBeInTheDocument();

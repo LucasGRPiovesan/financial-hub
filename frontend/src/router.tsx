@@ -20,6 +20,8 @@ import { BootScreen, RouteError } from "./routes/route-states";
 // Screens load on demand so the first paint ships only the shell, sign-in and the router.
 const OverviewPage = lazyRouteComponent(() => import("./routes/overview"), "OverviewPage");
 const PaymentDetailPage = lazyRouteComponent(() => import("./routes/payments-detail"), "PaymentDetailPage");
+const LedgerEntryPage = lazyRouteComponent(() => import("./routes/ledger-entry"), "LedgerEntryPage");
+const EventDetailPage = lazyRouteComponent(() => import("./routes/events-detail"), "EventDetailPage");
 const PlaceholderPage = lazyRouteComponent(() => import("./routes/placeholder"), "PlaceholderPage");
 const SCREENS = {
   "/projects": lazyRouteComponent(() => import("./routes/projects"), "ProjectsPage"),
@@ -28,7 +30,16 @@ const SCREENS = {
   "/customers": lazyRouteComponent(() => import("./routes/customers"), "CustomersPage"),
   "/payments": lazyRouteComponent(() => import("./routes/payments"), "PaymentsPage"),
   "/integrations": lazyRouteComponent(() => import("./routes/integrations"), "IntegrationsPage"),
+  "/events": lazyRouteComponent(() => import("./routes/events"), "EventsPage"),
+  "/billing": lazyRouteComponent(() => import("./routes/billing"), "BillingPage"),
+  "/ledger": lazyRouteComponent(() => import("./routes/ledger"), "LedgerPage"),
+  "/audit": lazyRouteComponent(() => import("./routes/audit"), "AuditPage"),
 };
+
+/** Screens with tabs keep the active one in `?tab=` so a view can be linked to. */
+function validateTabSearch(search: Record<string, unknown>): { tab?: string } {
+  return typeof search.tab === "string" && search.tab !== "" ? { tab: search.tab } : {};
+}
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -90,9 +101,11 @@ function buildRouteTree() {
   const overviewRoute = createRoute({ getParentRoute: () => appRoute, path: "/", component: OverviewPage });
   const screens: Record<string, typeof OverviewPage> = SCREENS;
   const screenRoutes = Object.entries(screens).map(([path, component]) =>
-    createRoute({ getParentRoute: () => appRoute, path, component }),
+    createRoute({ getParentRoute: () => appRoute, path, component, validateSearch: validateTabSearch }),
   );
   const paymentDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/payments/$paymentId", component: PaymentDetailPage });
+  const ledgerEntryRoute = createRoute({ getParentRoute: () => appRoute, path: "/ledger/entries/$entryId", component: LedgerEntryPage });
+  const eventDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/events/$eventId", component: EventDetailPage });
   const placeholderRoutes = NAV_ITEMS.filter((item) => item.to !== "/" && !(item.to in screens)).map((item) =>
     createRoute({
       getParentRoute: () => appRoute,
@@ -103,7 +116,7 @@ function buildRouteTree() {
     }),
   );
 
-  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, paymentDetailRoute, ...placeholderRoutes])]);
+  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, paymentDetailRoute, ledgerEntryRoute, eventDetailRoute, ...placeholderRoutes])]);
 }
 
 /**

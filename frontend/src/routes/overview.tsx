@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Scale } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { AuditRecordOut, TrialBalanceTotalOut } from "../api/generated/model";
+import type { AuditRecordOut, PaymentOut, TrialBalanceTotalOut } from "../api/generated/model";
 import { RelativeTime } from "../components/date-time";
 import { Money } from "../components/money";
 import { PageHeader } from "../components/page-header";
@@ -20,6 +20,8 @@ import { errorText } from "../features/console/errors";
 import { useMembers } from "../features/console/members-api";
 import { NoProjectState } from "../features/console/no-project";
 import { useProject } from "../features/console/use-project";
+import { flattenPayments, usePayments } from "../features/payments/payments-api";
+import { paymentsKpi } from "../features/payments/payments-kpi";
 import { HealthIndicator } from "../features/health/health-indicator";
 import { useT } from "../i18n";
 import { StreamStatusIndicator } from "../lib/realtime/stream-status";
@@ -41,7 +43,9 @@ function Stat({
   error,
   value,
   hasMore,
+  className,
 }: {
+  className?: string;
   title: string;
   href: string;
   linkLabel: string;
@@ -65,7 +69,7 @@ function Stat({
     );
   }
   return (
-    <Card>
+    <Card className={className}>
       <CardContent className="flex h-full flex-col justify-between gap-3">
         <h2 className="text-sm font-medium text-ink-muted">{title}</h2>
         <div className="min-h-9">{body}</div>
@@ -80,6 +84,43 @@ function Stat({
 /** Totals arrive as JSON numbers of minor units; anything beyond the safe range is left out rather than rounded. */
 function minorString(value: number): string | null {
   return Number.isSafeInteger(value) ? value.toString() : null;
+}
+
+const PAYMENTS_PATH: string = "/payments";
+
+function PaymentsStat({ allowed, pending, error, rows, hasMore }: { allowed: boolean; pending: boolean; error: unknown; rows: PaymentOut[]; hasMore: boolean }) {
+  const t = useT();
+  const title = t("overview.payments.title");
+  let body: ReactNode;
+  if (!allowed) body = <p className="text-sm text-ink-muted">{t("common.unavailableForRole")}</p>;
+  else if (pending) body = <Skeleton className="h-9 w-32" aria-label={t("overview.payments.loading")} role="status" />;
+  else if (error) body = <p className="text-sm text-danger">{t("overview.payments.failed")}</p>;
+  else {
+    const kpi = paymentsKpi(rows);
+    body = (
+      <div>
+        <p className="figures text-3xl font-semibold tracking-tight" data-testid="payments-kpi-total">
+          <Money value={{ amount_minor: kpi.capturedMinor, currency: "BRL" }} />
+          {hasMore ? "+" : ""}
+        </p>
+        <p className="mt-1 text-xs text-ink-muted">
+          {t("overview.payments.count", { count: kpi.count })} · {t("overview.payments.captured")}
+        </p>
+        {hasMore ? <p className="text-xs text-ink-faint">{t("overview.payments.more")}</p> : null}
+      </div>
+    );
+  }
+  return (
+    <Card className="xl:col-span-2">
+      <CardContent className="flex h-full flex-col justify-between gap-3">
+        <h2 className="text-sm font-medium text-ink-muted">{title}</h2>
+        <div className="min-h-9">{body}</div>
+        <Link to={PAYMENTS_PATH} className={buttonVariants({ variant: "link", size: "sm" }) + " self-start px-0!"}>
+          {t("overview.payments.link")}
+        </Link>
+      </CardContent>
+    </Card>
+  );
 }
 
 function TotalAmount({ currency, value }: { currency: string; value: number }) {
@@ -158,12 +199,14 @@ export function OverviewPage() {
   const mayMembers = can("members:read");
   const mayCustomers = can("customers:read");
   const mayAudit = can("audit:read");
+  const mayPayments = can("payments:read");
   const balance = useTrialBalance(mayLedger ? projectId : null);
   const keys = useApiKeys(projectId, mayKeys);
   const accounts = useProviderAccounts(projectId, mayAccounts);
   const members = useMembers(mayMembers ? projectId : null);
   const customers = useCustomers(projectId, null, mayCustomers);
   const audit = useRecentAudit(projectId, mayAudit);
+  const payments = usePayments(mayPayments ? projectId : null);
   const { operator } = useSession();
   const names: OperatorNames = new Map([
     [operator.id, operator.display_name],
@@ -231,8 +274,10 @@ export function OverviewPage() {
     <>
       <PageHeader title={t("overview.title")} description={t("overview.description")} />
 
-      <section aria-label={t("overview.keyFigures")} className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label={t("overview.keyFigures")} className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <PaymentsStat allowed={mayPayments} pending={payments.isPending} error={payments.error} rows={flattenPayments(payments.data)} hasMore={payments.hasNextPage} />
         <Stat
+          className="xl:col-span-2"
           title={t("overview.stats.apiKeys.title")}
           href={LINKS.apikeys}
           linkLabel={t("overview.stats.apiKeys.link")}
@@ -243,6 +288,7 @@ export function OverviewPage() {
           hasMore={keys.data?.has_more ?? false}
         />
         <Stat
+          className="xl:col-span-2"
           title={t("overview.stats.accounts.title")}
           href={LINKS.integrations}
           linkLabel={t("overview.stats.accounts.link")}
@@ -253,6 +299,7 @@ export function OverviewPage() {
           hasMore={accounts.data?.has_more ?? false}
         />
         <Stat
+          className="xl:col-span-3"
           title={t("overview.stats.members.title")}
           href={LINKS.members}
           linkLabel={t("overview.stats.members.link")}
@@ -263,6 +310,7 @@ export function OverviewPage() {
           hasMore={false}
         />
         <Stat
+          className="xl:col-span-3"
           title={t("overview.stats.customers.title")}
           href={LINKS.customers}
           linkLabel={t("overview.stats.customers.link")}

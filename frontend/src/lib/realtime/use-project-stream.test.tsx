@@ -89,7 +89,8 @@ describe("useProjectStream", () => {
     expect(invalidated("/v1/projects/other/ledger/accounts")).toBe(false);
     act(() => latest().message("payment.confirmed", "c2"));
     expect(invalidated(`/v1/projects/${P}/payments`)).toBe(true);
-    expect(invalidated(`/v1/projects/${P}/events`)).toBe(false);
+    // The Event Explorer lists every type, so any event refreshes it.
+    expect(invalidated(`/v1/projects/${P}/events`)).toBe(true);
     act(() => latest().message("schedule.due", "c3"));
     expect(invalidated(`/v1/projects/${P}/events`)).toBe(true);
   });

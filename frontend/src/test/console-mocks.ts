@@ -58,6 +58,7 @@ export function overviewData(projectId: string): Record<string, Handler> {
       json(200, { as_of: null, balanced: true, lines: [], totals: [{ currency: "BRL", balanced: true, debits: 0, credits: 0 }] }),
     [`GET /v1/projects/${projectId}/api-keys${LIST}`]: () => json(200, page([apiKey()])),
     [`GET /v1/projects/${projectId}/provider-accounts${LIST}`]: () => json(200, page([providerAccount()])),
+    [`GET /v1/projects/${projectId}/payments?limit=25`]: () => json(200, page([])),
     ...dashboardData(projectId),
   };
 }

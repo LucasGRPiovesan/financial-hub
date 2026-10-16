@@ -130,6 +130,17 @@ keeps its action row pinned to the bottom, so no form is ever taller than the sc
   e2e suite uses (pt-BR): table `Pagamentos`, link `Abrir cobrança <id>`, button `Estornar cobrança`, dialog `Estornar
   cobrança`, fields `Estorno parcial`, `Valor a estornar (R$)`, `Motivo (opcional)`, button `Confirmar estorno`, table
   `Estornos`.
+- **Ledger and audit.** `/ledger` (heading `Livro-razão`) has URL-addressable tabs via `?tab=` (`trial`, `accounts`,
+  `entries`; pt-BR tab names `Balancete`, `Contas`, `Lançamentos`) and `/ledger/entries/$entryId` shows one journal
+  entry; `/audit` (`Auditoria`) lists audit records. All are lazy routes; money is integer minor units (`Money`), and the
+  `[redacted]` marker the API sends is shown as a localized "hidden" value, never raw. The trial balance renders one
+  table per currency with a `Balanceado` / out-of-balance badge; entry totals are computed from the postings and shown
+  next to a "debits equal credits" badge. Text filters for accounts and audit narrow the pages already loaded (the UI
+  says so); audit action and actor filters are sent to the API. Accessible names the e2e suite uses (pt-BR): tables
+  `Balancete, BRL`, `Plano de contas`, `Lançamentos do diário`, `Partidas do lançamento`, `Registros de auditoria`;
+  links `Abrir lançamento <id>`, `Abrir pagamento <id>`; buttons `Mostrar detalhes de <ação>`; search forms `Filtrar
+  contas`, `Filtrar lançamentos`, `Filtrar registros de auditoria`. `ledger:read` and `audit:read` gate the screens; a
+  viewer sees an explanation instead of data.
 - **API keys.** The plaintext key is kept out of every query/mutation cache (`features/console/api.ts`).
 - **Code splitting.** Screens are `React.lazy` routes (via `lazyRouteComponent`); the initial chunk is ~466 kB (was
   ~539 kB) with login and the shell eager.
@@ -169,3 +180,9 @@ labels, dialog field labels. Rename one only together with the e2e suite; the e2
   (a dotted "Soon" tag in the sidebar, generated content so link names are unchanged).
 - A hard load shows `BootScreen` (shell silhouette, motion-safe pulse) instead of a blank page.
 - Recent activity text comes from `features/console/audit-activity.ts` (pure, table-tested), using only audit fields.
+
+### Events explorer, billing and the Overview payments KPI (W9.17)
+
+- **Events (`/events`, `/events/$eventId`).** Table named "Eventos, do mais recente ao mais antigo" (en: "Events, newest first"); each row has a link "Abrir evento {id}". Type filter: combobox "Tipo de evento", options read "Cobrança criada · payment.created" (humanized label plus raw type; unknown types show only the raw one). New events arrive over SSE: the list head query is invalidated by the stream, new rows get `animate-arrive` plus a "Novo" badge (the global reduced-motion rule removes the animation). Detail: "Envelope" (pretty JSON, "Copiar Envelope"), table "Entregas deste evento", ordered list "Causalidade" (oldest cause, this event with `aria-current="step"`, then descendants).
+- **Billing (`/billing`, "Cobrança").** Section "Medição de uso": table "Métricas faturáveis", button "Nova métrica" (dialog "Nova métrica faturável", field "Campo do evento" disabled for count), per-row "Arquivar métrica {code}" (type the code to confirm). Gated by `metering:manage`; viewers see the buttons disabled with the reason. "Resumo de consumo" picks customer, metric and `[from, to)`; the total (`data-testid="usage-value"`) is the API decimal string formatted by string math only (`features/billing/decimal.ts`), never a float. The dashed "Planos, assinaturas e faturas — Em breve" card reserves space for invoices.
+- **Overview KPI.** "Pagamentos (últimos 30 dias)": count of loaded payments created in the window and the captured BRL total, summed with BigInt over integer minor units (`features/payments/payments-kpi.ts`). It reuses the `usePayments` query (first page, 25 rows), so a "+" and a note appear when more pages exist.
