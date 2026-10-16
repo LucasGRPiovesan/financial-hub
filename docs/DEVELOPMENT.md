@@ -167,6 +167,13 @@ For evaluation, the console can sign in by picking an operator instead of typing
 
    This creates project "Demo Store" (`demo-store`) with Ana Owner (owner), Bruno Admin (admin),
    Carla Finance (finance) and Diego Viewer (viewer), e.g. `ana@demo.financial-hub.local`.
+   It also adds 8 fictitious customers (`cust-0001`…`cust-0008`, `@example.com` emails, no CPF/CNPJ),
+   12 payments through the fake provider (PIX, boleto and card; settled, pending, rejected, partially
+   and fully refunded; amounts in centavos) and one active API key named "Demo storefront" whose
+   secret is never printed. The payments are created through the payments service, so audit events
+   are recorded. A second run finds each record by its key and changes nothing (it reports
+   `already seeded; nothing to do`). The command refuses to run if the project has an active
+   provider account, since the payments would then reach that provider.
 3. Open the console (http://localhost:5173), choose an operator on the sign-in screen
    (`GET /v1/auth/demo-operators`, `POST /v1/auth/demo-login`). The session, cookie and CSRF
    token are the same as after a password login.

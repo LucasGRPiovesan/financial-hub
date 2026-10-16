@@ -17,7 +17,7 @@ from typing import Final, TextIO
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from financial_hub.cli.demo import SeedResult, seed_demo
+from financial_hub.cli.demo import DemoSeedError, SeedResult, seed_demo
 from financial_hub.modules.identity.application.service import (
     OperatorView,
     PasswordHasher,
@@ -143,16 +143,27 @@ async def _run_seed_demo() -> SeedResult:
 def _seed_demo(out: TextIO, err: TextIO) -> int:
     try:
         result = asyncio.run(_run_seed_demo())
+    except DemoSeedError as error:
+        print(f"error: {error}", file=err)
+        return 1
     except DomainError as error:
         print(f"error: {_describe(error)}", file=err)
         return 1
     if not result.changed:
-        print("demo workspace already seeded; nothing to do", file=out)
+        print(
+            "demo workspace already seeded; nothing to do "
+            f"(customers={result.customers_present}, payments={result.payments_present}, "
+            f"api keys={result.api_keys_present})",
+            file=out,
+        )
         return 0
     print(
         f"seeded demo workspace: project created={result.project_created}, "
         f"operators created={result.operators_created}, "
-        f"memberships created={result.memberships_created}",
+        f"memberships created={result.memberships_created}, "
+        f"customers created={result.customers_created}, "
+        f"payments created={result.payments_created}, "
+        f"api key created={result.api_key_created}",
         file=out,
     )
     return 0
