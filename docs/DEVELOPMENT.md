@@ -47,7 +47,7 @@ All wrappers live in `scripts/` (bash) and are plain `docker compose run --rm` c
 | Lint | `scripts/lint.sh` | `docker compose run --rm --no-deps api ruff check .` + `ruff format --check .` |
 | Typecheck (pyright strict, `src/`) | `scripts/typecheck.sh` | `docker compose run --rm --no-deps api pyright` |
 | Import contracts | `scripts/imports.sh` | `docker compose run --rm --no-deps api lint-imports` |
-| Tests (unit + integration, needs db) | `scripts/test.sh [pytest args]` | `docker compose run --rm test pytest` |
+| Tests (unit + integration, needs db; own `financial_hub_test` database) | `scripts/test.sh [pytest args]` | `docker compose run --rm test pytest` |
 | Web lint | `scripts/web-lint.sh` | `docker compose run --rm --no-deps web npm run lint` |
 | Web typecheck | `scripts/web-typecheck.sh` | `docker compose run --rm --no-deps web npm run typecheck` |
 | Web tests | `scripts/web-test.sh` | `docker compose run --rm --no-deps web npm run test` |
@@ -171,7 +171,27 @@ For evaluation, the console can sign in by picking an operator instead of typing
    (`GET /v1/auth/demo-operators`, `POST /v1/auth/demo-login`). The session, cookie and CSRF
    token are the same as after a password login.
 
-Never enable this in production: it hands any visitor any operator's session (docs/SECURITY.md).
+Demo login serves only these seeded personas (emails in `demo.financial-hub.local`); the picker lists
+only them and every other operator is refused like an unknown id. Backend tests run on their own database
+(`financial_hub_test`, docs/TESTING.md), so they no longer add operators to the demo picker.
+
+### Reset a polluted dev database
+
+A dev database filled by earlier test runs (before the test database existed) keeps its old rows, but they
+are no longer listed or usable by the demo login. To wipe them anyway, recreate the volume and re-seed
+(destroys all dev data):
+
+```bash
+docker compose down -v
+docker compose up -d --wait api web   # starts db and applies migrations
+docker compose run --rm api python -m financial_hub.cli seed-demo
+```
+
+There is deliberately no `purge-test-operators` command: operators are referenced by sessions,
+memberships, projects and the append-only audit log, so deleting them would mean touching those tables
+with the owner role.
+
+Never enable this in production: it would hand any visitor a persona's session (docs/SECURITY.md).
 
 ## Images
 

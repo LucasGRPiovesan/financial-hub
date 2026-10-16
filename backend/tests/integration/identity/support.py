@@ -23,7 +23,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from financial_hub.cli import bootstrap_operator
 from financial_hub.main import create_app
-from financial_hub.modules.identity.application.api import Role, grant_membership
+from financial_hub.modules.identity.application.api import (
+    DEMO_EMAIL_DOMAIN,
+    Role,
+    grant_membership,
+)
 from financial_hub.modules.identity.application.service import PasswordHasher
 from financial_hub.modules.identity.infrastructure.passwords import Argon2PasswordHasher
 from financial_hub.platform.db import UnitOfWork
@@ -50,6 +54,14 @@ def app_database_url() -> str:
 
 def unique_email(label: str = "op") -> str:
     return f"{label}-{secrets.token_hex(6)}@example.test"
+
+
+def unique_demo_email(label: str = "demo") -> str:
+    """An address inside the demo personas' domain (the only ones the demo login accepts).
+
+    Prefixed `0` so it sorts first in the picker (owners by email) even in a well-used database.
+    """
+    return f"0{label}-{secrets.token_hex(6)}@{DEMO_EMAIL_DOMAIN}"
 
 
 def unique_slug(label: str = "p") -> str:

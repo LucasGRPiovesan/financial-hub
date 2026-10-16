@@ -18,6 +18,7 @@ from financial_hub.modules.audit.application import (
     changed_fields,
 )
 from financial_hub.modules.identity.application.api import (
+    DEMO_EMAIL_DOMAIN,
     Role,
     find_operator_by_email,
     grant_membership,
@@ -45,10 +46,10 @@ class DemoOperator:
 
 
 DEMO_OPERATORS: Final = (
-    DemoOperator("ana@demo.financial-hub.local", "Ana Owner", Role.OWNER),
-    DemoOperator("bruno@demo.financial-hub.local", "Bruno Admin", Role.ADMIN),
-    DemoOperator("carla@demo.financial-hub.local", "Carla Finance", Role.FINANCE),
-    DemoOperator("diego@demo.financial-hub.local", "Diego Viewer", Role.VIEWER),
+    DemoOperator(f"ana@{DEMO_EMAIL_DOMAIN}", "Ana Owner", Role.OWNER),
+    DemoOperator(f"bruno@{DEMO_EMAIL_DOMAIN}", "Bruno Admin", Role.ADMIN),
+    DemoOperator(f"carla@{DEMO_EMAIL_DOMAIN}", "Carla Finance", Role.FINANCE),
+    DemoOperator(f"diego@{DEMO_EMAIL_DOMAIN}", "Diego Viewer", Role.VIEWER),
 )
 
 

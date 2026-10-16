@@ -12,8 +12,15 @@ PASSWORD_MAX_LENGTH: Final = 128
 EMAIL_MAX_LENGTH: Final = 254
 DISPLAY_NAME_MAX_LENGTH: Final = 100
 USER_AGENT_MAX_LENGTH: Final = 512
+# The demo login (FH_DEMO_LOGIN) only serves operators in this domain (the `seed-demo` personas).
+DEMO_EMAIL_DOMAIN: Final = "demo.financial-hub.local"
 # Deliberately loose (one @, a dot in the domain, no spaces): ownership is proven out of band.
 _EMAIL: Final = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
+def is_demo_email(email: str) -> bool:
+    """Whether `email` belongs to the demo personas' domain (case-insensitive)."""
+    return email.rpartition("@")[2].casefold() == DEMO_EMAIL_DOMAIN
 
 
 class OperatorStatus(StrEnum):

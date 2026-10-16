@@ -3,6 +3,23 @@
 Backend and frontend unit/integration suites are described in `docs/DEVELOPMENT.md` (Tooling commands).
 This page covers the browser suite.
 
+## Backend test database
+
+Backend tests never touch the developer database (the one `api`, `web` and `seed-demo` use). At the start
+of every pytest run `tests/conftest.py` calls `tests/testdb.py`, which, as the owner login and on the same
+Postgres server: derives `<dev database>_test` (`financial_hub_test`), creates it if missing, runs
+`alembic upgrade head` on it (so it includes every migration present in the working tree, and the `fh_app`
+role/grants are exactly the migrations') and points `FH_DATABASE_URL` and `FH_APP_TEST_DATABASE_URL` at it.
+It is transparent: `bash scripts/test.sh <paths>` is unchanged, locally and in CI. If no server is reachable
+the step is skipped (unit tests still run). Rows accumulate in the test database across runs (nothing is
+deletable by design); to start clean, or after editing a migration that was already applied, run
+`FH_TEST_DB_RECREATE=1 bash scripts/test.sh ...` (drops and recreates it) or
+`docker compose exec db psql -U financial_hub -c "DROP DATABASE financial_hub_test WITH (FORCE)"`.
+
+The demo picker is bounded (100 operators) and ordered by role then email, so an operator created by a
+test in the `demo.financial-hub.local` domain can in principle crowd the list in a very old test database;
+recreate it if that ever happens.
+
 ## End-to-end (Playwright)
 
 Journeys that drive the real console in Chromium, acting as the demo operators, against the real API and

@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from financial_hub.modules.identity.domain import (
+    DEMO_EMAIL_DOMAIN,
     Operator,
     OperatorStatus,
     Permission,
@@ -21,6 +22,7 @@ from financial_hub.modules.identity.infrastructure import repository
 from financial_hub.modules.identity.infrastructure.repository import MemberRow
 
 __all__ = [
+    "DEMO_EMAIL_DOMAIN",
     "MemberRow",
     "Operator",
     "OperatorStatus",

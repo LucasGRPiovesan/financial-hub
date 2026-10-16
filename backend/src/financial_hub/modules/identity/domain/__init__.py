@@ -1,6 +1,7 @@
 """Identity domain (pure). Other modules use ``financial_hub.modules.identity.application.api``."""
 
 from financial_hub.modules.identity.domain.model import (
+    DEMO_EMAIL_DOMAIN,
     DISPLAY_NAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
@@ -12,6 +13,7 @@ from financial_hub.modules.identity.domain.model import (
     PasswordPolicyError,
     Session,
     SessionPolicy,
+    is_demo_email,
     is_valid_email,
     mask_email,
     normalize_email,
@@ -36,6 +38,7 @@ from financial_hub.modules.identity.domain.throttle import (
 
 __all__ = [
     "CONFIGURATION",
+    "DEMO_EMAIL_DOMAIN",
     "DISPLAY_NAME_MAX_LENGTH",
     "EMAIL_MAX_LENGTH",
     "MONEY_MOVEMENT",
@@ -55,6 +58,7 @@ __all__ = [
     "ThrottlePolicy",
     "ThrottleScope",
     "ThrottleState",
+    "is_demo_email",
     "is_valid_email",
     "mask_email",
     "normalize_email",

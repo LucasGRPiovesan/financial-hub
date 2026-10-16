@@ -154,8 +154,9 @@ _DELETE_MEMBERSHIP = text(
     "DELETE FROM public.project_memberships WHERE operator_id = :operator_id "
     "AND project_id = :project_id"
 )
-_ACTIVE_OPERATORS = text(
-    _SELECT_OPERATOR + " WHERE status = 'active' ORDER BY lower(display_name), id LIMIT :limit"
+_ACTIVE_DOMAIN_OPERATORS = text(
+    _SELECT_OPERATOR + " WHERE status = 'active' AND lower(split_part(email, '@', 2)) = :domain "
+    "ORDER BY email LIMIT :limit"
 )
 _MEMBERSHIPS_OF = text(
     "SELECT operator_id, project_id, role FROM public.project_memberships "
@@ -428,8 +429,12 @@ async def delete_membership(session: AsyncSession, *, operator_id: UUID, project
     )
 
 
-async def list_active_operators(session: AsyncSession, *, limit: int) -> list[Operator]:
-    rows = (await session.execute(_ACTIVE_OPERATORS, {"limit": limit})).mappings()
+async def list_active_operators_in_domain(
+    session: AsyncSession, *, domain: str, limit: int
+) -> list[Operator]:
+    rows = (
+        await session.execute(_ACTIVE_DOMAIN_OPERATORS, {"domain": domain, "limit": limit})
+    ).mappings()
     return [_operator(row) for row in rows]
 
 

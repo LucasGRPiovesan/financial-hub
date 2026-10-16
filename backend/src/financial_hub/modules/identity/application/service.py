@@ -41,6 +41,7 @@ from financial_hub.modules.audit.application import (
 )
 from financial_hub.modules.identity.application import tokens
 from financial_hub.modules.identity.domain import (
+    DEMO_EMAIL_DOMAIN,
     USER_AGENT_MAX_LENGTH,
     Operator,
     OperatorStatus,
@@ -52,6 +53,7 @@ from financial_hub.modules.identity.domain import (
     ThrottlePolicy,
     ThrottleScope,
     ThrottleState,
+    is_demo_email,
     is_valid_email,
     mask_email,
     normalize_email,
@@ -85,6 +87,8 @@ INVALID_CREDENTIALS: Final = "Invalid email or password."
 TOO_MANY_ATTEMPTS: Final = "Too many login attempts. Try again later."
 UNKNOWN_IP: Final = "unknown"
 DEMO_OPERATORS_MAX: Final = 100
+# Seed order of the personas (owner first); anything else sorts after.
+_DEMO_ROLE_RANK: Final = {role.value: rank for rank, role in enumerate(Role)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -378,10 +382,15 @@ class AuthService:
     # --- demo login (FH_DEMO_LOGIN; evaluation only) -------------------------------------------
 
     async def demo_operators(self) -> list[DemoOperatorView]:
-        """Active operators with their memberships, for the demo operator picker."""
+        """The active demo personas (`DEMO_EMAIL_DOMAIN`) with memberships, for the picker.
+
+        Ordered by the best role held (owner first, as in the seed), then by email.
+        """
         async with self._uow() as uow:
             session = uow.session
-            operators = await repository.list_active_operators(session, limit=DEMO_OPERATORS_MAX)
+            operators = await repository.list_active_operators_in_domain(
+                session, domain=DEMO_EMAIL_DOMAIN, limit=DEMO_OPERATORS_MAX
+            )
             rows = await repository.memberships_of(session, [item.id for item in operators])
             names = await project_names(session, {row.project_id for row in rows})
         by_operator: dict[UUID, list[MembershipView]] = {}
@@ -393,6 +402,15 @@ class AuthService:
                     role=row.role.value,
                 )
             )
+        operators.sort(
+            key=lambda item: (
+                min(
+                    (_DEMO_ROLE_RANK.get(m.role, 99) for m in by_operator.get(item.id, [])),
+                    default=99,
+                ),
+                item.email,
+            )
+        )
         return [
             DemoOperatorView(
                 operator=_operator_view(item),
@@ -416,14 +434,21 @@ class AuthService:
         presented_token: str | None = None,
         audit: AuditContext | None = None,
     ) -> LoginResult:
-        """Open a session for an active operator without a password (same session as login)."""
+        """Open a session for an active demo persona without a password (same session as login).
+
+        Any other operator answers exactly like an unknown id (no enumeration, no impersonation).
+        """
         audit = audit or AuditContext.system()
         now = self._clock.now()
         token, csrf_token, record = self._mint_session(operator_id, now)
         async with self._uow() as uow:
             session = uow.session
             operator = await repository.get_operator(session, operator_id, for_update=True)
-            if operator is None or operator.status is not OperatorStatus.ACTIVE:
+            if (
+                operator is None
+                or operator.status is not OperatorStatus.ACTIVE
+                or not is_demo_email(operator.email)
+            ):
                 raise NotFound("Operator not found.")
             await self._open_session(
                 session, record, presented_token, user_agent=user_agent, ip=_client_ip(ip)
