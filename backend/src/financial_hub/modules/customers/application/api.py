@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from financial_hub.modules.customers.infrastructure import repository
 from financial_hub.shared.clock import Clock
 from financial_hub.shared.errors import Conflict, NotFound
-from financial_hub.shared.ids import IdPrefix, format_id
+from financial_hub.shared.ids import IdPrefix, InvalidIdError, format_id, parse_id
 
 __all__ = [
     "CustomerAccountOwner",
@@ -23,6 +23,7 @@ __all__ = [
     "find_identity_by_provider_customer",
     "get_provider_customer",
     "link_provider_customer",
+    "resolve_customer_identity",
 ]
 
 
@@ -97,3 +98,32 @@ async def find_identity_by_provider_customer(
     return await repository.find_identity_by_provider_customer(
         session, project_id, provider_account_id, provider_customer_id
     )
+
+
+async def resolve_customer_identity(
+    session: AsyncSession,
+    *,
+    project_id: UUID,
+    customer_id: str | None,
+    external_ref: str | None,
+) -> UUID | None:
+    """The live identity named by its ``cus_`` id and/or the project's ``external_ref``.
+
+    Read-only and project-scoped. ``None`` when nothing is given, the id is malformed, the identity
+    is unknown, belongs to another project or was anonymized, or both are given and disagree.
+    """
+    if customer_id is None and external_ref is None:
+        return None
+    if customer_id is None:
+        identity = await repository.get_identity_by_ref(session, project_id, external_ref or "")
+    else:
+        try:
+            identity_id = parse_id(customer_id, IdPrefix.CUSTOMER)
+        except InvalidIdError:
+            return None
+        identity = await repository.get_identity(session, project_id, identity_id)
+    if identity is None or identity.anonymized_at is not None:
+        return None
+    if external_ref is not None and identity.external_ref != external_ref:
+        return None
+    return identity.id

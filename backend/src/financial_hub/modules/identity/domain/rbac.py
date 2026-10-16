@@ -31,6 +31,7 @@ class Permission(StrEnum):
     LEDGER_READ = "ledger:read"
     LEDGER_ADJUST = "ledger:adjust"
     PAYMENTS_READ = "payments:read"
+    PAYMENTS_WRITE = "payments:write"
     PAYMENTS_REFUND = "payments:refund"
     PAYOUTS_MANAGE = "payouts:manage"
     BILLING_READ = "billing:read"
@@ -49,6 +50,7 @@ READ_PERMISSIONS: Final = frozenset(p for p in Permission if p.value.endswith(":
 MONEY_MOVEMENT: Final = frozenset(
     {
         Permission.LEDGER_ADJUST,
+        Permission.PAYMENTS_WRITE,
         Permission.PAYMENTS_REFUND,
         Permission.PAYOUTS_MANAGE,
         Permission.BILLING_MANAGE,

@@ -6,5 +6,6 @@ export * from './default/default';
 export * from './events/events';
 export * from './ledger/ledger';
 export * from './members/members';
+export * from './payments/payments';
 export * from './projects/projects';
 export * from './providers/providers';

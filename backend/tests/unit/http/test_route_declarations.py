@@ -81,6 +81,13 @@ EXPECTED = {
         "permission",
         "customers:manage",
     ),
+    ("POST", "/v1/projects/{project_id}/payments"): ("permission", "payments:write"),
+    ("GET", "/v1/projects/{project_id}/payments"): ("permission", "payments:read"),
+    ("GET", "/v1/projects/{project_id}/payments/{payment_id}"): ("permission", "payments:read"),
+    ("POST", "/v1/projects/{project_id}/payments/{payment_id}/refunds"): (
+        "permission",
+        "payments:refund",
+    ),
     ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
     ("GET", "/v1/projects/{project_id}/events"): ("permission", "events:read"),
     ("GET", "/v1/projects/{project_id}/events/{event_id}"): ("permission", "events:read"),

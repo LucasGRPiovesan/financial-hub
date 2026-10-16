@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     # client and X-Forwarded-For is ignored.
     rate_limit_trusted_proxies: list[str] = []
 
+    # Payments (PRO-40): the scriptable "fake" provider (no money moves). Unset = on in dev/test,
+    # off elsewhere; it can never be enabled in a live environment.
+    payments_fake_provider_enabled: bool | None = None
+
     @field_validator("otel_exporter_otlp_endpoint")
     @classmethod
     def _blank_endpoint_is_unset(cls, value: str | None) -> str | None:
@@ -105,6 +109,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _deployed_environments_configure_secrets(self) -> Settings:
+        if self.payments_fake_provider_enabled and self.app_env in LIVE_ENVIRONMENTS:
+            raise ValueError("FH_PAYMENTS_FAKE_PROVIDER_ENABLED must not be true in live")
         if self.app_env in DEV_ENVIRONMENTS:
             return self
         pepper = self.api_key_pepper.get_secret_value()
@@ -125,6 +131,13 @@ class Settings(BaseSettings):
     @property
     def active_encryption_key_version(self) -> int | None:
         return max(self.encryption_keys, default=None)
+
+    @property
+    def fake_payment_provider_enabled(self) -> bool:
+        """Whether the "fake" payment provider may be used (``payments_fake_provider_enabled``)."""
+        if self.payments_fake_provider_enabled is None:
+            return self.app_env in DEV_ENVIRONMENTS
+        return self.payments_fake_provider_enabled
 
     @property
     def cookies_secure(self) -> bool:

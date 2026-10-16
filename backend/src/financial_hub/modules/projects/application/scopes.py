@@ -24,7 +24,12 @@ SCOPE_PERMISSIONS: Final[Mapping[ApiKeyScope, frozenset[str]]] = MappingProxyTyp
         ApiKeyScope.LEDGER_READ: frozenset({Permission.LEDGER_READ.value}),
         ApiKeyScope.PAYMENTS_READ: frozenset({Permission.PAYMENTS_READ.value}),
         ApiKeyScope.PAYMENTS_WRITE: frozenset(
-            {Permission.PAYMENTS_READ.value, ApiKeyScope.PAYMENTS_WRITE.value}
+            {Permission.PAYMENTS_READ.value, Permission.PAYMENTS_WRITE.value}
+        ),
+        # Refunds move money out, so they are a scope of their own: a key that creates charges
+        # cannot refund them unless it was explicitly given payments:refund.
+        ApiKeyScope.PAYMENTS_REFUND: frozenset(
+            {Permission.PAYMENTS_READ.value, Permission.PAYMENTS_REFUND.value}
         ),
         ApiKeyScope.BILLING_READ: frozenset({Permission.BILLING_READ.value}),
         ApiKeyScope.BILLING_WRITE: frozenset(

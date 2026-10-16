@@ -41,6 +41,7 @@ dispute_status     none ──▶ open ──▶ won | lost
 `settled` > `captured→succeeded` > `overdue` (pending past due date) > `failed|canceled` > `processing` > `requires_payment`.
 Fields only move forward; a stale provider event is ignored and recorded on its receipt; contradictions trigger a refetch;
 unknown statuses park the event. A capture on an intent that is already captured, canceled or failed is unapplied cash (R2b).
+Creation of the provider payment is tracked separately on the intent (`creation_status`, ADR-0012 §3): while it is `create_requested` or `unknown` the derived status is `processing`, and a rejected creation is `failed`. A late capture (`failed|canceled → captured`) is accepted and reported to the ledger as late.
 
 ### Refund
 `requested (pending entry) → submitted → done (post)` · `submitted → denied | cancelled (void)` · `submitted → unknown → (lookup) done | denied`.

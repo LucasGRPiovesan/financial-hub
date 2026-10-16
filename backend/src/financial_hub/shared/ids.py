@@ -30,6 +30,7 @@ class IdPrefix(StrEnum):
     CHARGE = "chg"
     PAYMENT_INTENT = "pi"
     PROVIDER_PAYMENT = "pp"
+    REFUND = "rf"
     PROVIDER_EVENT = "pev"
     EVENT = "evt"
     DELIVERY = "dlv"

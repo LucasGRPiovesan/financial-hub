@@ -178,3 +178,18 @@ async def load_sealed(
         key_version=row.key_version, nonce=bytes(row.nonce), ciphertext=bytes(row.ciphertext)
     )
     return _account(row), sealed
+
+
+async def list_active_accounts(
+    session: AsyncSession, project_id: UUID
+) -> Sequence[ProviderAccount]:
+    """The project's active accounts, oldest first (few per project: no pagination)."""
+    statement = (
+        select(*_COLUMNS)
+        .where(
+            provider_accounts.c.project_id == project_id,
+            provider_accounts.c.status == ProviderAccountStatus.ACTIVE.value,
+        )
+        .order_by(provider_accounts.c.created_at, provider_accounts.c.id)
+    )
+    return [_account(row) for row in (await session.execute(statement)).all()]

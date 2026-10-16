@@ -593,6 +593,86 @@
         "title": "CreateApiKeyRequest",
         "type": "object"
       },
+      "CreatePaymentRequest": {
+        "properties": {
+          "amount": {
+            "description": "Minor units; an integer, never a decimal.",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "BRL",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/CustomerRef"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "method": {
+            "description": "`pix`, `boleto` or `card`.",
+            "title": "Method",
+            "type": "string"
+          },
+          "provider_account_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required only when the project has several active provider accounts.",
+            "title": "Provider Account Id"
+          }
+        },
+        "required": [
+          "amount",
+          "method",
+          "due_date",
+          "customer"
+        ],
+        "title": "CreatePaymentRequest",
+        "type": "object"
+      },
       "CreateProjectRequest": {
         "properties": {
           "name": {
@@ -653,6 +733,37 @@
           "credentials"
         ],
         "title": "CreateProviderAccountRequest",
+        "type": "object"
+      },
+      "CreateRefundRequest": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Minor units; omit to refund everything refundable.",
+            "title": "Amount"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "CreateRefundRequest",
         "type": "object"
       },
       "CreatedApiKeyOut": {
@@ -847,6 +958,37 @@
           "updated_at"
         ],
         "title": "CustomerOut",
+        "type": "object"
+      },
+      "CustomerRef": {
+        "properties": {
+          "external_ref": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The `cus_` id.",
+            "title": "Id"
+          }
+        },
+        "title": "CustomerRef",
         "type": "object"
       },
       "DeliveryOut": {
@@ -1744,6 +1886,39 @@
         "title": "Page[EntryOut]",
         "type": "object"
       },
+      "Page_PaymentOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[PaymentOut]",
+        "type": "object"
+      },
       "Page_ProjectOut_": {
         "properties": {
           "data": {
@@ -1830,6 +2005,183 @@
           "new_password"
         ],
         "title": "PasswordChangeRequest",
+        "type": "object"
+      },
+      "PaymentOut": {
+        "properties": {
+          "amount": {
+            "description": "Minor units (centavos for BRL).",
+            "title": "Amount",
+            "type": "integer"
+          },
+          "capture_status": {
+            "title": "Capture Status",
+            "type": "string"
+          },
+          "captured_amount": {
+            "title": "Captured Amount",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "dispute_status": {
+            "title": "Dispute Status",
+            "type": "string"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Account Id"
+          },
+          "provider_payment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Payment Id"
+          },
+          "refund_status": {
+            "title": "Refund Status",
+            "type": "string"
+          },
+          "refundable_amount": {
+            "title": "Refundable Amount",
+            "type": "integer"
+          },
+          "refunded_amount": {
+            "title": "Refunded Amount",
+            "type": "integer"
+          },
+          "refunds": {
+            "items": {
+              "$ref": "#/components/schemas/RefundOut"
+            },
+            "title": "Refunds",
+            "type": "array"
+          },
+          "settlement_status": {
+            "title": "Settlement Status",
+            "type": "string"
+          },
+          "status": {
+            "description": "Derived from the state fields (ADR-0012 precedence).",
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "customer_id",
+          "amount",
+          "currency",
+          "method",
+          "due_date",
+          "external_ref",
+          "description",
+          "metadata",
+          "status",
+          "provider",
+          "provider_account_id",
+          "provider_payment_id",
+          "capture_status",
+          "settlement_status",
+          "dispute_status",
+          "refund_status",
+          "captured_amount",
+          "refunded_amount",
+          "refundable_amount",
+          "failure_code",
+          "refunds",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PaymentOut",
         "type": "object"
       },
       "PostingOut": {
@@ -2074,6 +2426,68 @@
           "updated_at"
         ],
         "title": "ProviderAccountOut",
+        "type": "object"
+      },
+      "RefundOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "payment_id": {
+            "title": "Payment Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "payment_id",
+          "amount",
+          "currency",
+          "status",
+          "origin",
+          "reason",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RefundOut",
         "type": "object"
       },
       "ReplaceCredentialsRequest": {
@@ -4658,6 +5072,276 @@
         "summary": "Change Member Role",
         "tags": [
           "members"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/payments": {
+      "get": {
+        "operationId": "list_payments_v1_projects__project_id__payments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PaymentOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Payments",
+        "tags": [
+          "payments"
+        ]
+      },
+      "post": {
+        "description": "Create a payment and ask the provider for it (``processing`` until the outcome is known).",
+        "operationId": "create_payment_v1_projects__project_id__payments_post",
+        "parameters": [
+          {
+            "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/payments/{payment_id}": {
+      "get": {
+        "operationId": "get_payment_v1_projects__project_id__payments__payment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/payments/{payment_id}/refunds": {
+      "post": {
+        "description": "Refund all or part of a captured payment (at most what is still refundable).",
+        "operationId": "create_refund_v1_projects__project_id__payments__payment_id__refunds_post",
+        "parameters": [
+          {
+            "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRefundRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Refund",
+        "tags": [
+          "payments"
         ]
       }
     },

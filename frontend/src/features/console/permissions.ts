@@ -65,6 +65,7 @@ export const GRANTABLE_API_KEY_SCOPES: readonly { value: string; description: st
   { value: "ledger:read", description: "Read accounts, entries and balances" },
   { value: "payments:read", description: "Read payments" },
   { value: "payments:write", description: "Create payments" },
+  { value: "payments:refund", description: "Refund payments" },
   { value: "billing:read", description: "Read billing data" },
   { value: "billing:write", description: "Change billing data" },
   { value: "events:read", description: "Read events" },

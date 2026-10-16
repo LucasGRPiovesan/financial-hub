@@ -46,6 +46,7 @@ class ApiKeyScope(StrEnum):
     LEDGER_READ = "ledger:read"
     PAYMENTS_READ = "payments:read"
     PAYMENTS_WRITE = "payments:write"
+    PAYMENTS_REFUND = "payments:refund"
     BILLING_READ = "billing:read"
     BILLING_WRITE = "billing:write"
     EVENTS_READ = "events:read"

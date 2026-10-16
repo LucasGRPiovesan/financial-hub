@@ -314,6 +314,7 @@ source_modules = [
     "financial_hub.modules.ledger",
     "financial_hub.modules.events",
     "financial_hub.modules.audit",
+    "financial_hub.modules.payments",
 ]
 forbidden_modules = [
     "financial_hub.modules.customers.api",
@@ -321,5 +322,52 @@ forbidden_modules = [
     "financial_hub.modules.customers.infrastructure",
     "financial_hub.modules.customers.application.service",
     "financial_hub.modules.customers.application.events",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. payments is reached by other modules only through application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.customers",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.events",
+    "financial_hub.modules.audit",
+]
+forbidden_modules = [
+    "financial_hub.modules.payments.api",
+    "financial_hub.modules.payments.domain",
+    "financial_hub.modules.payments.infrastructure",
+    "financial_hub.modules.payments.application.service",
+    "financial_hub.modules.payments.application.registry",
+    "financial_hub.modules.payments.application.events",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. payments reaches projects only through application.api"
+type = "forbidden"
+source_modules = ["financial_hub.modules.payments"]
+forbidden_modules = [
+    "financial_hub.modules.projects.api",
+    "financial_hub.modules.projects.domain",
+    "financial_hub.modules.projects.infrastructure",
+    "financial_hub.modules.projects.application.api_keys",
+    "financial_hub.modules.projects.application.members",
+    "financial_hub.modules.projects.application.providers",
+    "financial_hub.modules.projects.application.scopes",
+    "financial_hub.modules.projects.application.service",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "5. payments never reaches decryption or the credentials vault"
+type = "forbidden"
+source_modules = ["financial_hub.modules.payments"]
+forbidden_modules = [
+    "financial_hub.platform.crypto.unseal",
+    "financial_hub.modules.projects.infrastructure.credentials_vault",
 ]
 allow_indirect_imports = true
