@@ -8,6 +8,8 @@
 export interface ProblemFieldError {
   pointer?: string;
   detail?: string;
+  /** Machine-readable reason (e.g. "missing", "string_too_short"); lets the console translate the message. */
+  code?: string;
 }
 
 export interface ProblemDetails {
@@ -74,8 +76,8 @@ export function isProblem(error: unknown): error is ApiError & ApiProblem {
   return error instanceof ApiError;
 }
 
-/** A user-presentable message: the problem's detail, else its title, else the fallback. */
-export function problemMessage(error: unknown, fallback = "Something went wrong."): string {
+/** The raw (English) message the server sent: the problem's detail, else its title, else the fallback. The console shows translated text instead (features/console/errors.ts). */
+export function problemMessage(error: unknown, fallback = ""): string {
   return error instanceof ApiError ? (error.detail ?? error.title) : fallback;
 }
 
@@ -127,6 +129,7 @@ function toFieldError(item: Record<string, unknown>): ProblemFieldError {
   return {
     pointer: typeof item.pointer === "string" ? item.pointer : undefined,
     detail: typeof item.detail === "string" ? item.detail : undefined,
+    code: typeof item.code === "string" ? item.code : undefined,
   };
 }
 

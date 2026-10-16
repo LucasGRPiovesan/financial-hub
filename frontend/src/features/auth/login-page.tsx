@@ -4,22 +4,26 @@ import { CircleAlert, CreditCard, LogIn, Scale, ScrollText, Webhook } from "luci
 import { useEffect, useState, type FormEvent } from "react";
 
 import type { DemoOperatorOut } from "../../api/generated/model";
+import { LanguageMenu } from "../../components/language-menu";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Skeleton } from "../../components/ui/skeleton";
+import { t, useI18n, type MessageKey } from "../../i18n";
 import { isApiError } from "../../lib/api";
+import { errorText } from "../console/errors";
+import { useDocumentTitle } from "../shell/document-title";
 import { BrandMark } from "../shell/sidebar-nav";
 import { demoLogin, demoOperatorsQueryOptions, login, meQueryOptions } from "./auth-api";
 import { DemoPicker } from "./demo-picker";
 import { safeRedirectTarget } from "./redirect";
 
-const CAPABILITIES = [
-  { icon: Scale, title: "Double-entry ledger", text: "Every entry balances to the cent. Money is stored as integers, never floats." },
-  { icon: CreditCard, title: "Idempotent payments", text: "Retries are safe behind a provider abstraction, tested against the Asaas sandbox." },
-  { icon: Webhook, title: "Signed webhooks and live events", text: "Verified provider callbacks, an outbox for delivery and realtime updates." },
-  { icon: ScrollText, title: "Audit trail", text: "Who changed what, and when, for members, customers, keys and accounts." },
-] as const;
+const CAPABILITIES: readonly { icon: typeof Scale; titleKey: MessageKey; textKey: MessageKey }[] = [
+  { icon: Scale, titleKey: "auth.capabilities.ledger.title", textKey: "auth.capabilities.ledger.text" },
+  { icon: CreditCard, titleKey: "auth.capabilities.payments.title", textKey: "auth.capabilities.payments.text" },
+  { icon: Webhook, titleKey: "auth.capabilities.webhooks.title", textKey: "auth.capabilities.webhooks.text" },
+  { icon: ScrollText, titleKey: "auth.capabilities.audit.title", textKey: "auth.capabilities.audit.text" },
+];
 
 type FailureKind = "credentials" | "rate-limit" | "network" | "other";
 
@@ -30,30 +34,56 @@ interface Failure {
 
 function describeFailure(error: unknown): { failure: Failure; retryAfter: number | null } {
   if (!isApiError(error)) {
-    return { failure: { kind: "other", message: "Something went wrong. Try again." }, retryAfter: null };
+    return { failure: { kind: "other", message: t("auth.failureOther") }, retryAfter: null };
   }
   if (error.isNetworkError) {
     return {
-      failure: { kind: "network", message: "Can't reach the Financial Hub API. Check your connection and try again." },
+      failure: { kind: "network", message: t("auth.failureNetwork") },
       retryAfter: null,
     };
   }
   if (error.status === 401) {
-    return { failure: { kind: "credentials", message: "The email or password is incorrect." }, retryAfter: null };
+    return { failure: { kind: "credentials", message: t("auth.failureCredentials") }, retryAfter: null };
   }
   if (error.status === 429) {
     return {
       failure: {
         kind: "rate-limit",
-        message: "Too many sign-in attempts. Wait before trying again.",
+        message: t("auth.failureRateLimit"),
       },
       retryAfter: error.retryAfterSeconds ?? 30,
     };
   }
-  return { failure: { kind: "other", message: error.detail ?? error.title }, retryAfter: null };
+  return { failure: { kind: "other", message: errorText(error) }, retryAfter: null };
+}
+
+/** Decorative: a posted entry that balances, the product's central promise. Hidden from assistive tech and on short screens. */
+function LedgerSample() {
+  const { t } = useI18n();
+  return (
+    <div
+      aria-hidden="true"
+      className="hidden max-w-lg rounded-md border border-chrome-line bg-chrome-raised/60 p-4 font-mono text-xs text-chrome-muted [@media(min-height:800px)]:block"
+    >
+      <div className="flex items-center justify-between pb-2 text-chrome-ink">
+        <span>{t("auth.sample.entry")}</span>
+        <span className="rounded-xs bg-chrome-brass/15 px-1.5 text-chrome-brass">{t("auth.sample.balanced")}</span>
+      </div>
+      <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-1 border-t border-chrome-line pt-2">
+        <span>{t("auth.sample.receivables")}</span>
+        <span className="text-right text-chrome-ink">R$ 1.250,00</span>
+        <span />
+        <span className="pl-4">{t("auth.sample.revenue")}</span>
+        <span />
+        <span className="text-right text-chrome-ink">R$ 1.250,00</span>
+      </div>
+    </div>
+  );
 }
 
 export function LoginPage({ redirectTo }: { redirectTo?: string }) {
+  const { t } = useI18n();
+  useDocumentTitle(t("auth.signIn"));
   const queryClient = useQueryClient();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -93,7 +123,7 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
       if (isApiError(error) && (error.status === 404 || error.status === 401)) {
         // Demo login was switched off (or the persona is gone) since the page loaded: fall back to the password form.
         void queryClient.invalidateQueries({ queryKey: demoOperatorsQueryOptions.queryKey });
-        setFailure({ kind: "other", message: "Demo sign-in isn't available. Use your email and password." });
+        setFailure({ kind: "other", message: t("auth.demoUnavailable") });
         setUsePassword(true);
         return;
       }
@@ -119,43 +149,44 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
   }
 
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]">
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside
-        aria-label="About Financial Hub"
-        className="relative hidden bg-chrome px-12 py-10 lg:flex lg:flex-col lg:justify-between"
+        aria-label={t("auth.aboutLabel")}
+        className="relative hidden overflow-hidden bg-chrome px-10 py-9 xl:px-14 lg:flex lg:flex-col lg:justify-between"
       >
         <BrandMark />
-        <div className="max-w-md">
+        <div className="max-w-lg">
           <h2 className="text-xl leading-tight font-semibold tracking-tight text-chrome-ink">
-            A payments back office built on a double-entry ledger.
+            {t("auth.tagline")}
           </h2>
-          <p className="mt-3 text-sm text-chrome-muted">
-            Financial Hub is the operator console for projects that take payments: ledger, customers, provider accounts and
-            API keys in one place.
-          </p>
-          <ul className="mt-8 flex flex-col gap-5">
-            {CAPABILITIES.map(({ icon: Icon, title, text }) => (
-              <li key={title} className="flex items-start gap-3">
+          <p className="mt-3 text-sm text-chrome-muted">{t("auth.intro")}</p>
+          <ul className="mt-7 flex flex-col gap-4">
+            {CAPABILITIES.map(({ icon: Icon, titleKey, textKey }) => (
+              <li key={titleKey} className="flex items-start gap-3">
                 <Icon className="mt-0.5 size-4 shrink-0 text-chrome-brass" aria-hidden="true" />
                 <div>
-                  <p className="text-sm font-medium text-chrome-ink">{title}</p>
-                  <p className="text-xs text-chrome-muted">{text}</p>
+                  <p className="text-sm font-medium text-chrome-ink">{t(titleKey)}</p>
+                  <p className="text-xs text-chrome-muted">{t(textKey)}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
+        <LedgerSample />
         <p className="border-t border-chrome-line pt-4 text-xs text-chrome-muted">
-          Evaluation environment. Sandbox providers only; no real money moves.
+          {t("auth.evalNotice")}
         </p>
       </aside>
 
-      <main className="flex items-center justify-center bg-canvas px-5 py-8">
-        <div className="w-full max-w-md">
+      <main className="flex items-center justify-center bg-canvas px-5 py-8 sm:px-8">
+        <div className="w-full max-w-xl">
+          <div className="mb-6 flex justify-end">
+            <LanguageMenu />
+          </div>
           <BrandMark className="mb-8 lg:hidden [&>span:last-child]:text-ink" />
-          <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("auth.signIn")}</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {showPicker ? "Pick who you want to be in this evaluation environment." : "Use your operator account to open the console."}
+            {showPicker ? t("auth.pickPrompt") : t("auth.accountPrompt")}
           </p>
 
           <div aria-live="polite" id="login-error" className="mt-4 empty:hidden">
@@ -167,14 +198,14 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
                 <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <p>
                   {failure.message}
-                  {failure.kind === "rate-limit" && locked ? ` Try again in ${waitSeconds}s.` : null}
+                  {failure.kind === "rate-limit" && locked ? ` ${t("auth.retryInSentence", { seconds: waitSeconds })}` : null}
                 </p>
               </div>
             ) : null}
           </div>
 
           {checkingDemo ? (
-            <div role="status" aria-label="Checking sign-in options" className="mt-6 flex flex-col gap-3">
+            <div role="status" aria-label={t("auth.checking")} className="mt-6 flex flex-col gap-3">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-2/3" />
@@ -196,14 +227,14 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
                   setUsePassword(true);
                 }}
               >
-                Use email and password instead
+                {t("auth.usePassword")}
               </Button>
             </>
           ) : (
             <>
               <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4" aria-describedby={failure ? "login-error" : undefined}>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email">{t("auth.email")}</Label>
                   <Input
                     id="login-email"
                     name="email"
@@ -216,7 +247,7 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">{t("auth.password")}</Label>
                   <Input
                     id="login-password"
                     name="password"
@@ -231,7 +262,7 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
 
                 <Button type="submit" size="lg" disabled={signIn.isPending || locked} className="mt-1">
                   <LogIn aria-hidden="true" />
-                  {signIn.isPending ? "Signing in…" : locked ? `Try again in ${waitSeconds}s` : "Sign in"}
+                  {signIn.isPending ? t("auth.signingIn") : locked ? t("auth.retryIn", { seconds: waitSeconds }) : t("auth.signIn")}
                 </Button>
               </form>
               {demoOperators.length > 0 ? (
@@ -244,7 +275,7 @@ export function LoginPage({ redirectTo }: { redirectTo?: string }) {
                     setUsePassword(false);
                   }}
                 >
-                  Back to demo personas
+                  {t("auth.backToDemo")}
                 </Button>
               ) : null}
             </>

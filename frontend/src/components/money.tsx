@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import { formatMoney, isNegativeMoney, type MoneyValue } from "../lib/money";
 import { cn } from "../lib/cn";
 
@@ -9,14 +10,15 @@ interface MoneyProps {
 
 /** An amount in a ledger column: tabular numerals, negatives in the danger colour. */
 export function Money({ value, locale, className }: MoneyProps) {
+  const { locale: current, t } = useI18n();
   let text: string;
   let negative: boolean;
   try {
-    text = formatMoney(value, { locale });
+    text = formatMoney(value, { locale: locale ?? current });
     negative = isNegativeMoney(value);
   } catch {
     return (
-      <span className={cn("figures text-ink-faint", className)} title="This amount could not be read">
+      <span className={cn("figures text-ink-faint", className)} title={t("money.unreadable")}>
         &mdash;
       </span>
     );
@@ -25,7 +27,7 @@ export function Money({ value, locale, className }: MoneyProps) {
     <span
       className={cn("figures whitespace-nowrap", negative && "text-danger", className)}
       data-negative={negative || undefined}
-      title={`${value.amount_minor} ${value.currency} minor units`}
+      title={t("money.minorUnits", { amount: value.amount_minor, currency: value.currency })}
     >
       {text}
     </span>

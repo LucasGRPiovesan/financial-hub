@@ -4,13 +4,6 @@ import type { BadgeProps } from "../../components/ui/badge";
 export const ROLES = ["owner", "admin", "finance", "viewer"] as const;
 export type Role = (typeof ROLES)[number];
 
-export const ROLE_SUMMARY: Record<Role, string> = {
-  owner: "Everything, including ownership of the project.",
-  admin: "Settings, members, API keys and provider accounts.",
-  finance: "Reads everything and handles money and customers.",
-  viewer: "Read-only access.",
-};
-
 export function isRole(value: string): value is Role {
   return (ROLES as readonly string[]).includes(value);
 }

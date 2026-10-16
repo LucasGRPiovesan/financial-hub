@@ -56,16 +56,36 @@ no flash.
 ### Spacing, radius, density
 
 4 px base unit via Tailwind's scale. Cards pad 20 px horizontally and 16 px vertically (`px-5 py-4`); the page gutter
-grows from 16 px on phones to 32 px on wide screens. Tables use a 40 px header row and `py-2.5` cells with hairline
+grows from 16 px on phones to 40 px on 2xl screens. Tables use a 40 px header row and `py-2.5` cells with hairline
 separators (no zebra); headers are sticky inside scrolling regions. Radii are tight
 (3 / 5 / 7 px) and only floating layers (dialogs, menus) use 11 px. Shadows are a hairline plus a low ambient; only
 overlays get a real lift.
 
+### Layout (W9.12)
+
+Content is fluid: `<main>` fills the viewport next to the fixed 15 rem sidebar, with gutters
+`px-4 sm:px-6 xl:px-8 2xl:px-10` (the same in `BootScreen`). Tables and card grids stretch to the full width; only
+prose (`PageHeader` description, empty-state copy, dialog forms) keeps a readable measure (`max-w-prose`, `max-w-lg`).
+Sign-in is a split screen: product panel (lg and up, with a decorative balanced ledger entry on screens 800 px or
+taller) and persona cards (initials avatar, email, role badge per project, `Continue as <name>` button, loading state
+on the clicked card only). Four personas fit 1366x768 without page scroll.
+
 ### Motion
 
-Sparing, and always an answer to something the operator did: dialogs and menus fade/pop in (140-160 ms), the nav and
-detail drawers slide (200 ms), toasts rise (220 ms). Nothing animates on its own. `prefers-reduced-motion: reduce`
-collapses every animation and transition to ~0.
+Defined once in `src/index.css`: `--ease-out-quart`, `--duration-fast` (150 ms), `--duration-base` (200 ms); the Tailwind
+default transition uses the same pair. Only transform and opacity animate (no layout shift).
+
+- Interactions: the `.motion-ui` utility (colour, border, shadow, opacity, transform) on buttons, rows, cards, inputs,
+  tabs, menu items and nav links; buttons press 1 px.
+- Overlays enter and leave: dialogs, menus and the nav sheet use `data-[state=open|closed]` animations, toasts slide out.
+- Tab panels cross-fade; skeletons use a subtle shimmer (`.skeleton-shimmer`); the demo persona list and
+  other first-render lists use `.stagger-in` (delay capped at 200 ms).
+- Modules: `createRouter({ defaultViewTransition: { types } })` in `src/router.tsx` wraps path changes in the View
+  Transitions API. Sidebar and top bar have their own `view-transition-name` (`vt-sidebar`, `vt-header`) and stay
+  still; only `vt-page` (`<main>`) fades out in 120 ms and rises in 220 ms. Without the API, `.route-enter` plays the
+  same rise as a CSS animation.
+- `prefers-reduced-motion: reduce`: one global rule collapses every animation and transition, view-transition
+  pseudo-elements are switched off, and the router skips `startViewTransition` entirely (no JS-driven motion).
 
 ### Data display rules
 
@@ -109,8 +129,29 @@ keeps its action row pinned to the bottom, so no form is ever taller than the sc
 ## Testing
 
 `scripts/web-test.sh` (vitest + Testing Library + axe). Prefer role/label queries; the e2e suite relies on the same
-accessible names (`Continue as <name>`, `Project: <name>`, `Operator menu: <name>`, `Theme: <mode>`, `Sign out`,
-nav labels, dialog field labels). Rename one only together with the e2e suite.
+accessible names, in the default language (pt-BR): `Continuar como <nome>`, `Projeto: <nome>`, `Menu do operador: <nome>`,
+`Tema: <modo>`, `Idioma: <idioma>` (en-US: `Continue as`, `Project:`, `Operator menu:`, `Theme:`, `Language:`), `Sair`, nav
+labels, dialog field labels. Rename one only together with the e2e suite; the e2e suite runs in pt-BR and has one journey
+(`tests/language.spec.ts`) that switches to English and back.
+
+## Internationalization
+
+- **Languages.** Portuguese (`pt-BR`) is the default; English (`en-US`) is selectable at runtime. The browser language is
+  deliberately not consulted. Code, identifiers and docs stay English; only UI copy is translated.
+- **Layer (`src/i18n/`, no dependency).** `en-US.ts` is the canonical tree (`as const`) and defines `MessageKey`; `pt-BR.ts`
+  is typed against its shape, so a key missing in one language fails the type check. `t(key, { name })` interpolates
+  `{placeholders}`; a plural message is an object of CLDR forms (`one`/`other`) chosen with `Intl.PluralRules` from `count`.
+  There is no Provider: the language lives in a small store (`lib/locale.ts`) that `useT()`, `useI18n()` and `useLocale()`
+  subscribe to with `useSyncExternalStore`; non-React code uses the global `t()` / `tLoose()`.
+- **Store.** `getLocale()` / `setLocale()` work anywhere; the choice is kept in `localStorage` (`fh.locale`, every access in
+  try/catch, the app works without storage) and `<html lang>` follows it. `formatMoney` and `formatDateTime` default to the
+  current language (`R$ 1.234,56` / `$1,234.56`); the time zone stays the browser's.
+- **Switch.** `LanguageMenu` on the sign-in page and the radio group in the operator menu; instant, no reload.
+- **Data vs. display.** Statuses, roles and scopes stay API values; they are translated at display time (`tLoose("status", value)`,
+  falling back to the raw value). Problem+JSON errors map the known `code`/`type` to translated messages (`features/console/errors.ts`,
+  `lib/api.ts`); the server `detail` is never the only text shown in pt-BR.
+- **Adding copy.** Add the key to `en-US.ts` and `pt-BR.ts` (domain terms: lançamento, livro-razão, balancete, conta, cobrança,
+  estorno, chave de API, integrante, cliente), then `t("section.key")`. Document titles are set per screen (`useDocumentTitle`).
 
 ### Polish notes (W9.10)
 

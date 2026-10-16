@@ -12,6 +12,7 @@ import { useToast } from "../components/ui/use-toast";
 import { CreateApiKeyDialog } from "../features/console/api-key-dialogs";
 import { useApiKeys, useRevokeApiKey } from "../features/console/api";
 import { GatedButton } from "../features/console/gated-button";
+import { useI18n } from "../i18n";
 import { NoProjectState } from "../features/console/no-project";
 import { deniedReason } from "../features/console/permissions";
 import { useProject } from "../features/console/use-project";
@@ -28,6 +29,7 @@ export function ApiKeysPage() {
 
 function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; role: string; mayManage: boolean }) {
   const toast = useToast();
+  const { t, tLoose } = useI18n();
   const keys = useApiKeys(projectId, mayManage);
   const revoke = useRevokeApiKey(projectId);
   const [creating, setCreating] = useState(false);
@@ -35,12 +37,12 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
 
   const header = (
     <PageHeader
-      title="API keys"
-      description="Credentials your backend uses to call the Financial Hub API for this project."
+      title={t("apiKeys.title")}
+      description={t("apiKeys.description")}
       actions={
         <GatedButton allowed={mayManage} reason={deniedReason("api_keys:manage", role)} onClick={() => setCreating(true)}>
           <Plus aria-hidden="true" />
-          Create API key
+          {t("apiKeys.create")}
         </GatedButton>
       }
     />
@@ -52,7 +54,7 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
         {header}
         <EmptyState
           icon={Lock}
-          title="API keys aren't available for your role"
+          title={t("apiKeys.unavailableTitle")}
           description={deniedReason("api_keys:manage", role)}
         />
       </>
@@ -64,10 +66,10 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
     const target = revoking;
     revoke.mutate(target.id, {
       onSuccess: () => {
-        toast({ tone: "success", title: "API key revoked", description: target.name });
+        toast({ tone: "success", title: t("apiKeys.revoked"), description: target.name });
         setRevoking(null);
       },
-      onError: () => toast({ tone: "danger", title: "Couldn't revoke the API key" }),
+      onError: () => toast({ tone: "danger", title: t("apiKeys.revokeFailed") }),
     });
   }
 
@@ -75,29 +77,29 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
     <>
       {header}
       {keys.isPending ? (
-        <ListSkeleton label="Loading API keys" />
+        <ListSkeleton label={t("apiKeys.loading")} />
       ) : keys.isError ? (
-        <QueryErrorState title="API keys couldn't load" error={keys.error} onRetry={() => void keys.refetch()} />
+        <QueryErrorState title={t("apiKeys.loadFailed")} error={keys.error} onRetry={() => void keys.refetch()} />
       ) : keys.data.data.length === 0 ? (
         <EmptyState
           icon={KeyRound}
-          title="No API keys yet"
-          description="Create a key to let your backend call the API."
+          title={t("apiKeys.emptyTitle")}
+          description={t("apiKeys.emptyDescription")}
         />
       ) : (
         <div className="rounded-md border border-line bg-surface">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Name</TableHead>
-                <TableHead>Prefix</TableHead>
-                <TableHead>Scopes</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("apiKeys.cols.name")}</TableHead>
+                <TableHead>{t("apiKeys.cols.prefix")}</TableHead>
+                <TableHead>{t("apiKeys.cols.scopes")}</TableHead>
+                <TableHead>{t("apiKeys.cols.created")}</TableHead>
+                <TableHead>{t("apiKeys.cols.lastUsed")}</TableHead>
+                <TableHead>{t("apiKeys.cols.expires")}</TableHead>
+                <TableHead>{t("apiKeys.cols.status")}</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("apiKeys.cols.actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -120,10 +122,10 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
                     <TableCell>
                       <DateTime value={key.created_at} />
                     </TableCell>
-                    <TableCell>{key.last_used_at ? <DateTime value={key.last_used_at} /> : "Never"}</TableCell>
-                    <TableCell>{key.expires_at ? <DateTime value={key.expires_at} /> : "Never"}</TableCell>
+                    <TableCell>{key.last_used_at ? <DateTime value={key.last_used_at} /> : t("apiKeys.never")}</TableCell>
+                    <TableCell>{key.expires_at ? <DateTime value={key.expires_at} /> : t("apiKeys.never")}</TableCell>
                     <TableCell>
-                      <Badge tone={tone}>{key.status}</Badge>
+                      <Badge tone={tone}>{tLoose("status", key.status)}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end">
@@ -131,12 +133,12 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
                           <GatedButton
                             variant="ghost"
                             size="sm"
-                            aria-label={`Revoke ${key.name}`}
+                            aria-label={t("apiKeys.revokeNamed", { name: key.name })}
                             allowed={mayManage}
                             reason={deniedReason("api_keys:manage", role)}
                             onClick={() => setRevoking(key)}
                           >
-                            Revoke
+                            {t("apiKeys.revoke")}
                           </GatedButton>
                         )}
                       </div>
@@ -147,7 +149,7 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
             </TableBody>
           </Table>
           {keys.data.has_more ? (
-            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">Showing the first keys only.</p>
+            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">{t("apiKeys.firstOnly")}</p>
           ) : null}
         </div>
       )}
@@ -156,9 +158,9 @@ function ApiKeysForProject({ projectId, role, mayManage }: { projectId: string; 
       <ConfirmDialog
         open={revoking !== null}
         onOpenChange={(open) => (open ? undefined : setRevoking(null))}
-        title="Revoke API key?"
-        description={`${revoking?.name ?? "This key"} will stop working immediately. This can't be undone.`}
-        confirmLabel="Revoke key"
+        title={t("apiKeys.confirmTitle")}
+        description={t("apiKeys.confirmDescription", { name: revoking?.name ?? t("apiKeys.confirmThisKey") })}
+        confirmLabel={t("apiKeys.confirmLabel")}
         tone="danger"
         pending={revoke.isPending}
         error={revoke.isError ? errorText(revoke.error) : null}

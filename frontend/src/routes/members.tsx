@@ -18,27 +18,29 @@ import { AddMemberDialog } from "../features/console/member-dialogs";
 import { useChangeMemberRole, useMembers, useRemoveMember } from "../features/console/members-api";
 import { NoProjectState } from "../features/console/no-project";
 import { deniedReason, isOwner } from "../features/console/permissions";
-import { ROLES, ROLE_SUMMARY, roleTone } from "../features/console/roles";
+import { ROLES, roleTone } from "../features/console/roles";
 import { ListSkeleton, QueryErrorState } from "../features/console/states";
 import { useProject } from "../features/console/use-project";
+import { t as translate, useI18n, useT } from "../i18n";
 import { isApiError } from "../lib/api";
 
 /** Why a member change was refused, in the words an operator needs (403 owners only, 409 last owner, 422 bad input). */
 function describeChangeFailure(error: unknown): string {
   if (isApiError(error)) {
-    if (error.status === 403) return "Only an owner can grant, change or remove the owner role.";
-    if (error.status === 409) return error.detail ?? "A project must keep at least one owner.";
-    if (error.status === 422) return error.errors?.[0]?.detail ?? error.detail ?? "That change isn't valid.";
+    if (error.status === 403) return translate("members.onlyOwner");
+    if (error.status === 409) return translate("members.lastOwner");
+    if (error.status === 422) return translate("members.invalidChange");
   }
   return errorText(error);
 }
 
 export function MembersPage() {
+  const t = useT();
   const { membership, can } = useProject();
   if (!membership) {
     return (
       <>
-        <PageHeader title="Members" description="Who can access this project, and what each role allows." />
+        <PageHeader title={t("members.title")} description={t("members.description")} />
         <NoProjectState />
       </>
     );
@@ -48,6 +50,7 @@ export function MembersPage() {
 
 function MembersForProject({ projectId, role, mayManage }: { projectId: string; role: string; mayManage: boolean }) {
   const toast = useToast();
+  const { t, tLoose } = useI18n();
   const session = useSession();
   const members = useMembers(projectId);
   const changeRole = useChangeMemberRole(projectId);
@@ -61,8 +64,8 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
     changeRole.mutate(
       { operatorId: member.operator_id, role: next },
       {
-        onSuccess: () => toast({ tone: "success", title: "Role changed", description: `${member.display_name} is now ${next}.` }),
-        onError: (error) => toast({ tone: "danger", title: "Couldn't change the role", description: describeChangeFailure(error) }),
+        onSuccess: () => toast({ tone: "success", title: t("members.roleChanged"), description: t("members.roleChangedDescription", { name: member.display_name, role: tLoose("roles", next) }) }),
+        onError: (error) => toast({ tone: "danger", title: t("members.roleChangeFailed"), description: describeChangeFailure(error) }),
       },
     );
   }
@@ -74,7 +77,7 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
     removeMember.mutate(target.operator_id, {
       onSuccess: () => {
         setRemoving(null);
-        toast({ tone: "success", title: "Member removed", description: `${target.display_name} no longer has access.` });
+        toast({ tone: "success", title: t("members.removed"), description: t("members.removedDescription", { name: target.display_name }) });
       },
       onError: (error) => setRemoveError(describeChangeFailure(error)),
     });
@@ -82,12 +85,12 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
 
   const header = (
     <PageHeader
-      title="Members"
-      description="Who can access this project, and what each role allows."
+      title={t("members.title")}
+      description={t("members.description")}
       actions={
         <GatedButton allowed={mayManage} reason={deniedReason("members:manage", role)} onClick={() => setAdding(true)}>
           <Plus aria-hidden="true" />
-          Add member
+          {t("members.add")}
         </GatedButton>
       }
     />
@@ -97,7 +100,7 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
     return (
       <>
         {header}
-        <ListSkeleton label="Loading members" />
+        <ListSkeleton label={t("members.loading")} />
       </>
     );
   }
@@ -105,7 +108,7 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
     return (
       <>
         {header}
-        <QueryErrorState title="Couldn't load members" error={members.error} onRetry={() => void members.refetch()} />
+        <QueryErrorState title={t("members.loadFailed")} error={members.error} onRetry={() => void members.refetch()} />
       </>
     );
   }
@@ -122,18 +125,18 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
       ) : null}
 
       {rows.length === 0 ? (
-        <EmptyState icon={UserCog} title="No members yet" description="Add the operators who should work in this project." />
+        <EmptyState icon={UserCog} title={t("members.emptyTitle")} description={t("members.emptyDescription")} />
       ) : (
         <div className="rounded-md border border-line bg-surface">
           <Table>
-            <caption className="sr-only">Project members</caption>
+            <caption className="sr-only">{t("members.caption")}</caption>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Member</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Added</TableHead>
+                <TableHead>{t("members.cols.member")}</TableHead>
+                <TableHead>{t("members.cols.role")}</TableHead>
+                <TableHead>{t("members.cols.added")}</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("members.cols.actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -147,24 +150,24 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
                     <TableCell>
                       <p className="font-medium">
                         {member.display_name}
-                        {isSelf ? <span className="ml-2 text-xs font-normal text-ink-muted">(you)</span> : null}
+                        {isSelf ? <span className="ml-2 text-xs font-normal text-ink-muted">{t("members.you")}</span> : null}
                       </p>
                       <p className="font-mono text-xs text-ink-muted">{member.email}</p>
                     </TableCell>
                     <TableCell>
                       {locked ? (
-                        <Badge tone={roleTone(member.role)}>{member.role}</Badge>
+                        <Badge tone={roleTone(member.role)}>{tLoose("roles", member.role)}</Badge>
                       ) : (
                         <div className="w-36">
                           <Select
-                            aria-label={`Role for ${member.display_name}`}
+                            aria-label={t("members.roleFor", { name: member.display_name })}
                             value={member.role}
                             disabled={changeRole.isPending}
                             onChange={(event) => onRoleChange(member, event.target.value)}
                           >
                             {ROLES.map((item) => (
                               <option key={item} value={item} disabled={item === "owner" && !iAmOwner}>
-                                {item}
+                                {t(`roles.${item}`)}
                               </option>
                             ))}
                           </Select>
@@ -179,13 +182,13 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label={`Remove ${member.display_name}`}
+                          aria-label={t("members.removeNamed", { name: member.display_name })}
                           onClick={() => {
                             setRemoveError(null);
                             setRemoving(member);
                           }}
                         >
-                          Remove
+                          {t("members.remove")}
                         </Button>
                       )}
                     </TableCell>
@@ -199,15 +202,15 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
 
       <section aria-labelledby="roles-heading" className="mt-8">
         <h2 id="roles-heading" className="text-base font-semibold tracking-tight">
-          What each role can do
+          {t("members.rolesHeading")}
         </h2>
         <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[8rem_minmax(0,1fr)]">
           {ROLES.map((item) => (
             <div key={item} className="contents">
               <dt>
-                <Badge tone={roleTone(item)}>{item}</Badge>
+                <Badge tone={roleTone(item)}>{t(`roles.${item}`)}</Badge>
               </dt>
-              <dd className="text-ink-muted">{ROLE_SUMMARY[item]}</dd>
+              <dd className="text-ink-muted">{t(`roles.summary.${item}`)}</dd>
             </div>
           ))}
         </dl>
@@ -217,11 +220,11 @@ function MembersForProject({ projectId, role, mayManage }: { projectId: string; 
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => (open ? undefined : setRemoving(null))}
-        title="Remove member"
+        title={t("members.removeTitle")}
         description={
-          removing ? `${removing.display_name} (${removing.email}) will lose access to this project immediately.` : ""
+          removing ? t("members.removeDescription", { name: removing.display_name, email: removing.email }) : ""
         }
-        confirmLabel="Remove member"
+        confirmLabel={t("members.removeLabel")}
         pending={removeMember.isPending}
         error={removeError}
         onConfirm={confirmRemove}

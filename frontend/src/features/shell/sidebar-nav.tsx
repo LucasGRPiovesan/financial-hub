@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 
+import { useT } from "../../i18n";
 import { cn } from "../../lib/cn";
 import { NAV_GROUPS } from "./nav";
 
@@ -24,8 +25,9 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
+  const t = useT();
   return (
-    <nav aria-label="Primary" className="flex flex-col gap-1 overflow-y-auto px-3 pb-6 [color-scheme:dark] [scrollbar-width:thin]">
+    <nav aria-label={t("shell.primaryNav")} className="flex flex-col gap-1 overflow-y-auto px-3 pb-6 [color-scheme:dark] [scrollbar-width:thin]">
       {NAV_GROUPS.map((group, index) => (
         <Fragment key={group[0]?.to ?? index}>
           {index > 0 ? <div aria-hidden="true" className="mx-2 my-2 h-px bg-chrome-line" /> : null}
@@ -37,19 +39,21 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
                   activeOptions={{ exact: item.to === "/" }}
                   onClick={onNavigate}
                   className={cn(
-                    "group relative flex items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm font-medium text-chrome-muted transition-colors hover:bg-chrome-raised hover:text-chrome-ink",
+                    "group relative flex items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm font-medium text-chrome-muted motion-ui hover:bg-chrome-raised hover:text-chrome-ink",
                     "data-[status=active]:bg-chrome-raised data-[status=active]:text-chrome-ink",
                     "before:absolute before:inset-y-1.5 before:-left-3 before:w-0.5 before:rounded-full before:bg-transparent data-[status=active]:before:bg-chrome-brass",
                   )}
                 >
                   <item.icon className="size-4 shrink-0" aria-hidden="true" />
-                  {item.label}
+                  {t(item.labelKey)}
                   {item.scope === "planned" ? (
                     <span
                       aria-hidden="true"
                       data-planned=""
-                      className="ml-auto rounded-xs border border-dotted border-chrome-line px-1 text-2xs leading-4 font-normal text-chrome-muted after:content-['Soon']"
-                    />
+                      className="ml-auto rounded-xs border border-dotted border-chrome-line px-1 text-2xs leading-4 font-normal text-chrome-muted"
+                    >
+                      {t("shell.soon")}
+                    </span>
                   ) : null}
                 </Link>
               </li>

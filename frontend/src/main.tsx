@@ -6,11 +6,13 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { ToastProvider } from "./components/ui/toast";
 import { installUnauthorizedRedirect } from "./features/auth/session";
+import { initLocale } from "./lib/locale";
 import { createQueryClient } from "./lib/query-client";
 import { initTheme } from "./lib/theme";
 import { createAppRouter } from "./router";
 
 initTheme();
+initLocale();
 
 const queryClient = createQueryClient();
 const router = createAppRouter(queryClient);

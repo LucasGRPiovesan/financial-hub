@@ -106,16 +106,31 @@
   --shadow-raised: 0 1px 0 rgb(14 23 38 / 0.04), 0 1px 3px rgb(14 23 38 / 0.06);
   --shadow-overlay: 0 12px 32px -8px rgb(14 23 38 / 0.35), 0 2px 6px rgb(14 23 38 / 0.12);
 
-  /* Motion */
+  /* Motion: one duration/easing pair for every interaction; only transform and opacity animate. */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --animate-fade-in: fade-in 140ms var(--ease-out-quart);
-  --animate-pop-in: pop-in 160ms var(--ease-out-quart);
-  --animate-slide-in-left: slide-in-left 200ms var(--ease-out-quart);
-  --animate-slide-in-right: slide-in-right 200ms var(--ease-out-quart);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: var(--ease-out-quart);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-out-quart);
+  --animate-fade-out: fade-out var(--duration-fast) var(--ease-out-quart) forwards;
+  --animate-pop-in: pop-in var(--duration-base) var(--ease-out-quart);
+  --animate-pop-out: pop-out var(--duration-fast) var(--ease-out-quart) forwards;
+  --animate-slide-in-left: slide-in-left 220ms var(--ease-out-quart);
+  --animate-slide-out-left: slide-out-left var(--duration-base) var(--ease-out-quart) forwards;
+  --animate-slide-in-right: slide-in-right 220ms var(--ease-out-quart);
+  --animate-slide-out-right: slide-out-right var(--duration-base) var(--ease-out-quart) forwards;
   --animate-toast-in: toast-in 220ms var(--ease-out-quart);
+  --animate-toast-out: toast-out var(--duration-fast) var(--ease-out-quart) forwards;
+  --animate-rise-in: rise-in 240ms var(--ease-out-quart) both;
 
   @keyframes fade-in {
     from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    to {
       opacity: 0;
     }
   }
@@ -125,8 +140,19 @@
       transform: translateY(4px) scale(0.98);
     }
   }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+  }
   @keyframes slide-in-left {
     from {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes slide-out-left {
+    to {
       transform: translateX(-100%);
     }
   }
@@ -135,10 +161,32 @@
       transform: translateX(100%);
     }
   }
+  @keyframes slide-out-right {
+    to {
+      transform: translateX(100%);
+    }
+  }
   @keyframes toast-in {
     from {
       opacity: 0;
       transform: translateY(8px);
+    }
+  }
+  @keyframes toast-out {
+    to {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes shimmer {
+    to {
+      transform: translateX(100%);
     }
   }
 }
@@ -162,13 +210,21 @@
   ::selection {
     background: var(--color-primary-soft);
   }
+  /* The one reduced-motion rule: nothing moves, and view transitions are cut (see also src/router.tsx). */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;
+      animation-delay: 0ms !important;
       transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
     }
   }
 }
@@ -182,4 +238,63 @@
   .ledger-rule {
     border-bottom: 3px double var(--color-line-strong);
   }
+
+  /* Interactive surfaces share this: colour, border, shadow and a tiny press, never layout properties. */
+  .motion-ui {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out-quart);
+  }
+
+  /* Skeleton: a soft highlight sweeps across (transform only), clipped by the block itself. */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .skeleton-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.07)), transparent);
+    animation: shimmer 1.6s var(--ease-out-quart) infinite;
+  }
+
+  /* Lists rise in on first render; the delay is capped so long lists never feel slow. */
+  .stagger-in > * {
+    animation: var(--animate-rise-in);
+  }
+  .stagger-in > :nth-child(2) { animation-delay: 40ms; }
+  .stagger-in > :nth-child(3) { animation-delay: 80ms; }
+  .stagger-in > :nth-child(4) { animation-delay: 120ms; }
+  .stagger-in > :nth-child(5) { animation-delay: 160ms; }
+  .stagger-in > :nth-child(n + 6) { animation-delay: 200ms; }
+
+  /* Module transitions. The shell parts keep their own layer so only the page content moves. */
+  .vt-sidebar { view-transition-name: shell-sidebar; }
+  .vt-header { view-transition-name: shell-header; }
+  .vt-page { view-transition-name: shell-page; }
+
+  /* Fallback where the View Transitions API is missing: the page enters with the same motion. */
+  @supports not (view-transition-name: none) {
+    .route-enter {
+      animation: var(--animate-rise-in);
+    }
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-old(shell-sidebar),
+::view-transition-new(shell-sidebar),
+::view-transition-old(shell-header),
+::view-transition-new(shell-header) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(shell-page) {
+  animation: fade-out 120ms var(--ease-out-quart) both;
+}
+::view-transition-new(shell-page) {
+  animation: rise-in 220ms var(--ease-out-quart) both;
 }

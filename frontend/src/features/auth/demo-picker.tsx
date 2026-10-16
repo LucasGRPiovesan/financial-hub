@@ -1,8 +1,10 @@
-import { ArrowRight, FlaskConical } from "lucide-react";
+import { ArrowRight, FlaskConical, LoaderCircle } from "lucide-react";
 
 import type { DemoOperatorOut } from "../../api/generated/model";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import { useI18n } from "../../i18n";
+import { cn } from "../../lib/cn";
 import { roleTone } from "../console/roles";
 
 interface DemoPickerProps {
@@ -23,23 +25,28 @@ function initials(displayName: string): string {
     .join("");
 }
 
-/** Evaluation environments only: one compact card per seeded operator, with what each can do in which project. */
+/** Evaluation environments only: one card per seeded operator, with what each can do in which project. */
 export function DemoPicker({ operators, pendingId, disabled, onPick }: DemoPickerProps) {
+  const { t, tLoose } = useI18n();
   return (
     <>
-      <p className="mt-4 flex items-start gap-2 rounded-sm border border-warning bg-warning-soft px-3 py-2 text-sm text-warning">
+      <p className="mt-5 flex items-start gap-2 rounded-sm border border-warning bg-warning-soft px-3 py-2 text-sm text-warning">
         <FlaskConical className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <span>Demo mode - choose a persona; no password needed. This is an evaluation environment.</span>
+        <span>{t("auth.demoBanner")}</span>
       </p>
-      <ul className="mt-4 flex flex-col gap-2" aria-label="Demo operators">
+      <ul className="stagger-in mt-4 flex flex-col gap-2.5" aria-label={t("auth.demoOperators")}>
         {operators.map((operator) => {
           const pending = pendingId === operator.id;
           return (
-            <li key={operator.id} className="rounded-md border border-line bg-surface px-3 py-2.5 shadow-raised">
-              <div className="flex items-center gap-3">
+            <li
+              key={operator.id}
+              aria-busy={pending || undefined}
+              className="motion-ui flex flex-col gap-3 rounded-md border border-line bg-surface p-3.5 shadow-raised hover:border-line-strong has-[button:focus-visible]:border-ring has-[button:focus-visible]:ring-1 has-[button:focus-visible]:ring-ring sm:flex-row sm:items-center"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
+                  className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary ring-1 ring-primary/15"
                 >
                   {initials(operator.display_name)}
                 </span>
@@ -48,31 +55,39 @@ export function DemoPicker({ operators, pendingId, disabled, onPick }: DemoPicke
                   <p className="truncate font-mono text-xs text-ink-muted" title={operator.email}>
                     {operator.email}
                   </p>
+                  {operator.memberships.length > 0 ? (
+                    <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1" aria-label={t("auth.projectsOf", { name: operator.display_name })}>
+                      {operator.memberships.map((membership) => (
+                        <li key={membership.project_id} className="flex min-w-0 items-center gap-1.5 text-xs">
+                          <span className="max-w-32 truncate text-ink-muted">{membership.project_name}</span>
+                          <Badge tone={roleTone(membership.role)}>{tLoose("roles", membership.role)}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-ink-muted">{t("auth.noProjects")}</p>
+                  )}
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="shrink-0"
-                  disabled={disabled}
-                  aria-label={pending ? undefined : `Continue as ${operator.display_name}`}
-                  onClick={() => onPick(operator)}
-                >
-                  {pending ? "Signing in…" : "Continue"}
-                  {pending ? null : <ArrowRight aria-hidden="true" />}
-                </Button>
               </div>
-              {operator.memberships.length > 0 ? (
-                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1" aria-label={`Projects of ${operator.display_name}`}>
-                  {operator.memberships.map((membership) => (
-                    <li key={membership.project_id} className="flex min-w-0 items-center gap-1.5 text-xs">
-                      <span className="max-w-40 truncate text-ink-muted">{membership.project_name}</span>
-                      <Badge tone={roleTone(membership.role)}>{membership.role}</Badge>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-xs text-ink-muted">Not a member of any project yet.</p>
-              )}
+              <Button
+                size="md"
+                className={cn("shrink-0 sm:w-44", pending && "disabled:opacity-100")}
+                disabled={disabled}
+                aria-label={pending ? undefined : t("auth.continueAs", { name: operator.display_name })}
+                onClick={() => onPick(operator)}
+              >
+                {pending ? (
+                  <>
+                    <LoaderCircle className="motion-safe:animate-spin" aria-hidden="true" />
+                    {t("auth.signingIn")}
+                  </>
+                ) : (
+                  <>
+                    <span className="truncate">{t("auth.continueAs", { name: operator.display_name.split(/\s+/)[0] ?? "" })}</span>
+                    <ArrowRight aria-hidden="true" />
+                  </>
+                )}
+              </Button>
             </li>
           );
         })}

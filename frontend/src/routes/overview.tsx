@@ -20,6 +20,7 @@ import { useMembers } from "../features/console/members-api";
 import { NoProjectState } from "../features/console/no-project";
 import { useProject } from "../features/console/use-project";
 import { HealthIndicator } from "../features/health/health-indicator";
+import { useT } from "../i18n";
 import { StreamStatusIndicator } from "../lib/realtime/stream-status";
 
 // Widened to string: the route tree is assembled at runtime, so its paths are not literal types.
@@ -29,8 +30,6 @@ const LINKS: Record<"apikeys" | "integrations" | "members" | "customers", string
   members: "/members",
   customers: "/customers",
 };
-
-const DESCRIPTION = "The state of your active project.";
 
 function Stat({
   title,
@@ -51,9 +50,10 @@ function Stat({
   value: number;
   hasMore: boolean;
 }) {
+  const t = useT();
   let body: ReactNode;
-  if (!allowed) body = <p className="text-sm text-ink-muted">Not available for your role.</p>;
-  else if (pending) body = <Skeleton className="h-9 w-16" aria-label={`Loading ${title.toLowerCase()}`} role="status" />;
+  if (!allowed) body = <p className="text-sm text-ink-muted">{t("common.unavailableForRole")}</p>;
+  else if (pending) body = <Skeleton className="h-9 w-16" aria-label={t("overview.loadingStat", { title: title.toLowerCase() })} role="status" />;
   else if (error) body = <p className="text-sm text-danger">{errorText(error)}</p>;
   else {
     body = (
@@ -68,7 +68,7 @@ function Stat({
       <CardContent className="flex h-full flex-col justify-between gap-3">
         <h2 className="text-sm font-medium text-ink-muted">{title}</h2>
         <div className="min-h-9">{body}</div>
-        <Link to={href} className={buttonVariants({ variant: "link", size: "sm" }) + " self-start px-0"}>
+        <Link to={href} className={buttonVariants({ variant: "link", size: "sm" }) + " self-start px-0!"}>
           {linkLabel}
         </Link>
       </CardContent>
@@ -88,15 +88,16 @@ function TotalAmount({ currency, value }: { currency: string; value: number }) {
 }
 
 function TrialBalanceTable({ totals }: { totals: TrialBalanceTotalOut[] }) {
+  const t = useT();
   return (
     <Table>
-      <caption className="sr-only">Trial balance by currency</caption>
+      <caption className="sr-only">{t("overview.trial.caption")}</caption>
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead>Currency</TableHead>
-          <TableHead className="text-right">Debits</TableHead>
-          <TableHead className="text-right">Credits</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>{t("overview.trial.currency")}</TableHead>
+          <TableHead className="text-right">{t("overview.trial.debits")}</TableHead>
+          <TableHead className="text-right">{t("overview.trial.credits")}</TableHead>
+          <TableHead>{t("overview.trial.status")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -110,7 +111,7 @@ function TrialBalanceTable({ totals }: { totals: TrialBalanceTotalOut[] }) {
               <TotalAmount currency={total.currency} value={total.credits} />
             </TableCell>
             <TableCell>
-              <Badge tone={total.balanced ? "success" : "danger"}>{total.balanced ? "Balanced" : "Not balanced"}</Badge>
+              <Badge tone={total.balanced ? "success" : "danger"}>{total.balanced ? t("overview.trial.balanced") : t("overview.trial.unbalanced")}</Badge>
             </TableCell>
           </TableRow>
         ))}
@@ -122,6 +123,7 @@ function TrialBalanceTable({ totals }: { totals: TrialBalanceTotalOut[] }) {
 const ACTIVITY_ROWS = 6;
 
 function ActivityItem({ record, names }: { record: AuditRecordOut; names: OperatorNames }) {
+  const t = useT();
   const line = describeActivity(record, names);
   const ids = line.ids.join(" · ");
   return (
@@ -129,7 +131,7 @@ function ActivityItem({ record, names }: { record: AuditRecordOut; names: Operat
       <div className="min-w-0">
         <p className="truncate text-sm">{line.sentence}</p>
         <p className="truncate text-xs text-ink-muted">
-          by {line.actor}
+          {t("activity.by", { actor: line.actor })}
           {ids ? (
             <>
               {" "}
@@ -146,6 +148,7 @@ function ActivityItem({ record, names }: { record: AuditRecordOut; names: Operat
 }
 
 export function OverviewPage() {
+  const t = useT();
   const { membership, can, stream } = useProject();
   const projectId = membership?.project_id ?? null;
   const mayKeys = can("api_keys:manage");
@@ -169,7 +172,7 @@ export function OverviewPage() {
   if (!membership) {
     return (
       <>
-        <PageHeader title="Overview" description={DESCRIPTION} />
+        <PageHeader title={t("overview.title")} description={t("overview.description")} />
         <NoProjectState />
       </>
     );
@@ -180,32 +183,32 @@ export function OverviewPage() {
   const customerCount = flattenCustomers(customers.data).length;
 
   let ledger: ReactNode;
-  if (!mayLedger) ledger = <p className="px-5 py-4 text-sm text-ink-muted">Not available for your role.</p>;
+  if (!mayLedger) ledger = <p className="px-5 py-4 text-sm text-ink-muted">{t("common.unavailableForRole")}</p>;
   else if (balance.isPending) {
     ledger = (
       <div className="px-5 py-4">
-        <Skeleton className="h-16 w-full" aria-label="Loading trial balance" role="status" />
+        <Skeleton className="h-16 w-full" aria-label={t("overview.trial.loading")} role="status" />
       </div>
     );
   } else if (balance.error) ledger = <p className="px-5 py-4 text-sm text-danger">{errorText(balance.error)}</p>;
   else if (balance.data.totals.length === 0) ledger = <p className="px-5 py-4 text-sm text-ink-muted">
-      No entries yet. Posted ledger entries appear here as debit and credit totals per currency.
+      {t("overview.trial.empty")}
     </p>;
   else ledger = <TrialBalanceTable totals={balance.data.totals} />;
 
   let activity: ReactNode;
-  if (!mayAudit) activity = <p className="px-5 py-4 text-sm text-ink-muted">Not available for your role.</p>;
+  if (!mayAudit) activity = <p className="px-5 py-4 text-sm text-ink-muted">{t("common.unavailableForRole")}</p>;
   else if (audit.isPending) {
     activity = (
       <div className="px-5 py-4">
-        <Skeleton className="h-24 w-full" aria-label="Loading recent activity" role="status" />
+        <Skeleton className="h-24 w-full" aria-label={t("overview.activity.loading")} role="status" />
       </div>
     );
   } else if (audit.error) activity = <p className="px-5 py-4 text-sm text-danger">{errorText(audit.error)}</p>;
-  else if (audit.data.data.length === 0) activity = <p className="px-5 py-4 text-sm text-ink-muted">No activity recorded yet.</p>;
+  else if (audit.data.data.length === 0) activity = <p className="px-5 py-4 text-sm text-ink-muted">{t("overview.activity.none")}</p>;
   else {
     activity = (
-      <ul aria-label="Recent activity" className="px-5">
+      <ul aria-label={t("overview.activity.title")} className="px-5">
         {audit.data.data.slice(0, ACTIVITY_ROWS).map((record) => (
           <ActivityItem key={record.id} record={record} names={names} />
         ))}
@@ -215,13 +218,13 @@ export function OverviewPage() {
 
   return (
     <>
-      <PageHeader title="Overview" description={DESCRIPTION} />
+      <PageHeader title={t("overview.title")} description={t("overview.description")} />
 
-      <section aria-label="Key figures" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label={t("overview.keyFigures")} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          title="Active API keys"
+          title={t("overview.stats.apiKeys.title")}
           href={LINKS.apikeys}
-          linkLabel="Manage API keys"
+          linkLabel={t("overview.stats.apiKeys.link")}
           allowed={mayKeys}
           pending={keys.isPending}
           error={keys.error}
@@ -229,9 +232,9 @@ export function OverviewPage() {
           hasMore={keys.data?.has_more ?? false}
         />
         <Stat
-          title="Active provider accounts"
+          title={t("overview.stats.accounts.title")}
           href={LINKS.integrations}
-          linkLabel="Manage provider accounts"
+          linkLabel={t("overview.stats.accounts.link")}
           allowed={mayAccounts}
           pending={accounts.isPending}
           error={accounts.error}
@@ -239,9 +242,9 @@ export function OverviewPage() {
           hasMore={accounts.data?.has_more ?? false}
         />
         <Stat
-          title="Members"
+          title={t("overview.stats.members.title")}
           href={LINKS.members}
-          linkLabel="See members"
+          linkLabel={t("overview.stats.members.link")}
           allowed={mayMembers}
           pending={members.isPending}
           error={members.error}
@@ -249,9 +252,9 @@ export function OverviewPage() {
           hasMore={false}
         />
         <Stat
-          title="Customers"
+          title={t("overview.stats.customers.title")}
           href={LINKS.customers}
-          linkLabel="Browse customers"
+          linkLabel={t("overview.stats.customers.link")}
           allowed={mayCustomers}
           pending={customers.isPending}
           error={customers.error}
@@ -260,34 +263,34 @@ export function OverviewPage() {
         />
       </section>
 
-      <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>Trial balance</CardTitle>
-            <CardDescription>Debits and credits per currency. They must match.</CardDescription>
+            <CardTitle>{t("overview.trial.title")}</CardTitle>
+            <CardDescription>{t("overview.trial.description")}</CardDescription>
           </CardHeader>
           {ledger}
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
-            <CardDescription>The latest audited actions in this project.</CardDescription>
+            <CardTitle>{t("overview.activity.title")}</CardTitle>
+            <CardDescription>{t("overview.activity.description")}</CardDescription>
           </CardHeader>
           {activity}
         </Card>
       </div>
 
-      <section aria-label="System status" className="mt-4 grid gap-4 sm:grid-cols-2">
+      <section aria-label={t("overview.system")} className="mt-4 grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="flex flex-col gap-2">
-            <h2 className="text-sm font-medium text-ink-muted">Realtime</h2>
+            <h2 className="text-sm font-medium text-ink-muted">{t("overview.realtime")}</h2>
             <StreamStatusIndicator status={stream.status} />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-2">
-            <h2 className="text-sm font-medium text-ink-muted">Environment</h2>
+            <h2 className="text-sm font-medium text-ink-muted">{t("overview.environment")}</h2>
             <HealthIndicator />
           </CardContent>
         </Card>

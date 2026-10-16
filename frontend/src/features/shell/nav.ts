@@ -16,16 +16,18 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { MessageKey } from "../../i18n";
 import type { Scope } from "../../lib/scope";
 
 export interface NavItem {
   /** Route path. */
   to: string;
-  label: string;
+  /** Translation keys, resolved at display time so the sidebar follows the language. */
+  labelKey: MessageKey;
   icon: LucideIcon;
   scope: Scope;
   /** What this area will do; shown on its placeholder page. */
-  summary: string;
+  summaryKey: MessageKey;
 }
 
 /** Sidebar order; blank lines in the source mark the visual groups (see NAV_GROUPS). */
@@ -33,111 +35,111 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
   [
     {
       to: "/",
-      label: "Overview",
+      labelKey: "nav.overview.label",
       icon: LayoutDashboard,
       scope: "implemented",
-      summary: "Environment status and what each capability label means.",
+      summaryKey: "nav.overview.summary",
     },
   ],
   [
     {
       to: "/projects",
-      label: "Projects",
+      labelKey: "nav.projects.label",
       icon: FolderKanban,
       scope: "implemented",
-      summary: "Create projects and manage which operators can access them.",
+      summaryKey: "nav.projects.summary",
     },
     {
       to: "/customers",
-      label: "Customers",
+      labelKey: "nav.customers.label",
       icon: Users,
       scope: "implemented",
-      summary: "Find customers by your own reference and keep their identity data tidy.",
+      summaryKey: "nav.customers.summary",
     },
   ],
   [
     {
       to: "/ledger",
-      label: "Ledger",
+      labelKey: "nav.ledger.label",
       icon: BookOpenText,
       scope: "planned",
-      summary: "Browse accounts, entries and balances of the double-entry ledger.",
+      summaryKey: "nav.ledger.summary",
     },
     {
       to: "/payments",
-      label: "Payments",
+      labelKey: "nav.payments.label",
       icon: CreditCard,
       scope: "planned",
-      summary: "Follow charges, refunds and payouts from creation to settlement.",
+      summaryKey: "nav.payments.summary",
     },
     {
       to: "/billing",
-      label: "Billing",
+      labelKey: "nav.billing.label",
       icon: Receipt,
       scope: "planned",
-      summary: "Manage plans, subscriptions, usage and invoices.",
+      summaryKey: "nav.billing.summary",
     },
   ],
   [
     {
       to: "/integrations",
-      label: "Provider accounts",
+      labelKey: "nav.integrations.label",
       icon: Plug,
       scope: "sandbox",
-      summary: "Connect payment providers and check their health.",
+      summaryKey: "nav.integrations.summary",
     },
     {
       to: "/events",
-      label: "Events",
+      labelKey: "nav.events.label",
       icon: Activity,
       scope: "planned",
-      summary: "Inspect the event log and its delivery status.",
+      summaryKey: "nav.events.summary",
     },
     {
       to: "/webhooks",
-      label: "Webhooks",
+      labelKey: "nav.webhooks.label",
       icon: Webhook,
       scope: "planned",
-      summary: "Manage endpoints that receive events and review their deliveries.",
+      summaryKey: "nav.webhooks.summary",
     },
   ],
   [
     {
       to: "/reconciliation",
-      label: "Reconciliation",
+      labelKey: "nav.reconciliation.label",
       icon: Scale,
       scope: "planned",
-      summary: "Compare the ledger with provider statements and resolve differences.",
+      summaryKey: "nav.reconciliation.summary",
     },
     {
       to: "/audit",
-      label: "Audit",
+      labelKey: "nav.audit.label",
       icon: ScrollText,
       scope: "planned",
-      summary: "Review who did what, and when.",
+      summaryKey: "nav.audit.summary",
     },
   ],
   [
     {
       to: "/api-keys",
-      label: "API keys",
+      labelKey: "nav.apiKeys.label",
       icon: KeyRound,
       scope: "implemented",
-      summary: "Create and revoke the keys your backend uses to call the API.",
+      summaryKey: "nav.apiKeys.summary",
     },
     {
       to: "/members",
-      label: "Members",
+      labelKey: "nav.members.label",
       icon: UserCog,
       scope: "implemented",
-      summary: "See who can access the project and what each role allows.",
+      summaryKey: "nav.members.summary",
     },
     {
       to: "/settings",
-      label: "Settings",
+      labelKey: "nav.settings.label",
       icon: Settings,
       scope: "planned",
-      summary: "Project configuration, API keys and operator preferences.",
+      summaryKey: "nav.settings.summary",
     },
   ],
 ];

@@ -22,7 +22,7 @@ describe("Provider accounts screen", () => {
     const { container } = renderApp("/integrations");
     const row = (await screen.findByText("Main Asaas")).closest("tr") as HTMLElement;
     expect(within(row).getByText("sandbox")).toBeInTheDocument();
-    expect(within(row).getByText("active")).toBeInTheDocument();
+    expect(within(row).getByText("Active")).toBeInTheDocument();
     expect(within(row).getByText(/9f2c/)).toBeInTheDocument();
     expect(await screen.findByText(/stripe — coming soon/)).toBeInTheDocument();
     await expectNoAxeViolations(container);
@@ -52,7 +52,7 @@ describe("Provider accounts screen", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Add provider account" })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: "Add provider account" }));
     const dialog = await screen.findByRole("dialog");
-    const secret = within(dialog).getByLabelText("Api key");
+    const secret = within(dialog).getByLabelText("API key");
     expect(secret).toHaveAttribute("type", "password");
     expect(secret).toHaveValue("");
     await user.type(within(dialog).getByRole("textbox", { name: "Label" }), "Main");
@@ -72,7 +72,7 @@ describe("Provider accounts screen", () => {
     renderApp("/integrations");
     await user.click(await screen.findByRole("button", { name: "Update credentials for Main Asaas" }));
     const dialog = await screen.findByRole("dialog");
-    const secret = within(dialog).getByLabelText("Api key");
+    const secret = within(dialog).getByLabelText("API key");
     expect(secret).toHaveValue("");
     await user.type(secret, "new-secret");
     await user.click(within(dialog).getByRole("button", { name: "Replace credentials" }));

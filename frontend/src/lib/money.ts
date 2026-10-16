@@ -8,7 +8,7 @@
  * eslint.config.js) and money.test.ts both forbid the coercion functions in this file.
  */
 
-import { UI_LOCALE } from "./locale";
+import { getLocale } from "./locale";
 
 export interface MoneyValue {
   /** Integer minor units as a decimal string, e.g. "123456" = 1,234.56 BRL. May be negative. */
@@ -51,12 +51,12 @@ export function parseMinorUnits(amountMinor: string): bigint {
 }
 
 export interface FormatMoneyOptions {
-  /** BCP 47 locale; defaults to the console locale (UI_LOCALE). */
+  /** BCP 47 locale; defaults to the current console language (getLocale()). */
   locale?: string;
 }
 
 function defaultLocale(): string {
-  return UI_LOCALE;
+  return getLocale();
 }
 
 const formatterCache = new Map<string, Intl.NumberFormat>();

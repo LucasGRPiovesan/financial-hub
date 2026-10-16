@@ -1,8 +1,9 @@
 import { cva } from "class-variance-authority";
 import { CircleCheck, CircleDashed, FlaskConical, Theater } from "lucide-react";
 
+import { useT } from "../i18n";
 import { cn } from "../lib/cn";
-import { SCOPE_DESCRIPTIONS, SCOPE_LABELS, type Scope } from "../lib/scope";
+import type { Scope } from "../lib/scope";
 
 /*
  * Each scope differs in border style as well as colour, so the label never depends on colour alone:
@@ -36,10 +37,11 @@ interface ScopeBadgeProps {
 
 export function ScopeBadge({ scope, className }: ScopeBadgeProps) {
   const Icon = ICONS[scope];
+  const t = useT();
   return (
-    <span className={cn(scopeBadge({ scope }), className)} data-scope={scope} title={SCOPE_DESCRIPTIONS[scope]}>
+    <span className={cn(scopeBadge({ scope }), className)} data-scope={scope} title={t(`scope.descriptions.${scope}`)}>
       <Icon className="size-3 shrink-0" aria-hidden="true" />
-      {SCOPE_LABELS[scope]}
+      {t(`scope.${scope}`)}
     </span>
   );
 }

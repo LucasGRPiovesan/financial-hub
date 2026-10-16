@@ -18,7 +18,7 @@ export function DropdownMenuContent({
       <MenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-48 animate-pop-in rounded-md border border-line bg-surface p-1 text-sm text-ink shadow-overlay",
+          "z-50 min-w-48 rounded-md data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in border border-line bg-surface p-1 text-sm text-ink shadow-overlay",
           className,
         )}
         {...props}
@@ -28,7 +28,7 @@ export function DropdownMenuContent({
 }
 
 const itemClass =
-  "relative flex cursor-default items-center gap-2 rounded-xs px-2 py-1.5 outline-none select-none data-[disabled]:opacity-50 data-[highlighted]:bg-primary-soft [&_svg]:size-4 [&_svg]:shrink-0";
+  "motion-ui relative flex cursor-default items-center gap-2 rounded-xs px-2 py-1.5 outline-none select-none data-[disabled]:opacity-50 data-[highlighted]:bg-primary-soft [&_svg]:size-4 [&_svg]:shrink-0";
 
 export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof MenuPrimitive.Item>) {
   return <MenuPrimitive.Item className={cn(itemClass, className)} {...props} />;

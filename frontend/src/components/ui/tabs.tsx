@@ -13,7 +13,7 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "-mb-px border-b-2 border-transparent px-0.5 pt-1 pb-2.5 text-sm font-medium text-ink-muted hover:text-ink data-[state=active]:border-brass data-[state=active]:text-ink",
+        "motion-ui -mb-px border-b-2 border-transparent px-0.5 pt-1 pb-2.5 text-sm font-medium text-ink-muted hover:text-ink data-[state=active]:border-brass data-[state=active]:text-ink",
         className,
       )}
       {...props}
@@ -22,5 +22,5 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
 }
 
 export function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content className={cn("pt-4", className)} {...props} />;
+  return <TabsPrimitive.Content className={cn("pt-4 data-[state=active]:animate-fade-in", className)} {...props} />;
 }

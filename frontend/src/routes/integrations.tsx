@@ -18,6 +18,7 @@ import { useProject } from "../features/console/use-project";
 import { CreateProviderAccountDialog, ReplaceCredentialsDialog } from "../features/console/provider-dialogs";
 import { errorText } from "../features/console/errors";
 import { ListSkeleton, QueryErrorState } from "../features/console/states";
+import { useI18n } from "../i18n";
 
 export function IntegrationsPage() {
   const { membership, can } = useProject();
@@ -44,6 +45,7 @@ function ProviderAccountsForProject({
   mayManage: boolean;
 }) {
   const toast = useToast();
+  const { t, tLoose } = useI18n();
   const accounts = useProviderAccounts(projectId, mayRead);
   const catalog = useProviderCatalog();
   const setActive = useSetProviderAccountActive(projectId);
@@ -57,17 +59,17 @@ function ProviderAccountsForProject({
 
   const header = (
     <PageHeader
-      title="Provider accounts"
-      description="Connect this project to payment providers. Asaas Sandbox is the only live integration."
+      title={t("providers.title")}
+      description={t("providers.description")}
       scope="sandbox"
       actions={
         <GatedButton
           allowed={mayManage && entries.some((entry) => entry.enabled)}
-          reason={mayManage ? "No provider is available yet." : reason}
+          reason={mayManage ? t("providers.noneAvailable") : reason}
           onClick={() => setCreating(true)}
         >
           <Plus aria-hidden="true" />
-          Add provider account
+          {t("providers.add")}
         </GatedButton>
       }
     />
@@ -77,7 +79,7 @@ function ProviderAccountsForProject({
     return (
       <>
         {header}
-        <EmptyState icon={Lock} title="Provider accounts aren't available for your role" description={deniedReason("integrations:read", role)} />
+        <EmptyState icon={Lock} title={t("providers.unavailableTitle")} description={deniedReason("integrations:read", role)} />
       </>
     );
   }
@@ -87,10 +89,10 @@ function ProviderAccountsForProject({
       { accountId: account.id, active },
       {
         onSuccess: () => {
-          toast({ tone: "success", title: active ? "Provider account enabled" : "Provider account disabled", description: account.name });
+          toast({ tone: "success", title: active ? t("providers.enabled") : t("providers.disabled"), description: account.name });
           setDisabling(null);
         },
-        onError: () => toast({ tone: "danger", title: active ? "Couldn't enable the account" : "Couldn't disable the account" }),
+        onError: () => toast({ tone: "danger", title: active ? t("providers.enableFailed") : t("providers.disableFailed") }),
       },
     );
   }
@@ -99,28 +101,28 @@ function ProviderAccountsForProject({
     <>
       {header}
       {accounts.isPending ? (
-        <ListSkeleton label="Loading provider accounts" />
+        <ListSkeleton label={t("providers.loading")} />
       ) : accounts.isError ? (
-        <QueryErrorState title="Provider accounts couldn't load" error={accounts.error} onRetry={() => void accounts.refetch()} />
+        <QueryErrorState title={t("providers.loadFailed")} error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : accounts.data.data.length === 0 ? (
         <EmptyState
           icon={Plug}
-          title="No provider accounts yet"
-          description="Add an Asaas Sandbox account to start testing payments."
+          title={t("providers.emptyTitle")}
+          description={t("providers.emptyDescription")}
         />
       ) : (
         <div className="rounded-md border border-line bg-surface">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Label</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Environment</TableHead>
-                <TableHead>Credentials</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>{t("providers.cols.label")}</TableHead>
+                <TableHead>{t("providers.cols.provider")}</TableHead>
+                <TableHead>{t("providers.cols.environment")}</TableHead>
+                <TableHead>{t("providers.cols.credentials")}</TableHead>
+                <TableHead>{t("providers.cols.status")}</TableHead>
+                <TableHead>{t("providers.cols.created")}</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("providers.cols.actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -133,10 +135,10 @@ function ProviderAccountsForProject({
                     <TableCell>{account.provider}</TableCell>
                     <TableCell>{account.environment}</TableCell>
                     <TableCell className="font-mono text-xs text-ink-muted">
-                      {account.has_credentials ? `•••• ${account.credentials_last4 ?? ""}`.trim() : "None"}
+                      {account.has_credentials ? `•••• ${account.credentials_last4 ?? ""}`.trim() : t("providers.none")}
                     </TableCell>
                     <TableCell>
-                      <Badge tone={isActive ? "success" : "neutral"}>{account.status}</Badge>
+                      <Badge tone={isActive ? "success" : "neutral"}>{tLoose("status", account.status)}</Badge>
                     </TableCell>
                     <TableCell>
                       <DateTime value={account.created_at} />
@@ -146,34 +148,34 @@ function ProviderAccountsForProject({
                         <GatedButton
                           variant="ghost"
                           size="sm"
-                          aria-label={`Update credentials for ${account.name}`}
+                          aria-label={t("providers.updateCredentialsFor", { name: account.name })}
                           allowed={mayManage}
                           reason={reason}
                           onClick={() => setReplacing(account)}
                         >
-                          Update credentials
+                          {t("providers.updateCredentials")}
                         </GatedButton>
                         {isActive ? (
                           <GatedButton
                             variant="ghost"
                             size="sm"
-                            aria-label={`Disable ${account.name}`}
+                            aria-label={t("providers.disableNamed", { name: account.name })}
                             allowed={mayManage}
                             reason={reason}
                             onClick={() => setDisabling(account)}
                           >
-                            Disable
+                            {t("providers.disable")}
                           </GatedButton>
                         ) : (
                           <GatedButton
                             variant="ghost"
                             size="sm"
-                            aria-label={`Enable ${account.name}`}
+                            aria-label={t("providers.enableNamed", { name: account.name })}
                             allowed={mayManage}
                             reason={reason}
                             onClick={() => toggle(account, true)}
                           >
-                            Enable
+                            {t("providers.enable")}
                           </GatedButton>
                         )}
                       </div>
@@ -184,7 +186,7 @@ function ProviderAccountsForProject({
             </TableBody>
           </Table>
           {accounts.data.has_more ? (
-            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">Showing the first accounts only.</p>
+            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">{t("providers.firstOnly")}</p>
           ) : null}
         </div>
       )}
@@ -192,14 +194,14 @@ function ProviderAccountsForProject({
       {comingSoon.length > 0 ? (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Other providers</CardTitle>
-            <CardDescription>Not available yet.</CardDescription>
+            <CardTitle>{t("providers.others")}</CardTitle>
+            <CardDescription>{t("providers.othersDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="flex flex-wrap gap-2">
               {comingSoon.map((entry) => (
                 <li key={entry.provider}>
-                  <Badge tone="neutral">{entry.provider} — coming soon</Badge>
+                  <Badge tone="neutral">{t("providers.comingSoon", { provider: entry.provider })}</Badge>
                 </li>
               ))}
             </ul>
@@ -217,9 +219,9 @@ function ProviderAccountsForProject({
       <ConfirmDialog
         open={disabling !== null}
         onOpenChange={(open) => (open ? undefined : setDisabling(null))}
-        title="Disable provider account?"
-        description={`${disabling?.name ?? "This account"} will stop processing requests until you enable it again.`}
-        confirmLabel="Disable account"
+        title={t("providers.disableTitle")}
+        description={t("providers.disableDescription", { name: disabling?.name ?? t("providers.thisAccount") })}
+        confirmLabel={t("providers.disableLabel")}
         tone="danger"
         pending={setActive.isPending}
         error={setActive.isError ? errorText(setActive.error) : null}

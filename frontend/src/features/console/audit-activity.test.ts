@@ -29,13 +29,13 @@ function record(overrides: Partial<AuditRecordOut>): AuditRecordOut {
 
 describe("describeActivity sentences", () => {
   it.each<[string, Partial<AuditRecordOut>, string]>([
-    ["member added with role", { diff: { after: { role: "admin" } } }, "Bruno Admin was added as admin"],
+    ["member added with role", { diff: { after: { role: "admin" } } }, "Bruno Admin was added as Admin"],
     ["member added without data", { target_id: "opr_unknown", diff: {} }, "Member added"],
-    ["member added, unknown operator", { target_id: "opr_unknown", diff: { after: { role: "viewer" } } }, "A member was added as viewer"],
+    ["member added, unknown operator", { target_id: "opr_unknown", diff: { after: { role: "viewer" } } }, "A member was added as Viewer"],
     [
       "role changed",
       { action: "member.role_changed", diff: { before: { role: "viewer" }, after: { role: "finance" } } },
-      "Bruno Admin is now finance (was viewer)",
+      "Bruno Admin is now Finance (was Viewer)",
     ],
     ["role changed without data", { action: "member.role_changed" }, "Member role changed"],
     ["member removed", { action: "member.removed" }, "Bruno Admin was removed from the project"],

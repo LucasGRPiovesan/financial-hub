@@ -25,7 +25,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
     }
-    await page.getByRole("link", { name: "API keys", exact: true }).first().click();
+    await page.getByRole("link", { name: "Chaves de API", exact: true }).first().click();
     await page.waitForLoadState("networkidle");
     await context.close();
     // Also warm the signed-out screen.

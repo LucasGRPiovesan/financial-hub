@@ -2,6 +2,7 @@ import * as ToastPrimitive from "@radix-ui/react-toast";
 import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
 import { useCallback, useRef, useState, type ReactNode } from "react";
 
+import { useT } from "../../i18n";
 import { cn } from "../../lib/cn";
 import { ToastContext, type ToastInput, type ToastTone } from "./use-toast";
 
@@ -20,6 +21,7 @@ const TONES: Record<ToastTone, string> = {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
+  const t = useT();
 
   const toast = useCallback((input: ToastInput) => {
     const id = nextId.current;
@@ -29,7 +31,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   return (
     <ToastContext value={toast}>
-      <ToastPrimitive.Provider swipeDirection="right" duration={6000} label="Notifications">
+      <ToastPrimitive.Provider swipeDirection="right" duration={6000} label={t("shell.notifications")}>
         {children}
         {items.map((item) => {
           const tone = item.tone ?? "info";
@@ -41,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               onOpenChange={(open) => {
                 if (!open) setItems((current) => current.filter((candidate) => candidate.id !== item.id));
               }}
-              className="flex w-full animate-toast-in items-start gap-3 rounded-md border border-line bg-surface p-3.5 text-ink shadow-overlay"
+              className="flex w-full items-start data-[state=closed]:animate-toast-out data-[state=open]:animate-toast-in gap-3 rounded-md border border-line bg-surface p-3.5 text-ink shadow-overlay"
             >
               <Icon className={cn("mt-0.5 size-4 shrink-0", TONES[tone])} aria-hidden="true" />
               <div className="min-w-0 flex-1">
@@ -53,8 +55,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 ) : null}
               </div>
               <ToastPrimitive.Close
-                aria-label="Dismiss notification"
-                className="grid size-6 shrink-0 place-items-center rounded-xs text-ink-muted hover:bg-surface-sunken hover:text-ink"
+                aria-label={t("shell.dismissNotification")}
+                className="motion-ui grid size-6 shrink-0 place-items-center rounded-xs text-ink-muted hover:bg-surface-sunken hover:text-ink"
               >
                 <X className="size-3.5" aria-hidden="true" />
               </ToastPrimitive.Close>

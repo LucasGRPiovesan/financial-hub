@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { useToast } from "../../components/ui/use-toast";
+import { useT } from "../../i18n";
 import { useCreateApiKey } from "./api";
 import { GRANTABLE_API_KEY_SCOPES } from "./permissions";
 import { fieldErrorsOf } from "./errors";
@@ -65,6 +66,7 @@ function CreateApiKeyForm({
   onIssued: (plaintext: string) => void;
 }) {
   const toast = useToast();
+  const t = useT();
   const create = useCreateApiKey(projectId);
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>([]);
@@ -88,21 +90,21 @@ function CreateApiKeyForm({
         },
         onKey: onIssued,
       },
-      { onError: () => toast({ tone: "danger", title: "Couldn't create the API key" }) },
+      { onError: () => toast({ tone: "danger", title: t("apiKeys.createFailed") }) },
     );
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Create API key</DialogTitle>
-        <DialogDescription>The key is shown once, right after you create it.</DialogDescription>
+        <DialogTitle>{t("apiKeys.create")}</DialogTitle>
+        <DialogDescription>{t("apiKeys.createDescription")}</DialogDescription>
       </DialogHeader>
-      <Field label="Name" error={fields.name}>
+      <Field label={t("apiKeys.nameLabel")} error={fields.name}>
         <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" required />
       </Field>
       <fieldset className="flex flex-col gap-2" aria-describedby={scopeError ? "api-key-scopes-error" : undefined}>
-        <legend className="mb-1 text-sm font-medium text-ink">Scopes</legend>
+        <legend className="mb-1 text-sm font-medium text-ink">{t("apiKeys.scopesLegend")}</legend>
         {GRANTABLE_API_KEY_SCOPES.map((scope) => (
           <label key={scope.value} className="flex items-start gap-2 text-sm">
             <input
@@ -113,7 +115,7 @@ function CreateApiKeyForm({
             />
             <span>
               <span className="font-mono text-xs">{scope.value}</span>
-              <span className="block text-xs text-ink-muted">{scope.description}</span>
+              <span className="block text-xs text-ink-muted">{t(scope.descriptionKey)}</span>
             </span>
           </label>
         ))}
@@ -123,7 +125,7 @@ function CreateApiKeyForm({
           </p>
         ) : null}
       </fieldset>
-      <Field label="Expires (optional)" error={fields.expires_at} hint="Leave empty for a key that doesn't expire.">
+      <Field label={t("apiKeys.expiresLabel")} error={fields.expires_at} hint={t("apiKeys.expiresHint")}>
         <Input type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} />
       </Field>
       {form ? (
@@ -133,10 +135,10 @@ function CreateApiKeyForm({
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? "Creating…" : "Create key"}
+          {create.isPending ? t("apiKeys.creating") : t("apiKeys.createKey")}
         </Button>
       </DialogFooter>
     </form>
@@ -144,6 +146,7 @@ function CreateApiKeyForm({
 }
 
 function IssuedKeyPanel({ plaintext, warn, onStored }: { plaintext: string; warn: boolean; onStored: () => void }) {
+  const t = useT();
   const [copied, setCopied] = useState<"yes" | "failed" | null>(null);
 
   async function copy() {
@@ -158,31 +161,29 @@ function IssuedKeyPanel({ plaintext, warn, onStored }: { plaintext: string; warn
   return (
     <div className="flex flex-col gap-4">
       <DialogHeader>
-        <DialogTitle>Your new API key</DialogTitle>
-        <DialogDescription>
-          Copy it now and keep it somewhere safe. For security it can't be shown again.
-        </DialogDescription>
+        <DialogTitle>{t("apiKeys.issuedTitle")}</DialogTitle>
+        <DialogDescription>{t("apiKeys.issuedDescription")}</DialogDescription>
       </DialogHeader>
       <div className="flex gap-2">
-        <Input readOnly aria-label="API key" value={plaintext} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+        <Input readOnly aria-label={t("apiKeys.keyLabel")} value={plaintext} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
         <Button type="button" variant="secondary" onClick={() => void copy()}>
           {copied === "yes" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-          {copied === "yes" ? "Copied" : "Copy"}
+          {copied === "yes" ? t("apiKeys.copied") : t("apiKeys.copy")}
         </Button>
       </div>
       {copied === "failed" ? (
         <p role="status" className="text-sm text-ink-muted">
-          Couldn't access the clipboard. Select the key above and copy it manually.
+          {t("apiKeys.clipboardFailed")}
         </p>
       ) : null}
       {warn ? (
         <p role="alert" className="text-sm text-danger">
-          Copy the key and confirm before closing — it can't be shown again.
+          {t("apiKeys.warn")}
         </p>
       ) : null}
       <DialogFooter>
         <Button type="button" onClick={onStored}>
-          I stored it
+          {t("apiKeys.stored")}
         </Button>
       </DialogFooter>
     </div>

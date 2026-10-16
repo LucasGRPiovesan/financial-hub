@@ -26,8 +26,8 @@ describe("Projects screen", () => {
     mockApi({ ...base, [PROJECTS]: () => json(200, page(two)) });
     const { container } = renderApp("/projects");
     const acme = (await screen.findByRole("cell", { name: /Acme Payments/ })).closest("tr") as HTMLElement;
-    expect(within(acme).getByText("owner")).toBeInTheDocument();
-    expect(within(acme).getByText("Active")).toBeInTheDocument();
+    expect(within(acme).getByText("Owner")).toBeInTheDocument();
+    expect(within(acme).getAllByText("Active").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Settings for Acme Payments" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Settings for Beta Billing" })).toBeDisabled();
     await expectNoAxeViolations(container);

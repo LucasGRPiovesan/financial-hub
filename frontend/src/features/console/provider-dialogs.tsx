@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { useToast } from "../../components/ui/use-toast";
+import { camelKey, useI18n } from "../../i18n";
 import { useCreateProviderAccount, useReplaceProviderCredentials } from "./api";
 import { fieldErrorsOf } from "./errors";
 
@@ -31,11 +32,13 @@ function CredentialInputs({
   onChange: (field: string, value: string) => void;
   errors: Record<string, string>;
 }) {
+  const { t, tLoose } = useI18n();
+  const nameOf = (field: string) => tLoose("providers.credentialFields", camelKey(field), labelOf(field));
   return (
     <>
       {[...required.map((field) => [field, true] as const), ...optional.map((field) => [field, false] as const)].map(
         ([field, isRequired]) => (
-          <Field key={field} label={isRequired ? labelOf(field) : `${labelOf(field)} (optional)`} error={errors[`credentials.${field}`]}>
+          <Field key={field} label={isRequired ? nameOf(field) : t("providers.optionalField", { field: nameOf(field) })} error={errors[`credentials.${field}`]}>
             <Input
               type="password"
               autoComplete="new-password"
@@ -76,6 +79,7 @@ export function CreateProviderAccountDialog({
 
 function CreateForm({ projectId, catalog, onDone }: { projectId: string; catalog: readonly CatalogEntryOut[]; onDone: () => void }) {
   const toast = useToast();
+  const { t } = useI18n();
   const create = useCreateProviderAccount(projectId);
   const enabled = catalog.filter((entry) => entry.enabled);
   const [provider, setProvider] = useState(enabled[0]?.provider ?? "");
@@ -92,10 +96,10 @@ function CreateForm({ projectId, catalog, onDone }: { projectId: string; catalog
       { provider, environment: chosenEnvironment, name: name.trim(), credentials: definedCredentials(credentials) },
       {
         onSuccess: () => {
-          toast({ tone: "success", title: "Provider account created", description: name.trim() });
+          toast({ tone: "success", title: t("providers.created"), description: name.trim() });
           onDone();
         },
-        onError: () => toast({ tone: "danger", title: "Couldn't create the provider account" }),
+        onError: () => toast({ tone: "danger", title: t("providers.createFailed") }),
       },
     );
   }
@@ -103,10 +107,10 @@ function CreateForm({ projectId, catalog, onDone }: { projectId: string; catalog
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Add provider account</DialogTitle>
-        <DialogDescription>Credentials are encrypted and can't be read back afterwards.</DialogDescription>
+        <DialogTitle>{t("providers.createTitle")}</DialogTitle>
+        <DialogDescription>{t("providers.createDescription")}</DialogDescription>
       </DialogHeader>
-      <Field label="Provider" error={fields.provider}>
+      <Field label={t("providers.providerLabel")} error={fields.provider}>
         <select
           className={SELECT_CLASS}
           value={provider}
@@ -123,7 +127,7 @@ function CreateForm({ projectId, catalog, onDone }: { projectId: string; catalog
           ))}
         </select>
       </Field>
-      <Field label="Environment" error={fields.environment}>
+      <Field label={t("providers.environmentLabel")} error={fields.environment}>
         <select className={SELECT_CLASS} value={chosenEnvironment} onChange={(event) => setEnvironment(event.target.value)}>
           {(entry?.environments ?? []).map((item) => (
             <option key={item} value={item}>
@@ -132,7 +136,7 @@ function CreateForm({ projectId, catalog, onDone }: { projectId: string; catalog
           ))}
         </select>
       </Field>
-      <Field label="Label" error={fields.name}>
+      <Field label={t("providers.nameLabel")} error={fields.name}>
         <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" required />
       </Field>
       <CredentialInputs
@@ -149,10 +153,10 @@ function CreateForm({ projectId, catalog, onDone }: { projectId: string; catalog
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={create.isPending || !entry}>
-          {create.isPending ? "Creating…" : "Add account"}
+          {create.isPending ? t("providers.creating") : t("providers.addAccount")}
         </Button>
       </DialogFooter>
     </form>
@@ -191,6 +195,7 @@ function ReplaceForm({
   onDone: () => void;
 }) {
   const toast = useToast();
+  const { t } = useI18n();
   const replace = useReplaceProviderCredentials(projectId);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const { fields, form } = fieldErrorsOf(replace.error);
@@ -201,10 +206,10 @@ function ReplaceForm({
       { accountId: account.id, credentials: definedCredentials(credentials) },
       {
         onSuccess: () => {
-          toast({ tone: "success", title: "Credentials updated", description: account.name });
+          toast({ tone: "success", title: t("providers.credentialsUpdated"), description: account.name });
           onDone();
         },
-        onError: () => toast({ tone: "danger", title: "Couldn't update the credentials" }),
+        onError: () => toast({ tone: "danger", title: t("providers.credentialsFailed") }),
       },
     );
   }
@@ -212,10 +217,8 @@ function ReplaceForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Update credentials</DialogTitle>
-        <DialogDescription>
-          Replaces every stored credential for {account.name}. Current values are never shown.
-        </DialogDescription>
+        <DialogTitle>{t("providers.replaceTitle")}</DialogTitle>
+        <DialogDescription>{t("providers.replaceDescription", { name: account.name })}</DialogDescription>
       </DialogHeader>
       <CredentialInputs
         required={entry?.credential_fields ?? []}
@@ -231,10 +234,10 @@ function ReplaceForm({
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={replace.isPending}>
-          {replace.isPending ? "Saving…" : "Replace credentials"}
+          {replace.isPending ? t("providers.saving") : t("providers.replaceLabel")}
         </Button>
       </DialogFooter>
     </form>

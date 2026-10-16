@@ -16,9 +16,11 @@ import { can, deniedReason } from "../features/console/permissions";
 import { CreateProjectDialog, RenameProjectDialog } from "../features/console/project-dialogs";
 import { useProject } from "../features/console/use-project";
 import { ListSkeleton, QueryErrorState } from "../features/console/states";
+import { useI18n } from "../i18n";
 import { selectProject } from "../lib/project-selection";
 
 export function ProjectsPage() {
+  const { t, tLoose } = useI18n();
   const { data: me } = useSuspenseQuery(meQueryOptions);
   const { membership } = useProject();
   const projects = useProjects();
@@ -30,39 +32,39 @@ export function ProjectsPage() {
   return (
     <>
       <PageHeader
-        title="Projects"
-        description="The projects you can access. Everything else in the console is scoped to the active one."
+        title={t("projects.title")}
+        description={t("projects.description")}
         actions={
           <Button onClick={() => setCreating(true)}>
             <Plus aria-hidden="true" />
-            Create project
+            {t("projects.create")}
           </Button>
         }
       />
 
       {projects.isPending ? (
-        <ListSkeleton label="Loading projects" />
+        <ListSkeleton label={t("projects.loading")} />
       ) : projects.isError ? (
-        <QueryErrorState title="Projects couldn't load" error={projects.error} onRetry={() => void projects.refetch()} />
+        <QueryErrorState title={t("projects.loadFailed")} error={projects.error} onRetry={() => void projects.refetch()} />
       ) : projects.data.data.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
-          title="No projects yet"
-          description="Create your first project to start issuing API keys and connecting providers."
-          action={<Button onClick={() => setCreating(true)}>Create project</Button>}
+          title={t("projects.emptyTitle")}
+          description={t("projects.emptyDescription")}
+          action={<Button onClick={() => setCreating(true)}>{t("projects.create")}</Button>}
         />
       ) : (
         <div className="rounded-md border border-line bg-surface">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Your role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>{t("projects.cols.name")}</TableHead>
+                <TableHead>{t("projects.cols.slug")}</TableHead>
+                <TableHead>{t("projects.cols.role")}</TableHead>
+                <TableHead>{t("projects.cols.status")}</TableHead>
+                <TableHead>{t("projects.cols.created")}</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("projects.cols.actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -77,14 +79,14 @@ export function ProjectsPage() {
                       {project.name}
                       {active ? (
                         <Badge tone="primary" className="ml-2">
-                          Active
+                          {t("projects.active")}
                         </Badge>
                       ) : null}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-ink-muted">{project.slug}</TableCell>
-                    <TableCell>{role ?? "—"}</TableCell>
+                    <TableCell>{role ? tLoose("roles", role) : "—"}</TableCell>
                     <TableCell>
-                      <Badge tone={project.status === "active" ? "success" : "neutral"}>{project.status}</Badge>
+                      <Badge tone={project.status === "active" ? "success" : "neutral"}>{tLoose("status", project.status)}</Badge>
                     </TableCell>
                     <TableCell>
                       <DateTime value={project.created_at} />
@@ -95,22 +97,22 @@ export function ProjectsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            aria-label={`Switch to ${project.name}`}
+                            aria-label={t("projects.switchTo", { name: project.name })}
                             onClick={() => selectProject(project.id)}
                           >
-                            Switch
+                            {t("projects.switch")}
                           </Button>
                         )}
                         <GatedButton
                           variant="ghost"
                           size="sm"
-                          aria-label={`Settings for ${project.name}`}
+                          aria-label={t("projects.settingsFor", { name: project.name })}
                           allowed={mayManage}
                           reason={deniedReason("projects:manage", role)}
                           onClick={() => setRenaming(project)}
                         >
                           <Settings2 aria-hidden="true" />
-                          Settings
+                          {t("projects.settings")}
                         </GatedButton>
                       </div>
                     </TableCell>
@@ -120,7 +122,7 @@ export function ProjectsPage() {
             </TableBody>
           </Table>
           {projects.data.has_more ? (
-            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">Showing the first projects only.</p>
+            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">{t("projects.firstOnly")}</p>
           ) : null}
         </div>
       )}

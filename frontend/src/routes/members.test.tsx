@@ -41,7 +41,7 @@ describe("Members screen", () => {
       expect(within(table).getByRole("button", { name: `Remove ${name}` })).toBeEnabled();
     }
     expect(screen.getByRole("button", { name: "Add member" })).toBeEnabled();
-    const ownerOption = within(screen.getByRole("combobox", { name: "Role for Davi Rocha" })).getByRole("option", { name: "owner" });
+    const ownerOption = within(screen.getByRole("combobox", { name: "Role for Davi Rocha" })).getByRole("option", { name: "Owner" });
     expect(ownerOption).toBeEnabled();
     await expectNoAxeViolations(container);
   });
@@ -58,7 +58,7 @@ describe("Members screen", () => {
     // ...other rows stay editable, but the owner role cannot be handed out.
     expect(within(table).getByRole("combobox", { name: "Role for Davi Rocha" })).toBeEnabled();
     expect(within(table).getByRole("button", { name: "Remove Davi Rocha" })).toBeEnabled();
-    const ownerOption = within(screen.getByRole("combobox", { name: "Role for Davi Rocha" })).getByRole("option", { name: "owner" });
+    const ownerOption = within(screen.getByRole("combobox", { name: "Role for Davi Rocha" })).getByRole("option", { name: /^Owner/ });
     expect(ownerOption).toBeDisabled();
     expect(screen.getByRole("button", { name: "Add member" })).toBeEnabled();
   });
@@ -71,7 +71,7 @@ describe("Members screen", () => {
     expect(within(table).queryByRole("combobox")).not.toBeInTheDocument();
     expect(within(table).queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add member" })).toBeDisabled();
-    expect(screen.getByText(/Your role \(viewer\) can't/)).toBeInTheDocument();
+    expect(screen.getByText(/Your role \(Viewer\) can't/)).toBeInTheDocument();
     await expectNoAxeViolations(container);
   });
 

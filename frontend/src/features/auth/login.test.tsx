@@ -151,6 +151,8 @@ describe("login page", () => {
     await screen.findByLabelText("Email");
 
     await user.tab();
+    expect(screen.getByRole("button", { name: "Language: English" })).toHaveFocus();
+    await user.tab();
     expect(screen.getByLabelText("Email")).toHaveFocus();
     await user.tab();
     expect(screen.getByLabelText("Password")).toHaveFocus();
@@ -206,9 +208,9 @@ describe("demo operator picker", () => {
     expect(within(list).getByRole("heading", { name: "Ana Souza" })).toBeInTheDocument();
     expect(within(list).getByText("bruno@example.test")).toBeInTheDocument();
     const anaProjects = within(list).getByRole("list", { name: "Projects of Ana Souza" });
-    expect(within(anaProjects).getByText("owner")).toBeInTheDocument();
-    expect(within(anaProjects).getByText("viewer")).toBeInTheDocument();
-    expect(within(within(list).getByRole("list", { name: "Projects of Bruno Lima" })).getByText("finance")).toBeInTheDocument();
+    expect(within(anaProjects).getByText("Owner")).toBeInTheDocument();
+    expect(within(anaProjects).getByText("Viewer")).toBeInTheDocument();
+    expect(within(within(list).getByRole("list", { name: "Projects of Bruno Lima" })).getByText("Finance")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue as Bruno Lima" })).toBeEnabled();
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     await expectNoAxeViolations(container);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useLocale } from "../i18n";
 import { cn } from "../lib/cn";
 import { formatDateTime, formatRelative, parseIsoInstant, type DateTimeOptions } from "../lib/datetime";
 
@@ -11,9 +12,10 @@ interface DateTimeProps extends DateTimeOptions {
 
 /** Absolute time in the operator's locale with a visible timezone label. */
 export function DateTime({ value, locale, timeZone, className }: DateTimeProps) {
+  const current = useLocale().locale;
   let formatted;
   try {
-    formatted = formatDateTime(value, { locale, timeZone });
+    formatted = formatDateTime(value, { locale: locale ?? current, timeZone });
   } catch {
     return <span className={cn("text-ink-faint", className)}>&mdash;</span>;
   }
@@ -35,6 +37,7 @@ interface RelativeTimeProps {
 
 /** "3 minutes ago": keeps itself fresh; hover (title) shows the absolute time and zone. */
 export function RelativeTime({ value, locale, className, refreshMs = 30_000 }: RelativeTimeProps) {
+  const current = useLocale().locale;
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     if (refreshMs <= 0) return;
@@ -46,8 +49,8 @@ export function RelativeTime({ value, locale, className, refreshMs = 30_000 }: R
   let title: string;
   try {
     parseIsoInstant(value);
-    text = formatRelative(value, now, locale);
-    const absolute = formatDateTime(value, { locale });
+    text = formatRelative(value, now, locale ?? current);
+    const absolute = formatDateTime(value, { locale: locale ?? current });
     title = `${absolute.text} ${absolute.zone}`.trim();
   } catch {
     return <span className={cn("text-ink-faint", className)}>&mdash;</span>;

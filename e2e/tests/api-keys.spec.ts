@@ -30,7 +30,7 @@ test.describe("API keys", () => {
     await expect(keys.issuedKey).toHaveCount(0);
 
     await keys.revoke(name);
-    await expect(keys.row(name)).toContainText(/revoked/i);
+    await expect(keys.row(name)).toContainText(/revogad/i);
     await expect(keys.revokeButton(name)).toHaveCount(0);
   });
 });

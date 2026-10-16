@@ -6,9 +6,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
 import { useToast } from "../../components/ui/use-toast";
+import { useI18n } from "../../i18n";
 import { fieldErrorsOf } from "./errors";
 import { useAddMember } from "./members-api";
-import { isRole, ROLES, ROLE_SUMMARY, type Role } from "./roles";
+import { isRole, ROLES, type Role } from "./roles";
 
 export function AddMemberDialog({
   open,
@@ -33,6 +34,7 @@ export function AddMemberDialog({
 // The form lives inside the content so closing the dialog unmounts it and clears the fields and errors.
 function AddMemberForm({ projectId, mayGrantOwner, onDone }: { projectId: string; mayGrantOwner: boolean; onDone: () => void }) {
   const toast = useToast();
+  const { t, tLoose } = useI18n();
   const add = useAddMember(projectId);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("viewer");
@@ -44,13 +46,13 @@ function AddMemberForm({ projectId, mayGrantOwner, onDone }: { projectId: string
       { email: email.trim(), role },
       {
         onSuccess: (member) => {
-          toast({ tone: "success", title: "Member added", description: `${member.display_name} is now ${member.role}.` });
+          toast({ tone: "success", title: t("members.added"), description: t("members.roleChangedDescription", { name: member.display_name, role: tLoose("roles", member.role) }) });
           onDone();
         },
         onError: (error) => {
           // Field problems (unknown email, already a member) stay on the form; a 403 or anything else is also a toast.
           const { form: message } = fieldErrorsOf(error);
-          if (message !== null) toast({ tone: "danger", title: "Couldn't add the member", description: message });
+          if (message !== null) toast({ tone: "danger", title: t("members.addFailed"), description: message });
         },
       },
     );
@@ -59,13 +61,13 @@ function AddMemberForm({ projectId, mayGrantOwner, onDone }: { projectId: string
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Add member</DialogTitle>
-        <DialogDescription>The person needs an operator account already. Enter the email they sign in with.</DialogDescription>
+        <DialogTitle>{t("members.add")}</DialogTitle>
+        <DialogDescription>{t("members.addDescription")}</DialogDescription>
       </DialogHeader>
-      <Field label="Email" error={fields.email}>
+      <Field label={t("members.emailLabel")} error={fields.email}>
         <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="off" required />
       </Field>
-      <Field label="Role" error={fields.role} hint={ROLE_SUMMARY[role]}>
+      <Field label={t("members.roleLabel")} error={fields.role} hint={t(`roles.summary.${role}`)}>
         <Select
           value={role}
           onChange={(event) => {
@@ -74,8 +76,8 @@ function AddMemberForm({ projectId, mayGrantOwner, onDone }: { projectId: string
         >
           {ROLES.map((item) => (
             <option key={item} value={item} disabled={item === "owner" && !mayGrantOwner}>
-              {item}
-              {item === "owner" && !mayGrantOwner ? " (owners only)" : ""}
+              {t(`roles.${item}`)}
+              {item === "owner" && !mayGrantOwner ? ` ${t("members.ownersOnly")}` : ""}
             </option>
           ))}
         </Select>
@@ -87,10 +89,10 @@ function AddMemberForm({ projectId, mayGrantOwner, onDone }: { projectId: string
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={add.isPending || email.trim() === ""}>
-          {add.isPending ? "Adding…" : "Add member"}
+          {add.isPending ? t("members.adding") : t("members.add")}
         </Button>
       </DialogFooter>
     </form>

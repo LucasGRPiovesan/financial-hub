@@ -44,7 +44,7 @@ export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSecti
 }
 
 export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-line hover:bg-surface-sunken", className)} {...props} />;
+  return <tr className={cn("motion-ui border-b border-line hover:bg-surface-sunken", className)} {...props} />;
 }
 
 interface CellAlign {

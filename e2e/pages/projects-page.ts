@@ -5,7 +5,7 @@ export class ProjectsPage {
 
   async goto(): Promise<void> {
     await this.page.goto("/projects");
-    await expect(this.page.getByRole("heading", { level: 1, name: "Projects" })).toBeVisible();
+    await expect(this.page.getByRole("heading", { level: 1, name: "Projetos" })).toBeVisible();
   }
 
   row(projectName: string): Locator {
@@ -13,11 +13,11 @@ export class ProjectsPage {
   }
 
   async create(name: string, slug: string): Promise<void> {
-    await this.page.getByRole("button", { name: "Create project" }).first().click();
-    const dialog = this.page.getByRole("dialog", { name: "Create project" });
-    await dialog.getByLabel("Name").fill(name);
+    await this.page.getByRole("button", { name: "Criar projeto" }).first().click();
+    const dialog = this.page.getByRole("dialog", { name: "Criar projeto" });
+    await dialog.getByLabel("Nome").fill(name);
     await dialog.getByLabel("Slug").fill(slug);
-    await dialog.getByRole("button", { name: "Create project" }).click();
+    await dialog.getByRole("button", { name: "Criar projeto" }).click();
     await expect(dialog).toBeHidden();
   }
 }

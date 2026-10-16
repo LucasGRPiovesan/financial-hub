@@ -6,11 +6,10 @@ import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { useToast } from "../../components/ui/use-toast";
+import { useT } from "../../i18n";
 import { selectProject } from "../../lib/project-selection";
 import { useCreateProject, useUpdateProject } from "./api";
 import { fieldErrorsOf } from "./errors";
-
-const SLUG_HINT = "Lowercase letters, digits and hyphens. Used in URLs; can't be changed later.";
 
 export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
@@ -24,6 +23,7 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
 
 // The form lives inside the content so closing the dialog unmounts it and clears the fields and errors.
 function CreateProjectForm({ onDone }: { onDone: () => void }) {
+  const t = useT();
   const toast = useToast();
   const create = useCreateProject();
   const [slug, setSlug] = useState("");
@@ -37,10 +37,10 @@ function CreateProjectForm({ onDone }: { onDone: () => void }) {
       {
         onSuccess: (project) => {
           selectProject(project.id);
-          toast({ tone: "success", title: "Project created", description: `${project.name} is now your active project.` });
+          toast({ tone: "success", title: t("projects.created"), description: t("projects.createdDescription", { name: project.name }) });
           onDone();
         },
-        onError: () => toast({ tone: "danger", title: "Couldn't create the project" }),
+        onError: () => toast({ tone: "danger", title: t("projects.createFailed") }),
       },
     );
   }
@@ -48,13 +48,13 @@ function CreateProjectForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Create project</DialogTitle>
-        <DialogDescription>You'll be its owner.</DialogDescription>
+        <DialogTitle>{t("projects.create")}</DialogTitle>
+        <DialogDescription>{t("projects.createDescription")}</DialogDescription>
       </DialogHeader>
-      <Field label="Name" error={fields.name}>
+      <Field label={t("projects.nameLabel")} error={fields.name}>
         <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" required />
       </Field>
-      <Field label="Slug" error={fields.slug} hint={SLUG_HINT}>
+      <Field label={t("projects.slugLabel")} error={fields.slug} hint={t("projects.slugHint")}>
         <Input value={slug} onChange={(event) => setSlug(event.target.value)} autoComplete="off" required />
       </Field>
       {form ? (
@@ -64,10 +64,10 @@ function CreateProjectForm({ onDone }: { onDone: () => void }) {
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? "Creating…" : "Create project"}
+          {create.isPending ? t("projects.creating") : t("projects.create")}
         </Button>
       </DialogFooter>
     </form>
@@ -83,6 +83,7 @@ export function RenameProjectDialog({ project, onClose }: { project: ProjectOut 
 }
 
 function RenameProjectForm({ project, onDone }: { project: ProjectOut; onDone: () => void }) {
+  const t = useT();
   const toast = useToast();
   const update = useUpdateProject(project.id);
   const [name, setName] = useState(project.name);
@@ -94,10 +95,10 @@ function RenameProjectForm({ project, onDone }: { project: ProjectOut; onDone: (
       { name: name.trim() },
       {
         onSuccess: () => {
-          toast({ tone: "success", title: "Project renamed" });
+          toast({ tone: "success", title: t("projects.renamed") });
           onDone();
         },
-        onError: () => toast({ tone: "danger", title: "Couldn't rename the project" }),
+        onError: () => toast({ tone: "danger", title: t("projects.renameFailed") }),
       },
     );
   }
@@ -105,10 +106,10 @@ function RenameProjectForm({ project, onDone }: { project: ProjectOut; onDone: (
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Project settings</DialogTitle>
-        <DialogDescription>Rename {project.slug}.</DialogDescription>
+        <DialogTitle>{t("projects.settingsTitle")}</DialogTitle>
+        <DialogDescription>{t("projects.renameDescription", { slug: project.slug })}</DialogDescription>
       </DialogHeader>
-      <Field label="Name" error={fields.name}>
+      <Field label={t("projects.nameLabel")} error={fields.name}>
         <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" required />
       </Field>
       {form ? (
@@ -118,10 +119,10 @@ function RenameProjectForm({ project, onDone }: { project: ProjectOut; onDone: (
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={update.isPending}>
-          {update.isPending ? "Saving…" : "Save"}
+          {update.isPending ? t("projects.saving") : t("projects.save")}
         </Button>
       </DialogFooter>
     </form>

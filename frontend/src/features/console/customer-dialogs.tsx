@@ -8,8 +8,9 @@ import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
 import { useToast } from "../../components/ui/use-toast";
+import { t, useT } from "../../i18n";
 import { documentError, externalRefError, type CustomerKind } from "../../lib/br-document";
-import { isKind, KIND_LABEL } from "./customer-kinds";
+import { isKind, kindLabel } from "./customer-kinds";
 import { useAnonymizeCustomer, useUpsertCustomer } from "./customers-api";
 import { fieldErrorsOf } from "./errors";
 
@@ -47,7 +48,7 @@ function parseMetadata(text: string): { value: Record<string, unknown>; error: s
   } catch {
     // fall through to the message below
   }
-  return { value: {}, error: 'Enter a JSON object, for example {"plan": "pro"}.' };
+  return { value: {}, error: t("customers.metadataInvalid") };
 }
 
 function validate(state: FormState, editing: boolean): Record<string, string> {
@@ -56,13 +57,13 @@ function validate(state: FormState, editing: boolean): Record<string, string> {
     const refError = externalRefError(state.externalRef.trim());
     if (refError) errors.external_ref = refError;
   }
-  if (state.name.trim() === "") errors.name = "Enter the customer's name.";
-  else if (state.name.trim().length > 200) errors.name = "Use at most 200 characters.";
+  if (state.name.trim() === "") errors.name = t("customers.nameRequired");
+  else if (state.name.trim().length > 200) errors.name = t("customers.nameTooLong");
   if (state.document.trim() !== "") {
     const error = documentError(state.document, state.kind);
     if (error) errors.document = error;
   }
-  if (state.email.trim() !== "" && !/^[^\s@]+@[^\s@]+$/.test(state.email.trim())) errors.email = "Enter a valid email address.";
+  if (state.email.trim() !== "" && !/^[^\s@]+@[^\s@]+$/.test(state.email.trim())) errors.email = t("customers.emailInvalid");
   const metadata = parseMetadata(state.metadata);
   if (metadata.error) errors.metadata = metadata.error;
   return errors;
@@ -104,6 +105,7 @@ function CustomerForm({
   onSaved: (customer: CustomerOut) => void;
 }) {
   const toast = useToast();
+  const tr = useT();
   const { upsert, isPending } = useUpsertCustomer(projectId);
   const editing = customer !== null;
   const hasDocument = customer?.document_masked != null;
@@ -140,13 +142,13 @@ function CustomerForm({
       const saved = await upsert(state.externalRef.trim(), request);
       // The document was sent once; forget it before anything else renders.
       setState((current) => ({ ...current, document: "" }));
-      toast({ tone: "success", title: editing ? "Customer updated" : "Customer saved", description: saved.name });
+      toast({ tone: "success", title: editing ? tr("customers.updated") : tr("customers.saved"), description: saved.name });
       onSaved(saved);
     } catch (error) {
       const mapped = fieldErrorsOf(error);
       setServerErrors(mapped);
       setState((current) => ({ ...current, document: "" }));
-      if (mapped.form !== null) toast({ tone: "danger", title: "Couldn't save the customer", description: mapped.form });
+      if (mapped.form !== null) toast({ tone: "danger", title: tr("customers.saveFailed"), description: mapped.form });
     }
   }
 
@@ -155,14 +157,12 @@ function CustomerForm({
   return (
     <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>{editing ? "Edit customer" : "New customer"}</DialogTitle>
+        <DialogTitle>{editing ? tr("customers.formEditTitle") : tr("customers.formNewTitle")}</DialogTitle>
         <DialogDescription>
-          {editing
-            ? "Saving updates the customer identified by this reference."
-            : "Creates the customer, or updates it if the reference already exists."}
+          {editing ? tr("customers.formEditDescription") : tr("customers.formNewDescription")}
         </DialogDescription>
       </DialogHeader>
-      <Field label="External reference" error={show("external_ref")} hint="The id your own system uses for this customer. Can't be changed later.">
+      <Field label={tr("customers.byExternalRef")} error={show("external_ref")} hint={tr("customers.refHint")}>
         <Input
           value={state.externalRef}
           onChange={(event) => set("externalRef", event.target.value)}
@@ -172,14 +172,14 @@ function CustomerForm({
           className="font-mono"
         />
       </Field>
-      <Field label="Name" error={show("name")}>
+      <Field label={tr("customers.rows.name")} error={show("name")}>
         <Input value={state.name} onChange={(event) => set("name", event.target.value)} autoComplete="off" />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label="Type"
+          label={tr("customers.rows.type")}
           error={show("kind")}
-          hint={hasDocument ? "Fixed once a document is on file." : undefined}
+          hint={hasDocument ? tr("customers.typeHintFixed") : undefined}
         >
           <Select
             value={state.kind}
@@ -188,9 +188,9 @@ function CustomerForm({
               if (isKind(event.target.value)) set("kind", event.target.value);
             }}
           >
-            {(Object.keys(KIND_LABEL) as CustomerKind[]).map((kind) => (
+            {(["individual", "company"] as const).map((kind) => (
               <option key={kind} value={kind}>
-                {KIND_LABEL[kind]}
+                {kindLabel(kind)}
               </option>
             ))}
           </Select>
@@ -198,7 +198,7 @@ function CustomerForm({
         <Field
           label={state.kind === "individual" ? "CPF" : "CNPJ"}
           error={show("document")}
-          hint={hasDocument ? `On file: ${customer?.document_masked ?? ""}. Leave blank to keep it.` : "Optional. Never shown again after you save."}
+          hint={hasDocument ? tr("customers.docOnFile", { masked: customer?.document_masked ?? "" }) : tr("customers.docOptional")}
         >
           <Input
             value={state.document}
@@ -211,14 +211,14 @@ function CustomerForm({
         </Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Email" error={show("email")}>
+        <Field label={tr("customers.rows.email")} error={show("email")}>
           <Input type="email" value={state.email} onChange={(event) => set("email", event.target.value)} autoComplete="off" />
         </Field>
-        <Field label="Phone" error={show("phone")}>
+        <Field label={tr("customers.rows.phone")} error={show("phone")}>
           <Input type="tel" value={state.phone} onChange={(event) => set("phone", event.target.value)} autoComplete="off" />
         </Field>
       </div>
-      <Field label="Metadata" error={show("metadata")} hint="Optional JSON object with anything your system wants to keep alongside.">
+      <Field label={tr("customers.metadata")} error={show("metadata")} hint={tr("customers.metadataHint")}>
         <Textarea value={state.metadata} onChange={(event) => set("metadata", event.target.value)} spellCheck={false} className="font-mono" />
       </Field>
       {serverErrors.form ? (
@@ -228,10 +228,10 @@ function CustomerForm({
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
+          {tr("common.cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving…" : editing ? "Save changes" : "Save customer"}
+          {isPending ? tr("customers.saving") : editing ? tr("customers.saveChanges") : tr("customers.saveCustomer")}
         </Button>
       </DialogFooter>
     </form>
@@ -272,6 +272,7 @@ function AnonymizeForm({
   onDone: (customer: CustomerOut) => void;
 }) {
   const toast = useToast();
+  const tr = useT();
   const { anonymize, isPending } = useAnonymizeCustomer(projectId);
   const [typed, setTyped] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
@@ -283,23 +284,20 @@ function AnonymizeForm({
     setFailure(null);
     try {
       const result = await anonymize(customer.id);
-      toast({ tone: "success", title: "Customer anonymized", description: `${customer.external_ref} no longer holds personal data.` });
+      toast({ tone: "success", title: tr("customers.anonymizedToast"), description: tr("customers.anonymizedToastDescription", { ref: customer.external_ref }) });
       onDone(result);
     } catch (error) {
-      setFailure(fieldErrorsOf(error).form ?? "The customer could not be anonymized.");
+      setFailure(fieldErrorsOf(error).form ?? tr("customers.anonymizeFailed"));
     }
   }
 
   return (
     <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4">
       <DialogHeader>
-        <DialogTitle>Anonymize customer</DialogTitle>
-        <DialogDescription>
-          This permanently erases the name, email, phone, document and metadata of {customer.name}. The reference and the
-          history that points to it stay. It can't be undone.
-        </DialogDescription>
+        <DialogTitle>{tr("customers.anonymizeTitle")}</DialogTitle>
+        <DialogDescription>{tr("customers.anonymizeDescription", { name: customer.name })}</DialogDescription>
       </DialogHeader>
-      <Field label={`Type ${customer.external_ref} to confirm`}>
+      <Field label={tr("customers.typeToConfirm", { ref: customer.external_ref })}>
         <Input
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
@@ -315,10 +313,10 @@ function AnonymizeForm({
       ) : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
-          Cancel
+          {tr("common.cancel")}
         </Button>
         <Button type="submit" variant="danger" disabled={!matches || isPending}>
-          {isPending ? "Anonymizing…" : "Anonymize customer"}
+          {isPending ? tr("customers.anonymizing") : tr("customers.anonymizeTitle")}
         </Button>
       </DialogFooter>
     </form>

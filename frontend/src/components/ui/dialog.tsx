@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";
 
+import { useT } from "../../i18n";
 import { cn } from "../../lib/cn";
 
 export const Dialog = DialogPrimitive.Root;
@@ -14,20 +15,21 @@ export const SheetClose = DialogPrimitive.Close;
 
 function Overlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
-    <DialogPrimitive.Overlay className={cn("fixed inset-0 z-40 animate-fade-in bg-overlay", className)} {...props} />
+    <DialogPrimitive.Overlay className={cn("fixed inset-0 z-40 bg-overlay data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in", className)} {...props} />
   );
 }
 
 function CloseButton({ className }: { className?: string }) {
+  const t = useT();
   return (
     <DialogPrimitive.Close
       className={cn(
-        "absolute top-3 right-3 grid size-8 place-items-center rounded-sm text-ink-muted hover:bg-surface-sunken hover:text-ink",
+        "motion-ui absolute top-3 right-3 grid size-8 place-items-center rounded-sm text-ink-muted hover:bg-surface-sunken hover:text-ink",
         className,
       )}
     >
       <X className="size-4" aria-hidden="true" />
-      <span className="sr-only">Close</span>
+      <span className="sr-only">{t("common.close")}</span>
     </DialogPrimitive.Close>
   );
 }
@@ -38,7 +40,7 @@ export function DialogContent({ className, children, ...props }: ComponentProps<
       <Overlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain max-w-md -translate-x-1/2 -translate-y-1/2 animate-pop-in flex-col gap-4 rounded-lg border border-line bg-surface p-6 text-ink shadow-overlay",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain max-w-md -translate-x-1/2 -translate-y-1/2 flex-col data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in gap-4 rounded-lg border border-line bg-surface p-6 text-ink shadow-overlay",
           className,
         )}
         {...props}
@@ -55,8 +57,8 @@ const sheetVariants = cva(
   {
     variants: {
       side: {
-        left: "left-0 animate-slide-in-left",
-        right: "right-0 animate-slide-in-right border-l border-line bg-surface text-ink",
+        left: "left-0 data-[state=closed]:animate-slide-out-left data-[state=open]:animate-slide-in-left",
+        right: "right-0 data-[state=closed]:animate-slide-out-right data-[state=open]:animate-slide-in-right border-l border-line bg-surface text-ink",
       },
     },
     defaultVariants: { side: "right" },

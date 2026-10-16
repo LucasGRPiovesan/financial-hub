@@ -7,15 +7,15 @@ export class Shell {
   constructor(private readonly page: Page) {}
 
   projectSwitcher(name?: string): Locator {
-    return this.page.getByRole("button", { name: name ? `Project: ${name}` : /^Project:/ });
+    return this.page.getByRole("button", { name: name ? `Projeto: ${name}` : /^Projeto:/ });
   }
 
   operatorMenu(persona: Persona): Locator {
-    return this.page.getByRole("button", { name: `Operator menu: ${persona.displayName}` });
+    return this.page.getByRole("button", { name: `Menu do operador: ${persona.displayName}` });
   }
 
   themeMenu(): Locator {
-    return this.page.getByRole("button", { name: /^Theme/ });
+    return this.page.getByRole("button", { name: /^Tema/ });
   }
 
   async expectSignedInAs(persona: Persona): Promise<void> {
@@ -24,7 +24,7 @@ export class Shell {
 
   async signOut(persona: Persona): Promise<void> {
     await this.operatorMenu(persona).click();
-    await this.page.getByRole("menuitem", { name: "Sign out" }).click();
+    await this.page.getByRole("menuitem", { name: "Sair" }).click();
   }
 
   async openSection(label: string): Promise<void> {

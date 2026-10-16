@@ -8,7 +8,7 @@ export class LoginPage {
 
   async goto(): Promise<void> {
     await this.page.goto("/login");
-    await expect(this.page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+    await expect(this.page.getByRole("heading", { name: /entrar/i })).toBeVisible();
   }
 
   /** The control that selects one operator (a button or a radio named after the operator). */

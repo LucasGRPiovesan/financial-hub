@@ -7,6 +7,7 @@ import { ToastProvider } from "../components/ui/toast";
 import type { MeResponse } from "../features/auth/auth-api";
 import { installUnauthorizedRedirect } from "../features/auth/session";
 import { clearCsrfToken, setUnauthorizedHandler } from "../lib/api";
+import { setLocale } from "../lib/locale";
 import { createAppRouter } from "../router";
 
 export const ME: MeResponse = {
@@ -46,6 +47,8 @@ export function resetApiState() {
   clearCsrfToken();
   setUnauthorizedHandler(null);
   window.localStorage.clear();
+  // Most suites assert the English copy; the i18n suites cover the pt-BR default and the switch.
+  setLocale("en-US");
 }
 
 export function renderApp(initialPath: string) {

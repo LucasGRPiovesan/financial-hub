@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { useT } from "../i18n";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   error,
   tone = "danger",
 }: ConfirmDialogProps) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
       <DialogContent>
@@ -42,10 +44,10 @@ export function ConfirmDialog({
         ) : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={pending}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant={tone} onClick={onConfirm} disabled={pending}>
-            {pending ? "Working…" : confirmLabel}
+            {pending ? t("common.working") : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

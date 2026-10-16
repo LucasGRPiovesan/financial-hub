@@ -1,3 +1,5 @@
+import { camelKey, t, tLoose, type MessageKey } from "../../i18n";
+
 /*
  * Mirror of the backend's role -> permission table (backend/.../identity/domain/rbac.py), used ONLY to decide
  * which controls to offer. The API enforces every permission itself; a mismatch here can hide or show a
@@ -42,31 +44,21 @@ export function isOwner(role: string | null | undefined): boolean {
 
 /** Why a control is unavailable, for tooltips and helper text. */
 export function deniedReason(permission: Permission, role: string | null | undefined): string {
-  const action: Record<Permission, string> = {
-    "projects:manage": "change project settings",
-    "members:read": "see members",
-    "members:manage": "manage members",
-    "api_keys:manage": "manage API keys",
-    "integrations:read": "view provider accounts",
-    "integrations:manage": "manage provider accounts",
-    "ledger:read": "read the ledger",
-    "customers:read": "see customers",
-    "customers:manage": "create, change or anonymize customers",
-    "audit:read": "read the audit log",
-  };
-  return `Your role${role ? ` (${role})` : ""} can't ${action[permission]}. Ask a project owner or admin.`;
+  const action = t(`permissions.actions.${camelKey(permission)}` as MessageKey);
+  if (!role) return t("permissions.deniedNoRole", { action });
+  return t("permissions.denied", { role: tLoose("roles", role), action });
 }
 
 /** Scopes an API key can be granted (docs/SECURITY.md 3.1). Administrative permissions are never grantable. */
-export const GRANTABLE_API_KEY_SCOPES: readonly { value: string; description: string }[] = [
-  { value: "projects:read", description: "Read the project" },
-  { value: "customers:read", description: "Read customers" },
-  { value: "customers:write", description: "Create and change customers" },
-  { value: "ledger:read", description: "Read accounts, entries and balances" },
-  { value: "payments:read", description: "Read payments" },
-  { value: "payments:write", description: "Create payments" },
-  { value: "payments:refund", description: "Refund payments" },
-  { value: "billing:read", description: "Read billing data" },
-  { value: "billing:write", description: "Change billing data" },
-  { value: "events:read", description: "Read events" },
+export const GRANTABLE_API_KEY_SCOPES: readonly { value: string; descriptionKey: MessageKey }[] = [
+  { value: "projects:read", descriptionKey: "apiKeyScope.projectsRead" },
+  { value: "customers:read", descriptionKey: "apiKeyScope.customersRead" },
+  { value: "customers:write", descriptionKey: "apiKeyScope.customersWrite" },
+  { value: "ledger:read", descriptionKey: "apiKeyScope.ledgerRead" },
+  { value: "payments:read", descriptionKey: "apiKeyScope.paymentsRead" },
+  { value: "payments:write", descriptionKey: "apiKeyScope.paymentsWrite" },
+  { value: "payments:refund", descriptionKey: "apiKeyScope.paymentsRefund" },
+  { value: "billing:read", descriptionKey: "apiKeyScope.billingRead" },
+  { value: "billing:write", descriptionKey: "apiKeyScope.billingWrite" },
+  { value: "events:read", descriptionKey: "apiKeyScope.eventsRead" },
 ];

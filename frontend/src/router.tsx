@@ -103,12 +103,22 @@ function buildRouteTree() {
   return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, ...placeholderRoutes])]);
 }
 
+/**
+ * Cross-fade the page content between modules (the CSS in index.css keeps the sidebar and top bar still).
+ * Skipped for same-path changes and when the visitor asked for reduced motion.
+ */
+function viewTransitionTypes({ pathChanged }: { pathChanged: boolean }): string[] | false {
+  if (!pathChanged || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  return ["module"];
+}
+
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({
     routeTree: buildRouteTree(),
     context: { queryClient },
     history,
     defaultPreload: "intent",
+    defaultViewTransition: { types: viewTransitionTypes },
   });
 }
 

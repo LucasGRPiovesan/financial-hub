@@ -26,7 +26,7 @@ describe("API keys screen", () => {
     const row = (await screen.findByText("Server key")).closest("tr") as HTMLElement;
     expect(within(row).getByText("fh_test_ab12")).toBeInTheDocument();
     expect(within(row).getByText("ledger:read")).toBeInTheDocument();
-    expect(within(row).getByText("active")).toBeInTheDocument();
+    expect(within(row).getByText("Active")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Revoke Server key" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Revoke Old" })).not.toBeInTheDocument();
     await expectNoAxeViolations(container);
@@ -130,7 +130,7 @@ describe("API keys screen", () => {
     await user.click(screen.getByRole("button", { name: "Revoke Server key" }));
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke key" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: "Revoke Server key" })).not.toBeInTheDocument());
-    expect(screen.getByText("revoked")).toBeInTheDocument();
+    expect(screen.getByText("Revoked")).toBeInTheDocument();
   });
 
   it("hides key management from roles that cannot manage keys", async () => {

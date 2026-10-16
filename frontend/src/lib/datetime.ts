@@ -1,6 +1,6 @@
 /** The API sends ISO 8601 UTC timestamps; the console shows them in the console locale and the operator's zone. */
 
-import { UI_LOCALE } from "./locale";
+import { getLocale } from "./locale";
 
 export interface DateTimeOptions {
   locale?: string;
@@ -9,7 +9,7 @@ export interface DateTimeOptions {
 }
 
 function defaultLocale(): string {
-  return UI_LOCALE;
+  return getLocale();
 }
 
 export function operatorTimeZone(): string {

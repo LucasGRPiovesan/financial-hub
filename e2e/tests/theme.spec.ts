@@ -10,10 +10,10 @@ test.describe("theme", () => {
     test.fixme((await shell.themeMenu().count()) === 0, "TODO(top bar): no theme control in this build yet");
 
     await shell.themeMenu().click();
-    await page.getByRole("menuitemradio", { name: "Dark" }).click();
-    await expect(shell.themeMenu()).toHaveAccessibleName("Theme: Dark");
+    await page.getByRole("menuitemradio", { name: "Escuro" }).click();
+    await expect(shell.themeMenu()).toHaveAccessibleName("Tema: Escuro");
 
     await page.reload();
-    await expect(shell.themeMenu()).toHaveAccessibleName("Theme: Dark");
+    await expect(shell.themeMenu()).toHaveAccessibleName("Tema: Escuro");
   });
 });

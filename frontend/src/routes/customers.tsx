@@ -19,15 +19,15 @@ import { NoProjectState } from "../features/console/no-project";
 import { deniedReason } from "../features/console/permissions";
 import { ListSkeleton, QueryErrorState } from "../features/console/states";
 import { useProject } from "../features/console/use-project";
-
-const DESCRIPTION = "People and companies your payments belong to, identified by your own reference.";
+import { useI18n } from "../i18n";
 
 export function CustomersPage() {
+  const { t } = useI18n();
   const { membership, can } = useProject();
   if (!membership) {
     return (
       <>
-        <PageHeader title="Customers" description={DESCRIPTION} />
+        <PageHeader title={t("customers.title")} description={t("customers.description")} />
         <NoProjectState />
       </>
     );
@@ -35,8 +35,8 @@ export function CustomersPage() {
   if (!can("customers:read")) {
     return (
       <>
-        <PageHeader title="Customers" description={DESCRIPTION} />
-        <EmptyState icon={UserRound} title="No access to customers" description={deniedReason("customers:read", membership.role)} />
+        <PageHeader title={t("customers.title")} description={t("customers.description")} />
+        <EmptyState icon={UserRound} title={t("customers.noAccess")} description={deniedReason("customers:read", membership.role)} />
       </>
     );
   }
@@ -44,6 +44,7 @@ export function CustomersPage() {
 }
 
 function CustomersForProject({ projectId, role, mayManage }: { projectId: string; role: string; mayManage: boolean }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<CustomerFilter>(null);
   const [by, setBy] = useState<"external_ref" | "email">("external_ref");
   const [value, setValue] = useState("");
@@ -82,35 +83,35 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
 
   const header = (
     <PageHeader
-      title="Customers"
-      description={DESCRIPTION}
+      title={t("customers.title")}
+      description={t("customers.description")}
       actions={
         <GatedButton allowed={mayManage} reason={deniedReason("customers:manage", role)} onClick={startCreate}>
           <Plus aria-hidden="true" />
-          New customer
+          {t("customers.new")}
         </GatedButton>
       }
     />
   );
 
   const filterForm = (
-    <form onSubmit={applyFilter} role="search" aria-label="Filter customers" className="mb-4 flex flex-wrap items-end gap-2">
+    <form onSubmit={applyFilter} role="search" aria-label={t("customers.filterLabel")} className="mb-4 flex flex-wrap items-end gap-2">
       <div className="w-52">
         <label htmlFor="customer-filter-by" className="mb-1 block text-sm font-medium">
-          Filter by
+          {t("customers.filterBy")}
         </label>
         <Select
           id="customer-filter-by"
           value={by}
           onChange={(event) => setBy(event.target.value === "email" ? "email" : "external_ref")}
         >
-          <option value="external_ref">External reference</option>
-          <option value="email">Email</option>
+          <option value="external_ref">{t("customers.byExternalRef")}</option>
+          <option value="email">{t("customers.byEmail")}</option>
         </Select>
       </div>
       <div className="min-w-56 flex-1">
         <label htmlFor="customer-filter-value" className="mb-1 block text-sm font-medium">
-          Exact value
+          {t("customers.exactValue")}
         </label>
         <Input
           id="customer-filter-value"
@@ -123,12 +124,12 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
       </div>
       <Button type="submit" variant="secondary">
         <Search aria-hidden="true" />
-        Apply filter
+        {t("customers.applyFilter")}
       </Button>
       {filter ? (
         <Button type="button" variant="ghost" onClick={clearFilter}>
           <X aria-hidden="true" />
-          Clear filter
+          {t("customers.clearFilter")}
         </Button>
       ) : null}
     </form>
@@ -136,31 +137,31 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
 
   let body;
   if (customers.isPending) {
-    body = <ListSkeleton label="Loading customers" />;
+    body = <ListSkeleton label={t("customers.loading")} />;
   } else if (customers.isError) {
-    body = <QueryErrorState title="Couldn't load customers" error={customers.error} onRetry={() => void customers.refetch()} />;
+    body = <QueryErrorState title={t("customers.loadFailed")} error={customers.error} onRetry={() => void customers.refetch()} />;
   } else if (rows.length === 0) {
     body = filter ? (
       <EmptyState
         icon={Search}
-        title="No customer matches"
-        description={`Nothing has ${filter.by === "email" ? "this email" : "this external reference"}. Filters match the whole value, not part of it.`}
+        title={t("customers.noMatchTitle")}
+        description={filter.by === "email" ? t("customers.noMatchEmail") : t("customers.noMatchRef")}
         action={
           <Button variant="secondary" onClick={clearFilter}>
-            Clear filter
+            {t("customers.clearFilter")}
           </Button>
         }
       />
     ) : (
       <EmptyState
         icon={UserRound}
-        title="No customers yet"
-        description="Customers appear here when you create them in this screen or send them through the API."
+        title={t("customers.emptyTitle")}
+        description={t("customers.emptyDescription")}
         action={
           mayManage ? (
             <Button onClick={startCreate}>
               <Plus aria-hidden="true" />
-              New customer
+              {t("customers.new")}
             </Button>
           ) : undefined
         }
@@ -171,15 +172,15 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
       <>
         <div className="rounded-md border border-line bg-surface">
           <Table>
-            <caption className="sr-only">Customers</caption>
+            <caption className="sr-only">{t("customers.caption")}</caption>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>External reference</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Document</TableHead>
-                <TableHead>Updated</TableHead>
+                <TableHead>{t("customers.cols.externalRef")}</TableHead>
+                <TableHead>{t("customers.cols.name")}</TableHead>
+                <TableHead>{t("customers.cols.type")}</TableHead>
+                <TableHead>{t("customers.cols.email")}</TableHead>
+                <TableHead>{t("customers.cols.document")}</TableHead>
+                <TableHead>{t("customers.cols.updated")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -190,13 +191,13 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
                       type="button"
                       onClick={() => open(customer)}
                       className="rounded-xs font-mono text-sm font-medium text-primary underline-offset-2 hover:underline"
-                      aria-label={`Open ${customer.external_ref}`}
+                      aria-label={t("customers.openNamed", { ref: customer.external_ref })}
                     >
                       {customer.external_ref}
                     </button>
                   </TableCell>
                   <TableCell className={customer.anonymized ? "text-ink-muted italic" : undefined}>
-                    {customer.anonymized ? "Anonymized" : customer.name}
+                    {customer.anonymized ? t("customers.anonymized") : customer.name}
                   </TableCell>
                   <TableCell>
                     <Badge tone="neutral">{kindLabel(customer.kind)}</Badge>
@@ -213,18 +214,17 @@ function CustomersForProject({ projectId, role, mayManage }: { projectId: string
         </div>
         <div className="mt-4 flex items-center justify-between gap-3">
           <p className="text-sm text-ink-muted" aria-live="polite">
-            {rows.length} {rows.length === 1 ? "customer" : "customers"} loaded
-            {customers.hasNextPage ? ", more available" : ""}
+            {t(customers.hasNextPage ? "customers.loadedMore" : "customers.loaded", { count: rows.length })}
           </p>
           {customers.hasNextPage ? (
             <Button variant="secondary" onClick={() => void customers.fetchNextPage()} disabled={customers.isFetchingNextPage}>
-              {customers.isFetchingNextPage ? "Loading…" : "Load more"}
+              {customers.isFetchingNextPage ? t("customers.loadingMore") : t("customers.loadMore")}
             </Button>
           ) : null}
         </div>
         {customers.isFetchNextPageError ? (
           <p role="alert" className="mt-2 text-sm text-danger">
-            Couldn't load the next page. Try again.
+            {t("customers.nextPageFailed")}
           </p>
         ) : null}
       </>
@@ -292,37 +292,38 @@ function CustomerDetail({
   onEdit: () => void;
   onAnonymize: () => void;
 }) {
+  const { t } = useI18n();
   const metadata = Object.entries(customer.metadata);
   const locked = !mayManage || customer.anonymized;
-  const reason = customer.anonymized ? "An anonymized customer can't be changed." : deniedReason("customers:manage", role);
+  const reason = customer.anonymized ? t("customers.anonymizedLocked") : deniedReason("customers:manage", role);
   return (
     <>
       <div className="flex flex-col gap-1 pr-8">
         <DialogTitle className="break-all font-mono text-base">{customer.external_ref}</DialogTitle>
         <DialogDescription>
-          {customer.anonymized ? "Personal data was erased." : `${kindLabel(customer.kind)}, ${customer.name}`}
+          {customer.anonymized ? t("customers.erased") : `${kindLabel(customer.kind)}, ${customer.name}`}
         </DialogDescription>
         {customer.anonymized ? (
           <div>
-            <Badge tone="warning">Anonymized</Badge>
+            <Badge tone="warning">{t("customers.anonymized")}</Badge>
           </div>
         ) : null}
       </div>
 
       <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-4 gap-y-3 text-sm">
-        <Row label="Name" value={customer.anonymized ? null : customer.name} />
-        <Row label="Type" value={kindLabel(customer.kind)} />
-        <Row label="Document" value={customer.document_masked} mono />
-        <Row label="Email" value={customer.email} />
-        <Row label="Phone" value={customer.phone} />
+        <Row label={t("customers.rows.name")} value={customer.anonymized ? null : customer.name} />
+        <Row label={t("customers.rows.type")} value={kindLabel(customer.kind)} />
+        <Row label={t("customers.rows.document")} value={customer.document_masked} mono />
+        <Row label={t("customers.rows.email")} value={customer.email} />
+        <Row label={t("customers.rows.phone")} value={customer.phone} />
         <div className="contents">
-          <dt className="text-ink-muted">Created</dt>
+          <dt className="text-ink-muted">{t("customers.rows.created")}</dt>
           <dd>
             <DateTime value={customer.created_at} />
           </dd>
         </div>
         <div className="contents">
-          <dt className="text-ink-muted">Updated</dt>
+          <dt className="text-ink-muted">{t("customers.rows.updated")}</dt>
           <dd>
             <DateTime value={customer.updated_at} />
           </dd>
@@ -331,10 +332,10 @@ function CustomerDetail({
 
       <section aria-labelledby="customer-metadata-heading">
         <h3 id="customer-metadata-heading" className="mb-2 text-sm font-semibold">
-          Metadata
+          {t("customers.metadata")}
         </h3>
         {metadata.length === 0 ? (
-          <p className="text-sm text-ink-muted">No metadata.</p>
+          <p className="text-sm text-ink-muted">{t("customers.noMetadata")}</p>
         ) : (
           <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-sm border border-line bg-surface-sunken p-3 text-sm">
             {metadata.map(([key, item]) => (
@@ -349,10 +350,10 @@ function CustomerDetail({
 
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-line pt-4">
         <GatedButton allowed={!locked} reason={reason} onClick={onEdit}>
-          Edit customer
+          {t("customers.edit")}
         </GatedButton>
         <GatedButton allowed={!locked} reason={reason} variant="danger" onClick={onAnonymize}>
-          Anonymize
+          {t("customers.anonymize")}
         </GatedButton>
       </div>
     </>
@@ -360,10 +361,11 @@ function CustomerDetail({
 }
 
 function Row({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
+  const { t } = useI18n();
   return (
     <div className="contents">
       <dt className="text-ink-muted">{label}</dt>
-      <dd className={mono ? "font-mono" : "break-words"}>{value ?? <span className="text-ink-faint">Not set</span>}</dd>
+      <dd className={mono ? "font-mono" : "break-words"}>{value ?? <span className="text-ink-faint">{t("customers.notSet")}</span>}</dd>
     </div>
   );
 }

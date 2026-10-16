@@ -1,10 +1,12 @@
 import type { AuditRecordOut } from "../../api/generated/model";
+import { camelKey, hasMessage, t, tLoose, type MessageKey } from "../../i18n";
+import { getLocale } from "../../lib/locale";
 
 /** Operator display names by id (members plus the signed-in operator); anything missing falls back to generic wording. */
 export type OperatorNames = ReadonlyMap<string, string>;
 
 export interface ActivityLine {
-  /** One readable sentence: "Bruno Admin was added as admin". */
+  /** One readable sentence: "Bruno Admin was added as Admin". */
   sentence: string;
   /** Who did it, when known: a name, or a generic "the system" / "an operator" / "an API key". */
   actor: string;
@@ -21,68 +23,71 @@ function field(record: AuditRecordOut, side: Side, key: string): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
 }
 
-/** "member.role_changed" -> "Member role changed" for actions without a dedicated sentence. */
+/** "member.role_changed" -> "Member role changed": the English fallback for actions without a dedicated sentence. */
 export function humanizeAction(action: string): string {
   const words = action.replace(/[._]+/g, " ").trim();
   return words === "" ? "Activity recorded" : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-const PROVIDER_ACCOUNT_SENTENCES: Record<string, string> = {
-  created: "Provider account added",
-  credentials_replaced: "Provider account credentials replaced",
-  activated: "Provider account activated",
-  disabled: "Provider account disabled",
-  status_changed: "Provider account status changed",
-};
-
-function quoted(label: string, name: string | null, fallback: string, verb: string): string {
-  return name ? `${label} "${name}" ${verb}` : fallback;
+function unknownAction(action: string): string {
+  // Action codes are data; only English has a readable rendering of them, other languages show the code itself.
+  if (getLocale() === "en-US") return humanizeAction(action);
+  return action.trim() === "" ? t("activity.recorded") : t("activity.unknown", { action });
 }
 
 function sentenceFor(record: AuditRecordOut, names: OperatorNames): string {
   const { action } = record;
   const target = record.target_id ? names.get(record.target_id) : undefined;
   const name = field(record, "after", "name") ?? field(record, "before", "name");
+  const named = <K extends "customerCreated" | "customerUpdated" | "apiKeyCreated" | "apiKeyRevoked" | "projectCreated">(
+    kind: K,
+  ): string => (name ? t(`activity.${kind}Named`, { name }) : t(`activity.${kind}`));
 
   switch (action) {
     case "member.added": {
       const role = field(record, "after", "role");
-      if (!target && !role) return "Member added";
-      return `${target ?? "A member"} was added${role ? ` as ${role}` : ""}`;
+      if (!target && !role) return t("activity.memberAdded");
+      const who = target ?? t("activity.aMember");
+      return role ? t("activity.memberAddedAs", { who, role: tLoose("roles", role) }) : t("activity.memberAddedWho", { who });
     }
     case "member.role_changed": {
       const from = field(record, "before", "role");
       const to = field(record, "after", "role");
-      if (!to) return "Member role changed";
-      return `${target ?? "A member"} is now ${to}${from ? ` (was ${from})` : ""}`;
+      if (!to) return t("activity.roleChanged");
+      const who = target ?? t("activity.aMember");
+      return from
+        ? t("activity.roleChangedFrom", { who, role: tLoose("roles", to), from: tLoose("roles", from) })
+        : t("activity.roleChangedTo", { who, role: tLoose("roles", to) });
     }
     case "member.removed":
-      return target ? `${target} was removed from the project` : "Member removed";
+      return target ? t("activity.memberRemovedNamed", { who: target }) : t("activity.memberRemoved");
     case "customer.created":
-      return quoted("Customer", name, "Customer created", "was created");
+      return named("customerCreated");
     case "customer.updated":
-      return quoted("Customer", name, "Customer updated", "was updated");
+      return named("customerUpdated");
     case "customer.anonymized":
-      return "Customer anonymized";
+      return t("activity.customerAnonymized");
     case "api_key.created":
-      return quoted("API key", name, "API key created", "was created");
+      return named("apiKeyCreated");
     case "api_key.revoked":
-      return quoted("API key", name, "API key revoked", "was revoked");
+      return named("apiKeyRevoked");
     case "project.created":
-      return quoted("Project", name, "Project created", "was created");
+      return named("projectCreated");
     default: {
       if (action.startsWith("provider_account.")) {
-        return PROVIDER_ACCOUNT_SENTENCES[action.slice("provider_account.".length)] ?? "Provider account updated";
+        const kind = action.slice("provider_account.".length);
+        const key = `activity.providerAccount.${camelKey(kind)}`;
+        return hasMessage(getLocale(), key) ? t(key as MessageKey) : t("activity.providerAccount.updated");
       }
-      return humanizeAction(action);
+      return unknownAction(action);
     }
   }
 }
 
 function actorFor(record: AuditRecordOut, names: OperatorNames): string {
-  if (record.actor_type === "operator") return (record.actor_id ? names.get(record.actor_id) : undefined) ?? "an operator";
-  if (record.actor_type === "api_key") return "an API key";
-  return "the system";
+  if (record.actor_type === "operator") return (record.actor_id ? names.get(record.actor_id) : undefined) ?? t("activity.actors.operator");
+  if (record.actor_type === "api_key") return t("activity.actors.apiKey");
+  return t("activity.actors.system");
 }
 
 /** Turns an audit record into display text using only what the audit endpoint returns. */

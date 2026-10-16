@@ -8,6 +8,7 @@ import { initTheme, THEME_STORAGE_KEY } from "../../lib/theme";
 import { expectNoAxeViolations } from "../../test/axe";
 import { overviewData } from "../../test/console-mocks";
 import { json, ME, mockApi, renderApp, resetApiState } from "../../test/harness";
+import { t } from "../../i18n";
 import { NAV_ITEMS } from "./nav";
 
 /** A session that ends once `endSession()` runs (what the API does after logout or expiry). */
@@ -58,8 +59,9 @@ describe("app shell", () => {
     const nav = screen.getByRole("navigation", { name: /main|primary/i });
     const labels = within(nav)
       .getAllByRole("link")
-      .map((link) => link.textContent?.trim());
-    expect(labels).toEqual(NAV_ITEMS.map((item) => item.label));
+      // The "Soon" tag is visible text inside the link but aria-hidden, so it is not part of the accessible name.
+      .map((link) => link.textContent?.replace(t("shell.soon"), "").trim());
+    expect(labels).toEqual(NAV_ITEMS.map((item) => t(item.labelKey)));
     expect(labels).toEqual([
       "Overview",
       "Projects",
@@ -176,7 +178,7 @@ describe("app shell", () => {
     expect(within(crumbs).getByText("Overview")).toHaveAttribute("aria-current", "page");
     await user.click(screen.getByRole("button", { name: /Operator menu/ }));
     const menu = await screen.findByRole("menu");
-    expect(within(menu).getByText("owner")).toBeInTheDocument();
+    expect(within(menu).getByText("Owner")).toBeInTheDocument();
     const where = within(menu).getByText((_, element) => element?.tagName === "P" && /in Acme Payments$/.test(element.textContent ?? ""));
     expect(where).toBeInTheDocument();
   });

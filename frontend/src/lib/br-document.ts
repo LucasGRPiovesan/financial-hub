@@ -4,6 +4,8 @@
  */
 const FORMATTING = /[.\-/\s]/g;
 
+import { t } from "../i18n";
+
 export type CustomerKind = "individual" | "company";
 
 export const CPF_LENGTH = 11;
@@ -52,18 +54,18 @@ export function isValidCnpj(digits: string): boolean {
 /** A form error for `raw` as a document of `kind`, or null when it is valid. The message never echoes the input. */
 export function documentError(raw: string, kind: CustomerKind): string | null {
   const digits = documentDigits(raw);
-  if (!/^\d+$/.test(digits)) return "Use digits only (dots, dashes and slashes are fine).";
+  if (!/^\d+$/.test(digits)) return t("validation.documentDigits");
   if (kind === "individual") {
-    if (digits.length !== CPF_LENGTH) return "A CPF has 11 digits.";
-    return isValidCpf(digits) ? null : "This CPF's check digits are wrong.";
+    if (digits.length !== CPF_LENGTH) return t("validation.cpfLength");
+    return isValidCpf(digits) ? null : t("validation.cpfCheck");
   }
-  if (digits.length !== CNPJ_LENGTH) return "A CNPJ has 14 digits.";
-  return isValidCnpj(digits) ? null : "This CNPJ's check digits are wrong.";
+  if (digits.length !== CNPJ_LENGTH) return t("validation.cnpjLength");
+  return isValidCnpj(digits) ? null : t("validation.cnpjCheck");
 }
 
 /** The same rule the API enforces on `external_ref`. */
 export function externalRefError(value: string): string | null {
-  if (value.length === 0) return "Enter the reference your system uses for this customer.";
-  if (value.length > 128) return "Use at most 128 characters.";
-  return /^[A-Za-z0-9._:@+=~-]+$/.test(value) ? null : "Use letters, digits and . _ : @ + = ~ - only.";
+  if (value.length === 0) return t("validation.refRequired");
+  if (value.length > 128) return t("validation.refTooLong");
+  return /^[A-Za-z0-9._:@+=~-]+$/.test(value) ? null : t("validation.refChars");
 }

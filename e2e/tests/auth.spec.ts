@@ -53,7 +53,7 @@ test.describe("session", () => {
     await shell.signOut(ana);
 
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /entrar/i })).toBeVisible();
     // The session is really gone: protected routes bounce back to sign in.
     await page.goto("/projects");
     await expect(page).toHaveURL(/\/login/);
