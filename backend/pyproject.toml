@@ -72,6 +72,9 @@ venv = ".venv"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+markers = [
+    "asaas_live: talks to the real Asaas Sandbox (skipped unless FH_ASAAS_API_KEY is set)",
+]
 addopts = "-ra --strict-markers --cov=financial_hub --cov-report=term-missing:skip-covered"
 
 [tool.coverage.run]
@@ -291,6 +294,18 @@ source_modules = [
     "financial_hub.main",
 ]
 forbidden_modules = ["financial_hub.modules.projects.infrastructure.credentials_vault"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "5. provider secrets are loaded only through projects.application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.projects.api",
+    "financial_hub.modules.projects.domain",
+    "financial_hub.modules.payments",
+    "financial_hub.main",
+]
+forbidden_modules = ["financial_hub.modules.projects.infrastructure.credentials_loader"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

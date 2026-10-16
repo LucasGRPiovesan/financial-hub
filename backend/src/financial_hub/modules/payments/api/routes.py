@@ -152,7 +152,12 @@ def _registry(request: Request) -> ProviderRegistry:
 def _service(request: Request, audit: AuditContext | None = None) -> PaymentService:
     state = request.app.state
     return PaymentService(
-        state.session_factory, clock=state.clock, registry=_registry(request), audit=audit
+        state.session_factory,
+        clock=state.clock,
+        registry=_registry(request),
+        # set by the composition root (main.py); absent only in tests that use the fake provider
+        credentials=getattr(state, "payment_credentials", None),
+        audit=audit,
     )
 
 

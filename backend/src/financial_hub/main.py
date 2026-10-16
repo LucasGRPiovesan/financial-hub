@@ -19,6 +19,10 @@ from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
 from financial_hub.modules.ledger.api.routes import router as ledger_router
 from financial_hub.modules.payments.api.routes import router as payments_router
+from financial_hub.modules.payments.application.api import (
+    build_registry,
+    projects_credentials_loader,
+)
 from financial_hub.modules.projects.api.api_keys import router as api_keys_router
 from financial_hub.modules.projects.api.auth import configure_projects
 from financial_hub.modules.projects.api.members import router as members_router
@@ -99,6 +103,9 @@ def create_app(
     if settings.demo_login:
         logger.warning("demo_login.enabled", detail="any visitor can open any operator session")
     configure_projects(app, settings)
+    # Payments never decrypts: it is handed a loader that the projects module backs (contract 5).
+    app.state.payment_providers = build_registry(settings)
+    app.state.payment_credentials = projects_credentials_loader(app.state.keyring)
     app.include_router(projects_router)
     app.include_router(api_keys_router)
     app.include_router(members_router)

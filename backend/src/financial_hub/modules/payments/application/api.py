@@ -4,6 +4,7 @@ from financial_hub.modules.payments.application.registry import (
     CredentialsLoader,
     ProviderRegistry,
     build_registry,
+    projects_credentials_loader,
 )
 from financial_hub.modules.payments.application.service import (
     NewPayment,
@@ -22,4 +23,5 @@ __all__ = [
     "RefundView",
     "build_registry",
     "on_payment_confirmed",
+    "projects_credentials_loader",
 ]

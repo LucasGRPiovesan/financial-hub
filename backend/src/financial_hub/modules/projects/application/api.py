@@ -1,8 +1,9 @@
 """Public API of projects for other modules (ARCHITECTURE s3): import only from here.
 
 Deliberately thin (reads on the caller's session) so identity can use it without an import cycle.
-Nothing here returns credential material: provider accounts are exposed as
-:class:`ProviderAccountRef`.
+Provider accounts are exposed as :class:`ProviderAccountRef` (no credential material). The single
+exception is :func:`load_provider_secrets`, which only the composition root wires into a payment
+provider adapter's credentials loader (ADR-0006; PRO-41).
 """
 
 from collections.abc import Collection, Mapping, Sequence
@@ -12,11 +13,19 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from financial_hub.modules.projects.domain import ProviderAccount, ProviderAccountStatus
-from financial_hub.modules.projects.infrastructure import provider_repository, repository
+from financial_hub.modules.projects.infrastructure import (
+    credentials_loader,
+    provider_repository,
+    repository,
+)
+from financial_hub.modules.projects.infrastructure.credentials_loader import ProviderSecrets
+from financial_hub.platform.crypto.keyring import Keyring
 
 __all__ = [
     "ProviderAccountRef",
+    "ProviderSecrets",
     "active_provider_accounts",
+    "load_provider_secrets",
     "project_names",
     "provider_account_ref",
 ]
@@ -54,6 +63,19 @@ async def provider_account_ref(
     """The project's provider account ``account_id`` (``None`` if absent or another project's)."""
     account = await provider_repository.get_account(session, project_id, account_id)
     return None if account is None else _ref(account)
+
+
+async def load_provider_secrets(
+    session: AsyncSession, keyring: Keyring, *, project_id: UUID, account_id: UUID
+) -> ProviderSecrets | None:
+    """Decrypted credentials of an *active* account of ``project_id`` (``None`` otherwise).
+
+    The one door to credential material for provider adapters' callers (the composition root wires
+    it into payments); it never reveals a disabled, foreign or undecryptable account.
+    """
+    return await credentials_loader.load_active_secrets(
+        session, keyring, project_id=project_id, account_id=account_id
+    )
 
 
 async def active_provider_accounts(

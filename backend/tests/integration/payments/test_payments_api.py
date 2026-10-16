@@ -194,7 +194,8 @@ async def test_a_real_account_is_chosen_but_needs_an_adapter(api: Api) -> None:
             ambiguous = await s.create()
             missing = await s.create(provider_account_id="pva_00000000000000000000000000")
 
-    # the asaas adapter arrives with PRO-41: until then the account cannot take payments
+    # the shop's registry holds only the fake provider (the asaas factory is wired in
+    # test_asaas_api.py), so a real account cannot take payments here
     for response in (only, named, missing, ambiguous):
         assert response.status_code == 422, response.text
         assert response.json()["errors"][0]["pointer"] == "/provider_account_id"
