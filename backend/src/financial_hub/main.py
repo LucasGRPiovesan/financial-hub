@@ -18,6 +18,7 @@ from financial_hub.modules.identity.api.routes import demo_router as demo_auth_r
 from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
 from financial_hub.modules.ledger.api.routes import router as ledger_router
+from financial_hub.modules.metering.api.routes import metrics_router, usage_router
 from financial_hub.modules.payments.api.routes import router as payments_router
 from financial_hub.modules.payments.application.api import (
     build_registry,
@@ -113,6 +114,8 @@ def create_app(
     app.include_router(provider_catalog_router)
     app.include_router(customers_router)
     app.include_router(payments_router)
+    app.include_router(metrics_router)
+    app.include_router(usage_router)
     app.include_router(stream_router)
     app.include_router(events_router)
     app.include_router(ledger_router)

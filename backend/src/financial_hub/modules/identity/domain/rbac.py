@@ -33,6 +33,9 @@ class Permission(StrEnum):
     PAYMENTS_READ = "payments:read"
     PAYMENTS_WRITE = "payments:write"
     PAYMENTS_REFUND = "payments:refund"
+    METERING_READ = "metering:read"
+    METERING_MANAGE = "metering:manage"
+    USAGE_WRITE = "usage:write"
     PAYOUTS_MANAGE = "payouts:manage"
     BILLING_READ = "billing:read"
     BILLING_MANAGE = "billing:manage"
@@ -71,8 +74,12 @@ CONFIGURATION: Final = frozenset(
 ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType(
     {
         Role.OWNER: frozenset(Permission),
-        Role.ADMIN: READ_PERMISSIONS | CONFIGURATION | {Permission.CUSTOMERS_MANAGE},
-        Role.FINANCE: READ_PERMISSIONS | MONEY_MOVEMENT | {Permission.CUSTOMERS_MANAGE},
+        Role.ADMIN: READ_PERMISSIONS
+        | CONFIGURATION
+        | {Permission.CUSTOMERS_MANAGE, Permission.METERING_MANAGE},
+        Role.FINANCE: READ_PERMISSIONS
+        | MONEY_MOVEMENT
+        | {Permission.CUSTOMERS_MANAGE, Permission.METERING_MANAGE},
         Role.VIEWER: READ_PERMISSIONS - {Permission.AUDIT_READ},
     }
 )

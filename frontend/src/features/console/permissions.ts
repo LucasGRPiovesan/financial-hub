@@ -63,4 +63,5 @@ export const GRANTABLE_API_KEY_SCOPES: readonly { value: string; descriptionKey:
   { value: "billing:read", descriptionKey: "apiKeyScope.billingRead" },
   { value: "billing:write", descriptionKey: "apiKeyScope.billingWrite" },
   { value: "events:read", descriptionKey: "apiKeyScope.eventsRead" },
+  { value: "usage:write", descriptionKey: "apiKeyScope.usageWrite" },
 ];

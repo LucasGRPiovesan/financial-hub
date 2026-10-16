@@ -143,6 +143,7 @@ export const enUS = {
     billingRead: "Read billing data",
     billingWrite: "Change billing data",
     eventsRead: "Read events",
+    usageWrite: "Record usage",
   },
   errors: {
     generic: "Something went wrong.",

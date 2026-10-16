@@ -404,6 +404,103 @@
         "title": "BalanceOut",
         "type": "object"
       },
+      "BatchItemOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Problem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the event was rejected; null otherwise."
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "duplicate",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The recorded (or original) event; null if rejected."
+          }
+        },
+        "required": [
+          "index",
+          "status",
+          "usage",
+          "error"
+        ],
+        "title": "BatchItemOut",
+        "type": "object"
+      },
+      "BatchOut": {
+        "description": "Always 200: look at each result. Events are independent (per-item semantics).",
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "duplicates": {
+            "title": "Duplicates",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/BatchItemOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results",
+          "created",
+          "duplicates",
+          "rejected"
+        ],
+        "title": "BatchOut",
+        "type": "object"
+      },
+      "BatchRequest": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/UsageRequest"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "BatchRequest",
+        "type": "object"
+      },
       "CatalogEntryOut": {
         "properties": {
           "credential_fields": {
@@ -591,6 +688,59 @@
           "scopes"
         ],
         "title": "CreateApiKeyRequest",
+        "type": "object"
+      },
+      "CreateMetricRequest": {
+        "properties": {
+          "aggregation": {
+            "description": "`sum`, `count`, `max` or `unique_count`.",
+            "maxLength": 32,
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "code": {
+            "description": "Lowercase letters, digits and `_`, unique.",
+            "maxLength": 100,
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The event property to read; required unless `count`. Immutable.",
+            "title": "Field"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "aggregation"
+        ],
+        "title": "CreateMetricRequest",
         "type": "object"
       },
       "CreatePaymentRequest": {
@@ -1678,6 +1828,86 @@
         "title": "MembershipOut",
         "type": "object"
       },
+      "MetricOut": {
+        "properties": {
+          "aggregation": {
+            "description": "`sum`, `count`, `max` or `unique_count`.",
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The event property it reads; null for `count`.",
+            "title": "Field"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "description": "`active` or `archived`.",
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "description",
+          "aggregation",
+          "field",
+          "status",
+          "created_at",
+          "updated_at",
+          "archived_at"
+        ],
+        "title": "MetricOut",
+        "type": "object"
+      },
       "MoneyOut": {
         "properties": {
           "amount_minor": {
@@ -1884,6 +2114,39 @@
           "has_more"
         ],
         "title": "Page[EntryOut]",
+        "type": "object"
+      },
+      "Page_MetricOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MetricOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[MetricOut]",
         "type": "object"
       },
       "Page_PaymentOut_": {
@@ -2509,6 +2772,62 @@
         "title": "ReplaceCredentialsRequest",
         "type": "object"
       },
+      "SummaryOut": {
+        "properties": {
+          "aggregation": {
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "end": {
+            "description": "Exclusive end of the range (UTC).",
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "events": {
+            "description": "Events in the range.",
+            "title": "Events",
+            "type": "integer"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "start": {
+            "description": "Inclusive start of the range (UTC).",
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact decimal as a string; `max` of no events is null, the rest are 0.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "customer_id",
+          "metric",
+          "aggregation",
+          "start",
+          "end",
+          "value",
+          "events"
+        ],
+        "title": "SummaryOut",
+        "type": "object"
+      },
       "TrialBalanceLineOut": {
         "properties": {
           "code": {
@@ -2711,6 +3030,127 @@
           "kind"
         ],
         "title": "UpsertCustomerRequest",
+        "type": "object"
+      },
+      "UsageOut": {
+        "properties": {
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "ingested_at": {
+            "format": "date-time",
+            "title": "Ingested At",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "title": "Properties",
+            "type": "object"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact decimal measure of a `sum`/`max` metric; null otherwise.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "customer_id",
+          "metric",
+          "timestamp",
+          "properties",
+          "value",
+          "ingested_at"
+        ],
+        "title": "UsageOut",
+        "type": "object"
+      },
+      "UsageRequest": {
+        "properties": {
+          "customer_external_ref": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project's own customer reference.",
+            "title": "Customer External Ref"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`cus_...` id.",
+            "title": "Customer Id"
+          },
+          "metric": {
+            "description": "Code of an active metric.",
+            "maxLength": 100,
+            "title": "Metric",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "description": "Event properties; the metric's `field` is read from here.",
+            "title": "Properties",
+            "type": "object"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the usage happened (with timezone offset). Within the last 30 days and at most 5 minutes ahead. Defaults to the time of receipt.",
+            "title": "Timestamp"
+          },
+          "transaction_id": {
+            "description": "Your unique id of this event (idempotency key), per project.",
+            "maxLength": 200,
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "metric"
+        ],
+        "title": "UsageRequest",
         "type": "object"
       }
     }
@@ -5075,6 +5515,259 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/metrics": {
+      "get": {
+        "operationId": "list_metrics_v1_projects__project_id__metrics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`active` or `archived`.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`active` or `archived`.",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MetricOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Metrics",
+        "tags": [
+          "metering"
+        ]
+      },
+      "post": {
+        "description": "Define how usage is aggregated. The definition cannot change afterwards, only archive.",
+        "operationId": "create_metric_v1_projects__project_id__metrics_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMetricRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Code in use."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Metric",
+        "tags": [
+          "metering"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/metrics/{code}": {
+      "get": {
+        "operationId": "get_metric_v1_projects__project_id__metrics__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Metric",
+        "tags": [
+          "metering"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/metrics/{code}/archive": {
+      "post": {
+        "description": "Stop accepting usage for the metric (final). Recorded usage stays readable. Idempotent.",
+        "operationId": "archive_metric_v1_projects__project_id__metrics__code__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Archive Metric",
+        "tags": [
+          "metering"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/payments": {
       "get": {
         "operationId": "list_payments_v1_projects__project_id__payments_get",
@@ -5764,6 +6457,97 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/usage/summary": {
+      "get": {
+        "description": "The metric's value for the customer over ``[from, to)``, computed by the database.",
+        "operationId": "usage_summary_v1_projects__project_id__usage_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`cus_...` id.",
+            "in": "query",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "description": "`cus_...` id.",
+              "maxLength": 64,
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive, with timezone.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Inclusive, with timezone.",
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Metric code.",
+            "in": "query",
+            "name": "metric",
+            "required": true,
+            "schema": {
+              "description": "Metric code.",
+              "maxLength": 100,
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive, with timezone.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Exclusive, with timezone.",
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Usage Summary",
+        "tags": [
+          "metering"
+        ]
+      }
+    },
     "/v1/provider-catalog": {
       "get": {
         "operationId": "get_provider_catalog_v1_provider_catalog_get",
@@ -5797,6 +6581,112 @@
         "summary": "Get Provider Catalog",
         "tags": [
           "providers"
+        ]
+      }
+    },
+    "/v1/usage": {
+      "post": {
+        "description": "Record one usage event. A retry of the same event answers 200 with the original.",
+        "operationId": "record_usage_v1_usage_post",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageOut"
+                }
+              }
+            },
+            "description": "Recorded."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`transaction_id` already recorded with a different payload."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Record Usage",
+        "tags": [
+          "metering"
+        ]
+      }
+    },
+    "/v1/usage/batch": {
+      "post": {
+        "description": "Record up to 100 events. **Per-item**: each event is accepted or rejected on its own (a\nbad one writes nothing and does not stop the others), the response is always 200 and lists\nevery outcome in order. Retry the whole batch safely: accepted events come back as\n`duplicate`.",
+        "operationId": "record_usage_batch_v1_usage_batch_post",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Record Usage Batch",
+        "tags": [
+          "metering"
         ]
       }
     }

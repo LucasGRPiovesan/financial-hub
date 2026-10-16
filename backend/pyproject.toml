@@ -330,6 +330,7 @@ source_modules = [
     "financial_hub.modules.events",
     "financial_hub.modules.audit",
     "financial_hub.modules.payments",
+    "financial_hub.modules.metering",
 ]
 forbidden_modules = [
     "financial_hub.modules.customers.api",
@@ -358,6 +359,27 @@ forbidden_modules = [
     "financial_hub.modules.payments.application.service",
     "financial_hub.modules.payments.application.registry",
     "financial_hub.modules.payments.application.events",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. metering is reached by other modules only through application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.customers",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.events",
+    "financial_hub.modules.audit",
+    "financial_hub.modules.payments",
+]
+forbidden_modules = [
+    "financial_hub.modules.metering.api",
+    "financial_hub.modules.metering.domain",
+    "financial_hub.modules.metering.infrastructure",
+    "financial_hub.modules.metering.application.service",
+    "financial_hub.modules.metering.application.events",
 ]
 allow_indirect_imports = true
 

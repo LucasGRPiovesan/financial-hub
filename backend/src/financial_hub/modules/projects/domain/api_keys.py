@@ -50,6 +50,7 @@ class ApiKeyScope(StrEnum):
     BILLING_READ = "billing:read"
     BILLING_WRITE = "billing:write"
     EVENTS_READ = "events:read"
+    USAGE_WRITE = "usage:write"
 
 
 @dataclass(frozen=True, slots=True)

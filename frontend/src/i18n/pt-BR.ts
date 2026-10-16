@@ -141,6 +141,7 @@ export const ptBR: Messages = {
     billingRead: "Ler dados de faturamento",
     billingWrite: "Alterar dados de faturamento",
     eventsRead: "Ler eventos",
+    usageWrite: "Registrar consumo",
   },
   errors: {
     generic: "Algo deu errado.",
