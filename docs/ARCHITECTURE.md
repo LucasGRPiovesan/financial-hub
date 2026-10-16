@@ -77,6 +77,13 @@ Horizontal scale: `api` and `worker` are stateless and can run N replicas (SKIP 
 A command handler runs in one DB transaction (Unit of Work) that includes: state change + ledger entry (if any) + event-log rows.
 External HTTP calls (Asaas) never happen inside a DB transaction. Money-moving calls follow ADR-0012 §3: commit state + fencing token → call provider → CAS-record the result; unknown outcomes are resolved by lookup, transfers are never auto-retried. Lock order inside a UoW: aggregate row → ledger accounts (ADR-0003 §5).
 
+### 4.3 Idempotency
+Creating routes opt in with the `idempotent()` dependency (`platform/http/protection`), placed after the access declaration; `mode="required"` answers `400` without a key. Today projects, API keys and provider accounts accept an optional key. Keys (1..255 visible ASCII) are scoped to `(project, principal)` and live 24 h in `idempotency_records`:
+1. Before the handler, one `INSERT ... ON CONFLICT DO UPDATE ... WHERE expired` claims the key (`in_progress`) in its own committed transaction. A live record answers instead: another method/path/body hash `422`, still in progress `409` + `Retry-After: 1`, completed → the stored status/body/`Content-Type`/`Location` with `Idempotent-Replayed: true`.
+2. `IdempotencyMiddleware` buffers the claimed response, records it (`completed`) and only then sends it. 4xx answers are stored; a 5xx or an exception deletes the claim so the client may retry.
+3. Bodies over 1 MiB and success bodies of `store_success_body=False` routes (the API key secret, shown once) are not stored: a replay answers `409 idempotency-response-unavailable`.
+The rate limiter runs outside this middleware, so a limited request never claims a key. Expired keys and idle buckets are purged by `purge_protection_state` (worker housekeeping).
+
 ## 5. Cross-cutting
 
 | Concern | Approach |

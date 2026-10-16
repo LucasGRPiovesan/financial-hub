@@ -7,12 +7,19 @@ same HMAC work, so a caller learns nothing about which keys exist.
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Final
+from typing import Any, Final
 from uuid import UUID
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from financial_hub.modules.audit.application import (
+    Actor,
+    AuditContext,
+    AuditRecorder,
+    AuditTarget,
+    changed_fields,
+)
 from financial_hub.modules.projects.application.scopes import permissions_for_scopes
 from financial_hub.modules.projects.domain import (
     DUMMY_DIGEST,
@@ -150,11 +157,13 @@ class ApiKeyService:
         clock: Clock,
         pepper: bytes,
         environment: KeyEnvironment,
+        audit: AuditContext | None = None,
     ) -> None:
         self._uow = uow
         self._clock = clock
         self._pepper = pepper
         self._environment: KeyEnvironment = environment
+        self._audit = audit or AuditContext.system()
 
     async def create(
         self,
@@ -200,6 +209,21 @@ class ApiKeyService:
                 expires_at=expires_at,
             )
             if stored is not None:
+                await self._record(
+                    scope,
+                    "api_key.created",
+                    stored,
+                    changed_fields(
+                        None,
+                        {
+                            "name": stored.name,
+                            "prefix": stored.prefix,
+                            "environment": stored.environment,
+                            "scopes": [item.value for item in stored.scopes],
+                            "expires_at": stored.expires_at,
+                        },
+                    ),
+                )
                 logger.info(
                     "api_key.created",
                     key_id=format_id(IdPrefix.API_KEY, stored.id),
@@ -209,6 +233,18 @@ class ApiKeyService:
                 )
                 return CreatedApiKey(view=_view(stored, now), key=minted.plaintext)
         raise RuntimeError("could not allocate a unique API key prefix")  # pragma: no cover
+
+    async def _record(
+        self, scope: ProjectScope, action: str, key: ApiKey, diff: dict[str, Any]
+    ) -> None:
+        await AuditRecorder.record(
+            self._uow.session,
+            actor=self._audit.acting(Actor.of_principal(scope.principal_kind, scope.principal_id)),
+            action=action,
+            target=AuditTarget("api_key", format_id(IdPrefix.API_KEY, key.id)),
+            diff=diff,
+            project_id=key.project_id,
+        )
 
     async def list_keys(self, project_id: UUID, params: PageParams) -> Page[ApiKeyView]:
         now = self._clock.now()
@@ -229,11 +265,22 @@ class ApiKeyService:
             key_uuid = parse_id(key_id, IdPrefix.API_KEY)
         except ValueError:
             raise NotFound("API key not found.") from None
+        before = await api_key_repository.get_api_key(self._uow.session, scope.project_id, key_uuid)
         key = await api_key_repository.revoke_api_key(
             self._uow.session, scope.project_id, key_uuid, now=now
         )
-        if key is None:
+        if key is None or before is None:
             raise NotFound("API key not found.")
+        if before.revoked_at is None and key.revoked_at == now:
+            await self._record(
+                scope,
+                "api_key.revoked",
+                key,
+                changed_fields(
+                    {"name": key.name, "prefix": key.prefix, "revoked_at": None},
+                    {"name": key.name, "prefix": key.prefix, "revoked_at": key.revoked_at},
+                ),
+            )
         logger.info(
             "api_key.revoked",
             key_id=format_id(IdPrefix.API_KEY, key.id),

@@ -12,6 +12,7 @@ from typing import Annotated, Final
 from fastapi import APIRouter, Depends, FastAPI, Request, Response, status
 from pydantic import BaseModel, Field
 
+from financial_hub.modules.audit.application import AuditContext, request_audit_context
 from financial_hub.modules.identity.application.service import (
     AuthService,
     IdentityConfig,
@@ -23,6 +24,7 @@ from financial_hub.modules.identity.application.service import (
 )
 from financial_hub.platform.http.auth import Principal, authenticated, install_authenticators
 from financial_hub.platform.http.auth import public as public_access
+from financial_hub.platform.http.protection.rate_limit import AuthAttempt
 from financial_hub.platform.settings import Settings
 from financial_hub.shared.clock import Clock
 from financial_hub.shared.errors import Forbidden
@@ -164,11 +166,17 @@ router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 Service = Annotated[AuthService, Depends(auth_service)]
 CurrentPrincipal = Annotated[Principal, authenticated()]
+AuditCtx = Annotated[AuditContext, Depends(request_audit_context)]
 
 
 @router.post("/login", dependencies=[public_access()])
 async def login(
-    body: LoginRequest, request: Request, response: Response, service: Service
+    body: LoginRequest,
+    request: Request,
+    response: Response,
+    service: Service,
+    audit: AuditCtx,
+    _attempt: AuthAttempt,
 ) -> LoginResponse:
     result = await service.login(
         email=body.email,
@@ -176,6 +184,7 @@ async def login(
         ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
         presented_token=request.cookies.get(SESSION_COOKIE),
+        audit=audit,
     )
     config: IdentityConfig = request.app.state.identity_config
     max_age = int(config.session.absolute_timeout.total_seconds())
@@ -184,8 +193,10 @@ async def login(
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(principal: CurrentPrincipal, request: Request, service: Service) -> Response:
-    await service.logout(_operator_principal(principal))
+async def logout(
+    principal: CurrentPrincipal, request: Request, service: Service, audit: AuditCtx
+) -> Response:
+    await service.logout(_operator_principal(principal), audit)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     _clear_session_cookie(request, response)
     return response
@@ -198,11 +209,12 @@ async def me(principal: CurrentPrincipal, service: Service) -> MeResponse:
 
 @router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(
-    body: PasswordChangeRequest, principal: CurrentPrincipal, service: Service
+    body: PasswordChangeRequest, principal: CurrentPrincipal, service: Service, audit: AuditCtx
 ) -> Response:
     await service.change_password(
         _operator_principal(principal),
         current_password=body.current_password,
         new_password=body.new_password,
+        audit=audit,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

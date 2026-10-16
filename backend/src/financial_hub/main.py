@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from financial_hub.modules.audit.api.routes import router as audit_router
 from financial_hub.modules.events.api.stream import router as stream_router
 from financial_hub.modules.events.application.realtime import build_broker
 from financial_hub.modules.identity.api.routes import configure_identity
@@ -24,6 +25,7 @@ from financial_hub.platform.http.auth import public, verify_route_declarations
 from financial_hub.platform.http.headers import SecurityHeadersMiddleware
 from financial_hub.platform.http.middleware import CorrelationIdMiddleware
 from financial_hub.platform.http.problems import Problem, register_exception_handlers
+from financial_hub.platform.http.protection import configure_protection
 from financial_hub.platform.logging import configure_logging
 from financial_hub.platform.settings import Settings, get_settings
 from financial_hub.platform.telemetry import (
@@ -80,6 +82,7 @@ def create_app(
         responses={"default": {"model": Problem, "description": "RFC 9457 problem details"}},
     )
     register_exception_handlers(app)
+    configure_protection(app, settings)  # idempotency + rate limits, inside the correlation id
     app.add_middleware(CorrelationIdMiddleware)
     # Outermost: also covers the 500 responses CorrelationIdMiddleware renders itself.
     app.add_middleware(SecurityHeadersMiddleware)
@@ -94,6 +97,7 @@ def create_app(
     app.include_router(provider_catalog_router)
     app.include_router(stream_router)
     app.include_router(ledger_router)
+    app.include_router(audit_router)
 
     @app.get("/health/live", dependencies=[public()])
     async def live() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]

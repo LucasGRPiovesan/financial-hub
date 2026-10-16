@@ -8,9 +8,10 @@ returned: responses carry ``has_credentials`` and, when safe, the last four char
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, Field, SecretStr
 
+from financial_hub.modules.audit.application import AuditContext, request_audit_context
 from financial_hub.modules.projects.application.providers import (
     CatalogEntry,
     ProviderAccountService,
@@ -20,6 +21,7 @@ from financial_hub.modules.projects.application.providers import (
 from financial_hub.modules.projects.application.service import Permission
 from financial_hub.platform.db import UnitOfWork
 from financial_hub.platform.http.auth import Principal, ProjectScope, authenticated, require
+from financial_hub.platform.http.protection.idempotency import idempotent
 from financial_hub.shared.pagination import Page, PageParams
 
 router = APIRouter(prefix="/v1/projects/{project_id}/provider-accounts", tags=["providers"])
@@ -87,9 +89,11 @@ def _uow(request: Request) -> UnitOfWork:
     return UnitOfWork(request.app.state.session_factory)
 
 
-def _service(request: Request, uow: UnitOfWork) -> ProviderAccountService:
+def _service(
+    request: Request, uow: UnitOfWork, audit: AuditContext | None = None
+) -> ProviderAccountService:
     state = request.app.state
-    return ProviderAccountService(uow, clock=state.clock, keyring=state.keyring)
+    return ProviderAccountService(uow, clock=state.clock, keyring=state.keyring, audit=audit)
 
 
 def _plain(credentials: dict[str, SecretStr]) -> dict[str, str]:
@@ -98,6 +102,7 @@ def _plain(credentials: dict[str, SecretStr]) -> dict[str, str]:
 
 ReadAccounts = Annotated[ProjectScope, require(Permission.INTEGRATIONS_READ)]
 ManageAccounts = Annotated[ProjectScope, require(Permission.INTEGRATIONS_MANAGE)]
+AuditCtx = Annotated[AuditContext, Depends(request_audit_context)]
 
 
 @catalog_router.get("")
@@ -109,10 +114,14 @@ async def get_provider_catalog(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_provider_account(
-    body: CreateProviderAccountRequest, scope: ManageAccounts, request: Request
+    body: CreateProviderAccountRequest,
+    scope: ManageAccounts,
+    request: Request,
+    audit: AuditCtx,
+    _idempotency: Annotated[None, idempotent()],
 ) -> ProviderAccountOut:
     async with _uow(request) as uow:
-        view = await _service(request, uow).create(
+        view = await _service(request, uow, audit).create(
             scope,
             provider=body.provider,
             environment=body.environment,
@@ -146,10 +155,14 @@ async def get_provider_account(
 
 @router.put("/{account_id}/credentials")
 async def replace_provider_credentials(
-    account_id: str, body: ReplaceCredentialsRequest, scope: ManageAccounts, request: Request
+    account_id: str,
+    body: ReplaceCredentialsRequest,
+    scope: ManageAccounts,
+    request: Request,
+    audit: AuditCtx,
 ) -> ProviderAccountOut:
     async with _uow(request) as uow:
-        view = await _service(request, uow).replace_credentials(
+        view = await _service(request, uow, audit).replace_credentials(
             scope, account_id, _plain(body.credentials)
         )
     return ProviderAccountOut.of(view)
@@ -157,17 +170,17 @@ async def replace_provider_credentials(
 
 @router.post("/{account_id}/activate")
 async def activate_provider_account(
-    account_id: str, scope: ManageAccounts, request: Request
+    account_id: str, scope: ManageAccounts, request: Request, audit: AuditCtx
 ) -> ProviderAccountOut:
     async with _uow(request) as uow:
-        view = await _service(request, uow).set_active(scope, account_id, active=True)
+        view = await _service(request, uow, audit).set_active(scope, account_id, active=True)
     return ProviderAccountOut.of(view)
 
 
 @router.post("/{account_id}/deactivate")
 async def deactivate_provider_account(
-    account_id: str, scope: ManageAccounts, request: Request
+    account_id: str, scope: ManageAccounts, request: Request, audit: AuditCtx
 ) -> ProviderAccountOut:
     async with _uow(request) as uow:
-        view = await _service(request, uow).set_active(scope, account_id, active=False)
+        view = await _service(request, uow, audit).set_active(scope, account_id, active=False)
     return ProviderAccountOut.of(view)

@@ -57,6 +57,7 @@ EXPECTED = {
         "integrations:manage",
     ),
     ("GET", "/v1/projects/{project_id}/stream"): ("permission", "events:read"),
+    ("GET", "/v1/projects/{project_id}/audit-records"): ("permission", "audit:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts"): ("permission", "ledger:read"),
     ("GET", "/v1/projects/{project_id}/ledger/accounts/{account_id}"): (
         "permission",

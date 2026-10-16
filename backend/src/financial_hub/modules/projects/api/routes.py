@@ -6,9 +6,14 @@ Each handler runs one Unit of Work and commits it before the response is built.
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, Field
 
+from financial_hub.modules.audit.application import (
+    Actor,
+    AuditContext,
+    request_audit_context,
+)
 from financial_hub.modules.projects.application.service import (
     Permission,
     ProjectService,
@@ -16,6 +21,7 @@ from financial_hub.modules.projects.application.service import (
 )
 from financial_hub.platform.db import UnitOfWork
 from financial_hub.platform.http.auth import Principal, ProjectScope, authenticated, require
+from financial_hub.platform.http.protection.idempotency import idempotent
 from financial_hub.shared.pagination import Page, PageParams
 
 
@@ -54,6 +60,7 @@ def _uow(request: Request) -> UnitOfWork:
 
 
 CurrentPrincipal = Annotated[Principal, authenticated()]
+AuditCtx = Annotated[AuditContext, Depends(request_audit_context)]
 
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
 
@@ -73,10 +80,17 @@ async def list_projects(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_project(
-    body: CreateProjectRequest, principal: CurrentPrincipal, request: Request
+    body: CreateProjectRequest,
+    principal: CurrentPrincipal,
+    request: Request,
+    audit: AuditCtx,
+    _idempotency: Annotated[None, idempotent()],
 ) -> ProjectOut:
+    actor = Actor.of_principal(principal.kind, principal.subject_id)
     async with _uow(request) as uow:
-        view = await ProjectService(uow).create_owned_by(principal, slug=body.slug, name=body.name)
+        view = await ProjectService(uow, audit.acting(actor)).create_owned_by(
+            principal, slug=body.slug, name=body.name
+        )
     return ProjectOut.of(view)
 
 
@@ -94,9 +108,11 @@ async def update_project(
     body: UpdateProjectRequest,
     scope: Annotated[ProjectScope, require(Permission.PROJECTS_MANAGE)],
     request: Request,
+    audit: AuditCtx,
 ) -> ProjectOut:
+    actor = Actor.of_principal(scope.principal_kind, scope.principal_id)
     async with _uow(request) as uow:
-        view = await ProjectService(uow).update(
+        view = await ProjectService(uow, audit.acting(actor)).update(
             scope.project_id, name=body.name, status=body.status
         )
     return ProjectOut.of(view)

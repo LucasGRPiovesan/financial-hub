@@ -1,5 +1,7 @@
 import base64
 import binascii
+import ipaddress
+from decimal import Decimal
 from functools import lru_cache
 from typing import Final, Literal
 
@@ -52,10 +54,38 @@ class Settings(BaseSettings):
     login_ip_max_attempts: int = Field(default=30, gt=0)
     login_ip_window_minutes: int = Field(default=15, gt=0)
 
+    # Idempotency-Key (ADR-0004): how long a key is remembered, and the largest response body
+    # stored for replay (bigger ones are recorded without a body, see docs/ARCHITECTURE.md).
+    idempotency_ttl_hours: int = Field(default=24, gt=0)
+    idempotency_max_body_bytes: int = Field(default=1024 * 1024, ge=0)
+    # Rate limiting (docs/SECURITY.md): Postgres token buckets, capacity = burst size, refill in
+    # tokens per second (decimal, e.g. "0.5"; parsed exactly, never as a float).
+    rate_limit_enabled: bool = True
+    rate_limit_api_key_capacity: int = Field(default=600, gt=0)
+    rate_limit_api_key_refill_per_second: Decimal = Field(default=Decimal(10), gt=0)
+    rate_limit_operator_capacity: int = Field(default=300, gt=0)
+    rate_limit_operator_refill_per_second: Decimal = Field(default=Decimal(5), gt=0)
+    # Unauthenticated auth attempts per client IP: logins and rejected credentials.
+    rate_limit_auth_ip_capacity: int = Field(default=60, gt=0)
+    rate_limit_auth_ip_refill_per_second: Decimal = Field(default=Decimal("0.1"), gt=0)
+    # Proxies (IPs or CIDRs) whose X-Forwarded-For is believed; empty = the socket peer is the
+    # client and X-Forwarded-For is ignored.
+    rate_limit_trusted_proxies: list[str] = []
+
     @field_validator("otel_exporter_otlp_endpoint")
     @classmethod
     def _blank_endpoint_is_unset(cls, value: str | None) -> str | None:
         return value.strip().rstrip("/") or None if value is not None else None
+
+    @field_validator("rate_limit_trusted_proxies")
+    @classmethod
+    def _proxies_are_networks(cls, value: list[str]) -> list[str]:
+        for entry in value:
+            try:
+                ipaddress.ip_network(entry, strict=False)
+            except ValueError:
+                raise ValueError(f"trusted proxy {entry!r} is not an IP address or CIDR") from None
+        return value
 
     @field_validator("encryption_keys")
     @classmethod

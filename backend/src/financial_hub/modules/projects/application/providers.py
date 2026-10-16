@@ -9,11 +9,19 @@ view carries them: callers get ``has_credentials`` and, when safe, the last four
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Final
+from typing import Any, Final
 from uuid import UUID
 
 import structlog
 
+from financial_hub.modules.audit.application import (
+    REDACTED,
+    Actor,
+    AuditContext,
+    AuditRecorder,
+    AuditTarget,
+    changed_fields,
+)
 from financial_hub.modules.projects.domain import (
     CATALOG,
     ProjectStatus,
@@ -138,10 +146,32 @@ def _environment(value: str) -> ProviderEnvironment:
 class ProviderAccountService:
     """Every method runs inside the caller's active :class:`UnitOfWork`."""
 
-    def __init__(self, uow: UnitOfWork, *, clock: Clock, keyring: Keyring) -> None:
+    def __init__(
+        self,
+        uow: UnitOfWork,
+        *,
+        clock: Clock,
+        keyring: Keyring,
+        audit: AuditContext | None = None,
+    ) -> None:
         self._uow = uow
         self._clock = clock
         self._keyring = keyring
+        self._audit = audit or AuditContext.system()
+
+    async def _record(
+        self, scope: ProjectScope, action: str, account: ProviderAccount, diff: dict[str, Any]
+    ) -> None:
+        await AuditRecorder.record(
+            self._uow.session,
+            actor=self._audit.acting(Actor.of_principal(scope.principal_kind, scope.principal_id)),
+            action=action,
+            target=AuditTarget(
+                "provider_account", format_id(IdPrefix.PROVIDER_ACCOUNT, account.id)
+            ),
+            diff=diff,
+            project_id=account.project_id,
+        )
 
     def _seal(
         self,
@@ -203,6 +233,21 @@ class ProviderAccountService:
                 "The project already has a provider account with this name.",
                 errors=[FieldError(pointer="/name", detail="already taken", code="taken")],
             )
+        await self._record(
+            scope,
+            "provider_account.created",
+            account,
+            changed_fields(
+                None,
+                {
+                    "provider": account.provider.value,
+                    "environment": account.environment.value,
+                    "name": account.name,
+                    "status": account.status.value,
+                    "credentials": REDACTED,
+                },
+            ),
+        )
         logger.info(
             "provider_account.created",
             account_id=format_id(IdPrefix.PROVIDER_ACCOUNT, account.id),
@@ -254,6 +299,12 @@ class ProviderAccountService:
         )
         if updated is None:  # pragma: no cover - the account was just read in this transaction
             raise NotFound("Provider account not found.")
+        await self._record(
+            scope,
+            "provider_account.credentials_replaced",
+            updated,
+            {"before": {"credentials": REDACTED}, "after": {"credentials": REDACTED}},
+        )
         logger.info(
             "provider_account.credentials_replaced",
             account_id=format_id(IdPrefix.PROVIDER_ACCOUNT, updated.id),
@@ -278,6 +329,13 @@ class ProviderAccountService:
         )
         if updated is None:  # pragma: no cover - the account was just read in this transaction
             raise NotFound("Provider account not found.")
+        if account.status is not status:
+            await self._record(
+                scope,
+                "provider_account.activated" if active else "provider_account.disabled",
+                updated,
+                changed_fields({"status": account.status.value}, {"status": updated.status.value}),
+            )
         logger.info(
             "provider_account.status_changed",
             account_id=format_id(IdPrefix.PROVIDER_ACCOUNT, updated.id),

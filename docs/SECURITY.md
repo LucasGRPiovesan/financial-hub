@@ -25,7 +25,7 @@ Internet → API (products with API keys; operators with sessions) · Provider �
 | Inbound webhooks | Per-provider-account token, constant-time compare; size limit; raw body stored; idempotent processing |
 | Outbound webhooks | Standard Webhooks signatures; SSRF guard (deny private/link-local/metadata ranges, resolve-then-connect pinning, no redirects to private ranges, https required outside dev) |
 | Input | Pydantic strict models; request size limits; RFC 9457 errors without stack traces |
-| Rate limiting | Per API key and per login identity (Postgres token bucket) |
+| Rate limiting | Postgres token buckets (one atomic upsert per check): per API key, per operator session, and per client IP for unauthenticated attempts (every login, every rejected API key or session). `429` problem+json with integer `Retry-After`, `RateLimit-Limit`/`RateLimit-Remaining`; health checks and SSE exempt; `X-Forwarded-For` honoured only from `FH_RATE_LIMIT_TRUSTED_PROXIES`. Complements the per-email/per-IP login throttle |
 | AI / MCP | No money-moving tools (ADR-0009); prompts never include secrets; PII minimized (sample events are redacted before reaching the model); AI output treated as untrusted and schema-validated; AI-proposed manifests always need human approval (four-eyes if they change splits) |
 | PII / LGPD | PII (name, CPF/CNPJ, email, phone) only in `customers` tables, encrypted at rest for documents; never in ledger metadata, event payloads to other projects, logs or traces (redaction processor + tests); erasure = anonymize the customer record while keeping ledger entries (legal retention) |
 | Browser | CSP (`default-src 'self'`), `X-Content-Type-Options`, `Referrer-Policy`, frame-ancestors none |
@@ -42,7 +42,7 @@ Internet → API (products with API keys; operators with sessions) · Provider �
 - **Lifecycle.** `created_by`, optional `expires_at`, `revoked_at` (revocation is final: a database trigger refuses to clear or change it, and `fh_app` cannot update the secret hash, scopes, prefix or owner). `last_used_at` is written at most once per `FH_API_KEY_TOUCH_INTERVAL_SECONDS` (default 60) so authentication does not write on every request. Only operators with `api_keys:manage` (owner, admin) create or revoke keys.
 - **Authentication precedence.** The API-key authenticator runs **before** the session authenticator. `Authorization: Bearer fh_...` is judged on that token alone: an invalid key is `401` even when a valid session cookie is also sent (explicit credentials are never silently replaced by ambient ones). A request without a `fh_` bearer token falls through to the session cookie. Bearer tokens are not ambient (browsers never attach them), so they need no CSRF token; session-authenticated unsafe requests still do.
 - **Logging.** Key creation and revocation are logged with the key id and prefix; the key, the secret and the digest never are, and neither is a rejected guess.
-- **Known gaps.** Repeated invalid keys are not throttled yet (*Planned*, rate limiting is its own task); the pepper has no online rotation.
+- **Known gaps.** The pepper has no online rotation. Repeated invalid keys are throttled per client IP (`auth_ip` bucket), not per targeted prefix, so a distributed guesser is limited only by the 256-bit secret.
 
 ### 3.2 Provider accounts and credentials
 
@@ -52,7 +52,15 @@ Internet → API (products with API keys; operators with sessions) · Provider �
 - **Confinement.** Decryption (`credentials_vault`) is importable only from the provider infrastructure layer; import-linter contracts fail the build if the API, application or any other module imports it. The runtime role can update only the sealed columns and `name`/`status` of `provider_accounts` (not `provider`, `environment` or `project_id`, which are part of the associated data) and cannot delete rows (accounts are disabled).
 - **Access.** Reading accounts needs `integrations:read`, changing them `integrations:manage` (owner, admin). API keys have neither.
 
-### 3.3 Tests that guard this
+### 3.3 Audit log
+
+- **What is recorded.** One `audit_records` row per privileged action, written in the *same transaction* as the action (it commits or rolls back with it; the recorder never commits): operator login success/failure/lockout and logout, password change, project create/update, member added (project owner at creation), API key create/revoke, provider account create/credentials replaced/activated/disabled. Each row carries actor (`operator`, `api_key` or `system`), action (`api_key.created`), target, project (NULL for global actions such as login), correlation id, request id, client ip and user agent (truncated to 256).
+- **Redaction.** `diff` holds before/after values of non-secret fields only: an API key shows name, prefix, environment and scopes, never the key or its hash; provider credentials appear as the fixed string `"[redacted]"`; login failures carry a masked email. The recorder also masks any diff key that names a secret (secret, hash, ciphertext, password, token, credential, nonce, document...) as defence in depth.
+- **Immutability.** `fh_app` holds INSERT and SELECT only; a row trigger rejects UPDATE/DELETE and a statement trigger TRUNCATE for every role, the table owner included. Corrections are new records.
+- **Reading.** `GET /v1/projects/{project_id}/audit-records` needs `audit:read` (owner, admin, finance; never viewers or API keys), is filterable by action, actor, target and time range, cursor-paginated, newest first. Global records (login) have no project and are not exposed by the API yet.
+- **Known gaps.** Throttled (429) login attempts are logged, not audited, to keep an attack from flooding the table; member role change/removal are not audited because those endpoints do not exist yet (*Planned*, they must call the recorder when added).
+
+### 3.4 Tests that guard this
 
 `tests/integration/isolation` enumerates every served route containing `{project_id}` and proves that neither the owner session nor an all-scopes API key of project A can reach project B: always `404`, identical to the answer for a project that does not exist, with nothing of B changed. `tests/integration/projects` and `tests/integration/providers` cover key display-once, no plaintext in any table, wrong/revoked/expired/foreign keys, scopes, AES-GCM tampering (ciphertext, nonce, associated data), key rotation, log scrubbing, database privileges and the `0003 <-> 0004` migration round trip.
 

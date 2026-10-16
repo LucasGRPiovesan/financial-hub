@@ -7,9 +7,10 @@ mint, list or revoke keys. Every handler runs one Unit of Work.
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
+from financial_hub.modules.audit.application import AuditContext, request_audit_context
 from financial_hub.modules.projects.application.api_keys import (
     ApiKeyService,
     ApiKeyView,
@@ -18,6 +19,7 @@ from financial_hub.modules.projects.application.api_keys import (
 from financial_hub.modules.projects.application.service import Permission
 from financial_hub.platform.db import UnitOfWork
 from financial_hub.platform.http.auth import ProjectScope, require
+from financial_hub.platform.http.protection.idempotency import idempotent
 from financial_hub.shared.pagination import Page, PageParams
 
 router = APIRouter(prefix="/v1/projects/{project_id}/api-keys", tags=["api-keys"])
@@ -72,13 +74,14 @@ class CreateApiKeyRequest(BaseModel):
     expires_at: datetime | None = None
 
 
-def _service(request: Request, uow: UnitOfWork) -> ApiKeyService:
+def _service(request: Request, uow: UnitOfWork, audit: AuditContext | None = None) -> ApiKeyService:
     state = request.app.state
     return ApiKeyService(
         uow,
         clock=state.clock,
         pepper=state.api_key_pepper,
         environment=state.api_key_environment,
+        audit=audit,
     )
 
 
@@ -87,14 +90,21 @@ def _uow(request: Request) -> UnitOfWork:
 
 
 ManageKeys = Annotated[ProjectScope, require(Permission.API_KEYS_MANAGE)]
+AuditCtx = Annotated[AuditContext, Depends(request_audit_context)]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_api_key(
-    body: CreateApiKeyRequest, scope: ManageKeys, request: Request, response: Response
+    body: CreateApiKeyRequest,
+    scope: ManageKeys,
+    request: Request,
+    response: Response,
+    audit: AuditCtx,
+    # The secret is shown once: a replay never returns it (409 idempotency-response-unavailable).
+    _idempotency: Annotated[None, idempotent(store_success_body=False)],
 ) -> CreatedApiKeyOut:
     async with _uow(request) as uow:
-        created = await _service(request, uow).create(
+        created = await _service(request, uow, audit).create(
             scope, name=body.name, scopes=body.scopes, expires_at=body.expires_at
         )
     response.headers["Cache-Control"] = "no-store"
@@ -115,7 +125,9 @@ async def list_api_keys(
 
 
 @router.post("/{key_id}/revoke")
-async def revoke_api_key(key_id: str, scope: ManageKeys, request: Request) -> ApiKeyOut:
+async def revoke_api_key(
+    key_id: str, scope: ManageKeys, request: Request, audit: AuditCtx
+) -> ApiKeyOut:
     async with _uow(request) as uow:
-        view = await _service(request, uow).revoke(scope, key_id)
+        view = await _service(request, uow, audit).revoke(scope, key_id)
     return ApiKeyOut.of(view)

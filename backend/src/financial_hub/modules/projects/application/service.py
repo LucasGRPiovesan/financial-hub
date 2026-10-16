@@ -5,6 +5,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from financial_hub.modules.audit.application import (
+    AuditContext,
+    AuditRecorder,
+    AuditTarget,
+    changed_fields,
+)
 from financial_hub.modules.identity.application.api import Permission, Role, grant_membership
 from financial_hub.modules.projects.domain import (
     Project,
@@ -51,8 +57,9 @@ def _invalid(pointer: str, error: ValueError) -> ValidationFailed:
 
 
 class ProjectService:
-    def __init__(self, uow: UnitOfWork) -> None:
+    def __init__(self, uow: UnitOfWork, audit: AuditContext | None = None) -> None:
         self._uow = uow
+        self._audit = audit or AuditContext.system()
 
     async def create(self, *, owner_operator_id: UUID, slug: str, name: str) -> ProjectView:
         """Create a project and make ``owner_operator_id`` its owner (same transaction)."""
@@ -75,6 +82,24 @@ class ProjectService:
             )
         await grant_membership(
             session, operator_id=owner_operator_id, project_id=project.id, role=Role.OWNER
+        )
+        owner = format_id(IdPrefix.OPERATOR, owner_operator_id)
+        project_id = format_id(IdPrefix.PROJECT, project.id)
+        await AuditRecorder.record(
+            session,
+            actor=self._audit,
+            action="project.created",
+            target=AuditTarget("project", project_id),
+            diff=changed_fields(None, {"slug": project.slug, "name": project.name}),
+            project_id=project.id,
+        )
+        await AuditRecorder.record(
+            session,
+            actor=self._audit,
+            action="member.added",
+            target=AuditTarget("operator", owner),
+            diff=changed_fields(None, {"role": Role.OWNER.value}),
+            project_id=project.id,
         )
         return _view(project)
 
@@ -126,9 +151,23 @@ class ProjectService:
                 new_status = ProjectStatus(status)
             except ValueError:
                 raise _invalid("/status", ValueError("must be active or archived")) from None
+        before = await repository.get_project(self._uow.session, project_id)
         project = await repository.update_project(
             self._uow.session, project_id, name=new_name, status=new_status
         )
-        if project is None:
+        if project is None or before is None:
             raise NotFound("Project not found.")
+        diff = changed_fields(
+            {"name": before.name, "status": before.status.value},
+            {"name": project.name, "status": project.status.value},
+        )
+        if diff["after"]:  # an update that changes nothing is not an audited change
+            await AuditRecorder.record(
+                self._uow.session,
+                actor=self._audit,
+                action="project.updated",
+                target=AuditTarget("project", format_id(IdPrefix.PROJECT, project.id)),
+                diff=diff,
+                project_id=project.id,
+            )
         return _view(project)

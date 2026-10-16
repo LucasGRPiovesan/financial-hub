@@ -32,6 +32,13 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from financial_hub.modules.audit.application import (
+    Actor,
+    ActorType,
+    AuditContext,
+    AuditRecorder,
+    AuditTarget,
+)
 from financial_hub.modules.identity.application import tokens
 from financial_hub.modules.identity.domain import (
     USER_AGENT_MAX_LENGTH,
@@ -175,6 +182,10 @@ def _operator_view(operator: Operator) -> OperatorView:
     )
 
 
+def _operator_actor(operator_id: UUID) -> Actor:
+    return Actor(ActorType.OPERATOR, format_id(IdPrefix.OPERATOR, operator_id))
+
+
 def _client_ip(ip: str | None) -> str | None:
     """A storable (``inet``) address, or ``None``."""
     if ip is None:
@@ -226,7 +237,9 @@ class AuthService:
         ip: str | None,
         user_agent: str | None,
         presented_token: str | None = None,
+        audit: AuditContext | None = None,
     ) -> LoginResult:
+        audit = audit or AuditContext.system()
         now = self._clock.now()
         normalized = normalize_email(email)
         address = _client_ip(ip)
@@ -263,8 +276,10 @@ class AuthService:
             or operator.status is not OperatorStatus.ACTIVE
             or operator.is_locked(now)
         ):
-            await self._record_failure(normalized, email_key, operator, now)
             reason = "unknown_email" if operator is None else "rejected"
+            await self._record_failure(
+                normalized, email_key, operator, now, audit=audit, reason=reason
+            )
             logger.info("auth.login_failed", email=mask_email(normalized), reason=reason)
             raise Unauthorized(INVALID_CREDENTIALS)
 
@@ -315,6 +330,12 @@ class AuthService:
                 await repository.insert_session(
                     session, record, user_agent=_user_agent(user_agent), ip=address
                 )
+                await AuditRecorder.record(
+                    session,
+                    actor=audit.acting(_operator_actor(current.id)),
+                    action="operator.login_succeeded",
+                    target=AuditTarget("operator", format_id(IdPrefix.OPERATOR, current.id)),
+                )
         if current is None:
             logger.info("auth.login_failed", email=mask_email(normalized), reason="stale")
             raise Unauthorized(INVALID_CREDENTIALS)
@@ -329,12 +350,24 @@ class AuthService:
         )
 
     async def _record_failure(
-        self, email: str, email_key: bytes, operator: Operator | None, now: datetime
+        self,
+        email: str,
+        email_key: bytes,
+        operator: Operator | None,
+        now: datetime,
+        *,
+        audit: AuditContext | None = None,
+        reason: str = "rejected",
     ) -> None:
-        """Count one failure for the email (and its operator, in lockstep with the block)."""
+        """Count one failure for the email (and its operator, in lockstep with the block).
+
+        With ``audit`` (a login attempt) the failure and a resulting lockout are recorded in the
+        same transaction; the unauthenticated actor is ``system``.
+        """
         async with self._uow() as uow:
             session = uow.session
             state = await repository.lock_throttle(session, ThrottleScope.EMAIL, email_key, now)
+            was_blocked = state.retry_after(now) is not None
             state = state.record(now, self._config.email_throttle)
             await repository.save_throttle(session, ThrottleScope.EMAIL, email_key, state, now)
             if operator is not None:
@@ -351,8 +384,39 @@ class AuthService:
                         failed_login_count=current.failed_login_count + 1,
                         locked_until=locked_until,
                     )
+            if audit is not None:
+                await self._audit_login_failure(
+                    session,
+                    audit,
+                    email,
+                    operator,
+                    reason,
+                    locked=state.blocked_until is not None and not was_blocked,
+                )
         if state.blocked_until is not None:
             logger.warning("auth.login_locked", email=mask_email(email))
+
+    async def _audit_login_failure(
+        self,
+        session: AsyncSession,
+        audit: AuditContext,
+        email: str,
+        operator: Operator | None,
+        reason: str,
+        *,
+        locked: bool,
+    ) -> None:
+        target = AuditTarget(
+            "operator", None if operator is None else format_id(IdPrefix.OPERATOR, operator.id)
+        )
+        diff = {"email": mask_email(email), "reason": reason}
+        await AuditRecorder.record(
+            session, actor=audit, action="operator.login_failed", target=target, diff=diff
+        )
+        if locked:
+            await AuditRecorder.record(
+                session, actor=audit, action="operator.login_locked", target=target, diff=diff
+            )
 
     # --- sessions ------------------------------------------------------------------------------
 
@@ -391,9 +455,16 @@ class AuthService:
             memberships=memberships,
         )
 
-    async def logout(self, principal: OperatorPrincipal) -> None:
+    async def logout(self, principal: OperatorPrincipal, audit: AuditContext | None = None) -> None:
+        context = (audit or AuditContext.system()).acting(_operator_actor(principal.operator_id))
         async with self._uow() as uow:
             await repository.revoke_session(uow.session, principal.session_id, self._clock.now())
+            await AuditRecorder.record(
+                uow.session,
+                actor=context,
+                action="operator.logout",
+                target=AuditTarget("operator", principal.subject_id),
+            )
         logger.info("auth.logout", operator_id=principal.subject_id)
 
     async def me(self, principal: OperatorPrincipal) -> MeView:
@@ -423,7 +494,12 @@ class AuthService:
     # --- password change -----------------------------------------------------------------------
 
     async def change_password(
-        self, principal: OperatorPrincipal, *, current_password: str, new_password: str
+        self,
+        principal: OperatorPrincipal,
+        *,
+        current_password: str,
+        new_password: str,
+        audit: AuditContext | None = None,
     ) -> None:
         """Replace the password and revoke every other session of the operator."""
         try:
@@ -456,6 +532,13 @@ class AuthService:
             )
             revoked = await repository.revoke_other_sessions(
                 session, current.id, keep_id=principal.session_id, now=now
+            )
+            await AuditRecorder.record(
+                session,
+                actor=(audit or AuditContext.system()).acting(_operator_actor(current.id)),
+                action="operator.password_changed",
+                target=AuditTarget("operator", principal.subject_id),
+                diff={"after": {"revoked_other_sessions": revoked}},
             )
         logger.info(
             "auth.password_changed", operator_id=principal.subject_id, revoked_sessions=revoked

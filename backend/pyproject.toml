@@ -225,6 +225,36 @@ forbidden_modules = [
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
+name = "6. audit is reached by other modules only through application"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.customers",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.wallets",
+    "financial_hub.modules.pricing",
+    "financial_hub.modules.metering",
+    "financial_hub.modules.billing",
+    "financial_hub.modules.payments",
+    "financial_hub.modules.reconciliation",
+    "financial_hub.modules.integrations",
+    "financial_hub.modules.events",
+    "financial_hub.modules.webhooks",
+    "financial_hub.modules.realtime",
+    "financial_hub.modules.intelligence",
+]
+forbidden_modules = [
+    "financial_hub.modules.audit.api",
+    "financial_hub.modules.audit.domain",
+    "financial_hub.modules.audit.infrastructure",
+    "financial_hub.modules.audit.application.recorder",
+    "financial_hub.modules.audit.application.queries",
+    "financial_hub.modules.audit.application.context",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
 name = "5. decryption is importable only by provider infrastructure"
 type = "forbidden"
 # source_modules must not overlap the forbidden module (import-linter silently skips an overlapping
