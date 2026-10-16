@@ -159,6 +159,34 @@ services:
       retries: 6
       start_period: 15s
 
+  # Opt-in end-to-end suite (Playwright, `scripts/e2e.sh`): never started by `up`. Shares the `web`
+  # network namespace, so the browser reaches the console at http://localhost:5173 (Vite only accepts
+  # localhost-style Host headers) and the API through its /v1 proxy. Keep the image tag equal to the
+  # @playwright/test version pinned in e2e/package.json.
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.64.0-noble
+    pull_policy: missing
+    profiles: ["e2e"]
+    network_mode: "service:web"
+    ipc: host
+    working_dir: /e2e
+    entrypoint: ["sh", "-c", "npm ci --no-audit --no-fund && exec npx playwright \"$$@\"", "--"]
+    command: ["test"]
+    environment:
+      CI: ${CI:-}
+      E2E_BASE_URL: http://localhost:5173
+    cpus: 2
+    mem_limit: 2g
+    volumes:
+      - ../e2e:/e2e
+      - e2e-node-modules:/e2e/node_modules
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: "no"
+
   # Opt-in (about 0.7 GB RAM idle): COMPOSE_PROFILES=observability plus
   # FH_OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318 in .env, then `docker compose up -d`.
   lgtm:
@@ -183,4 +211,5 @@ volumes:
   db-data:
   backend-venv:
   web-node-modules:
+  e2e-node-modules:
   lgtm-data:

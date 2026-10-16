@@ -1,0 +1,69 @@
+name: E2E
+
+# Browser journeys (Playwright) against the full compose stack. Heavier than the PR checks, so it runs
+# on pushes to main and on demand rather than on every pull request.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      FH_NO_TEST_LOCK: "1" # single-tenant runner: no host-wide test lock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Create .env from the example (no real secrets)
+        run: cp .env.example .env
+      # Containers run as uid 1000 / root and the sources are bind-mounted; the runner user differs.
+      - name: Make bind-mounted source writable for the container users
+        run: chmod -R a+rwX backend frontend e2e
+      # Same images/tags compose uses (api, migrate, worker and web reuse them; scripts/e2e.sh builds nothing).
+      - name: Build backend dev image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          target: dev
+          load: true
+          pull: true
+          tags: financial-hub-backend:dev
+          cache-from: type=gha,scope=backend-dev
+      - name: Build web dev image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: frontend
+          target: dev
+          load: true
+          pull: true
+          tags: financial-hub-web:dev
+          cache-from: type=gha,scope=web-dev
+      - name: Run the journeys (starts db, migrate, api, web; seeds the demo workspace)
+        run: bash scripts/e2e.sh
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose -p financial-hub-e2e logs --no-color --tail 200 api web
+      - name: Tear down
+        if: always()
+        run: docker compose -p financial-hub-e2e down -v --remove-orphans

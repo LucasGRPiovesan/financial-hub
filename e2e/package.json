@@ -1,0 +1,20 @@
+{
+  "name": "financial-hub-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "description": "End-to-end journeys (Playwright) acting as the console's operators. See docs/TESTING.md.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  }
+}

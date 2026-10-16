@@ -1,0 +1,6 @@
+# Override used only by scripts/e2e.sh (`-f compose.yaml -f deploy/compose.e2e.yaml`): a stable API for
+# the end-to-end run. The dev image's --reload polls the bind-mounted source on a Windows drive and burns
+# about a CPU while idle, which starves the browser journeys on a constrained host.
+services:
+  api:
+    command: ["uvicorn", "financial_hub.main:app", "--host", "0.0.0.0", "--port", "8000"]
