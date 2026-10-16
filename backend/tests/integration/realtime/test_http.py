@@ -46,6 +46,8 @@ async def create_project(
     assert created.status_code == 201, created.text
     public_id: str = created.json()["id"]
     harness = Harness(api.factory, owner_engine, parse_id(public_id, IdPrefix.PROJECT))
+    # Publish at the API clock (the real "now"): replay rejects cursors older than its age window.
+    harness.clock.set(api.clock.now())
     return public_id, harness
 
 

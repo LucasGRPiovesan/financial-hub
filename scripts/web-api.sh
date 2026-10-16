@@ -30,6 +30,7 @@ tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 docker compose run --rm --no-deps -T api python -c "$dump" > "$tmp"
 [ "$(head -c1 "$tmp")" = "{" ] || { echo "OpenAPI dump failed" >&2; exit 1; }
+chmod 644 "$tmp"  # mktemp creates 0600; the web container user must read it
 mv "$tmp" frontend/openapi.json
 trap - EXIT
 
