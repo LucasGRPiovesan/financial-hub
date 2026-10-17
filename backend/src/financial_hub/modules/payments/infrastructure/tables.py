@@ -26,6 +26,7 @@ payment_intents = Table(
     Column("failure_code", Text),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("invoice_id", UUID(as_uuid=True)),  # 0013_billing: the invoice it collects
 )
 
 provider_payments = Table(

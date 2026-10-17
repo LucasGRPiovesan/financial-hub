@@ -1,25 +1,39 @@
 """Public API of webhooks for the composition roots (``main``, ``workers``): import only from here.
 
 Outbound webhooks (hub -> products, docs/INTEGRATIONS.md s3). Other modules never call webhooks:
-they publish events, and endpoints subscribe to them through the event log.
+they publish events, and endpoints subscribe to them through the event log. The one exception is
+integrations: activating a manifest creates the endpoints it declares through
+:func:`create_endpoint` (the same use case as ``POST /webhook-endpoints``).
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from financial_hub.modules.audit.application import AuditContext
 from financial_hub.modules.webhooks.application import events as _events  # registers webhook.test
 from financial_hub.modules.webhooks.application.config import WebhookSettings
 from financial_hub.modules.webhooks.application.sender import SendStatus, WebhookSender
+from financial_hub.modules.webhooks.application.service import (
+    EndpointView,
+    EndpointWithSecret,
+    WebhookEndpointService,
+)
 from financial_hub.modules.webhooks.domain import TargetPolicy
 from financial_hub.modules.webhooks.infrastructure.http_client import GuardedSender
 from financial_hub.platform.crypto.keyring import Keyring
+from financial_hub.platform.db import UnitOfWork
+from financial_hub.platform.http.auth import ProjectScope
 from financial_hub.platform.settings import DEV_ENVIRONMENTS, Settings
 from financial_hub.shared.clock import Clock
 
 __all__ = [
+    "EndpointView",
+    "EndpointWithSecret",
     "SendStatus",
+    "TargetPolicy",
     "WebhookSender",
     "WebhookSettings",
     "build_sender",
+    "create_endpoint",
     "target_policy",
 ]
 
@@ -53,3 +67,20 @@ def build_sender(
         lease_seconds=config.lease_seconds,
         poll_interval_seconds=config.poll_interval_seconds,
     )
+
+
+async def create_endpoint(
+    uow: UnitOfWork,
+    scope: ProjectScope,
+    *,
+    clock: Clock,
+    keyring: Keyring,
+    policy: TargetPolicy,
+    audit: AuditContext,
+    url: str,
+    description: str | None,
+    event_types: list[str],
+) -> EndpointWithSecret:
+    """Create an endpoint (audited, secret sealed); the plaintext secret is returned only here."""
+    service = WebhookEndpointService(uow, clock=clock, keyring=keyring, policy=policy, audit=audit)
+    return await service.create(scope, url=url, description=description, event_types=event_types)

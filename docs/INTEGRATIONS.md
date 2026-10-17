@@ -6,12 +6,48 @@
 |---|---|
 | 1. Create project + API key | Console → Projects. Key format `fh_<env>_<prefix>_<secret>` (shown once). Scopes: `ingest`, `read`, `mcp`, `admin`. |
 | 2. Describe the product | Write a manifest by hand, or let the AI Integration Analyst propose one (Console or MCP). |
-| 3. Validate & simulate | `POST /v1/manifests/{id}/versions/{v}:validate`, `:simulate` with sample business events (dry run, no side effects). |
-| 4. Approve & activate | Operator with `integrations:approve`. Audited. Rollback = activate previous version. |
-| 5. Send facts | `POST /v1/business-events` or `POST /v1/usage-events` (batch), `PUT /v1/customers/{external_ref}`; always with `Idempotency-Key` / `transaction_id`. |
+| 3. Validate & simulate | `POST /v1/projects/{p}/manifests/{v}/validate`, then `.../simulate` with a sample business event (dry run, no side effects). |
+| 4. Approve & activate | Operator with `integrations:approve` (owner, finance). Four-eyes on money changes. Audited. Rollback = activate a previous version. |
+| 5. Send facts | `POST /v1/business-events` (key scope `events:write`) or `POST /v1/usage` / `/v1/usage/batch`, `PUT /v1/projects/{p}/customers/{external_ref}`; always with an `idempotency_key` / `transaction_id`. |
 | 6. Receive outcomes | Subscribe to outbound webhooks (`invoice.finalized`, `payment.confirmed`, `wallet.low_balance`, …). |
 
-Manifest schema: `manifest.v1` (published at `GET /v1/manifests/schema`). See [ADR-0008](adr/0008-integration-manifest.md).
+Manifest schema: `manifest.v1` (JSON Schema draft 2020-12, served at `GET /v1/manifest-schema/v1` and checked in at
+[`schemas/manifest.v1.json`](schemas/manifest.v1.json)). See [ADR-0008](adr/0008-integration-manifest.md).
+
+### The integration manifest (W6.1): what the code does
+
+Module `modules/integrations`; tables `integration_manifests`, `integration_manifest_activations`,
+`integration_webhook_endpoints`, `business_events` (migration `0015_integrations`).
+
+- **Document.** A `manifest.v1` declares the product, how customers are read from a payload, the business events (each
+  with a bounded `payload_schema` and its `usage` mappings), the metrics (`existing` or `create`), the prices it rates
+  with, the splits (basis points; the platform keeps the remainder), the wallet policy and outbound webhooks. Models are
+  strict pydantic (unknown keys are refused); the JSON Schema is generated from them, so there is no `jsonschema`
+  dependency. Payloads are checked by a small validator of the schema subset the manifest allows (`type` without `number`, `required`,
+  `properties`, `items`, `enum`, length/range bounds, `format` `decimal`/`date-time`; no `pattern`, no `$ref`), never by a regex engine. Floats are refused anywhere
+  in a manifest or payload: amounts and factors are decimal strings, money is integer minor units.
+- **Mapping language.** Bounded, no `eval`, no loops: a selector is a JSON Pointer (`/customer/id`), or
+  `{"op": "literal", "value": ...}`, `{"op": "pointer", "pointer": "/a"}`, `{"op": "multiply", "of": <selector>, "by": "<decimal>"}`,
+  `{"op": "coalesce", "of": [<selector>, ...]}` (first present value), `{"op": "to_decimal", "of": <selector>}`. Nesting
+  depth, pointer length and list sizes are capped; violations are 422 with a pointer to the offending node.
+- **Lifecycle.** `draft → validated → approved → active → superseded`, plus `rejected`. A draft may be edited (`PUT`)
+  and may even be incomplete; `validate` checks the schema and that every referenced metric and price exists, and
+  freezes the content (`content_hash` = SHA-256 of canonical JSON). `approve` takes the `content_hash` the reviewer saw
+  and stores the diff against the active version. **Four-eyes** (approver ≠ author) is mandatory when the diff touches
+  `splits`, `prices` or `wallet`, and optional otherwise (`FH_INTEGRATIONS_FOUR_EYES_ALWAYS=true` makes it universal).
+  `activate` is atomic: it supersedes the previous active version, creates the declared metrics and webhook endpoints
+  (an endpoint created by an earlier activation is reused), records the activation, audits and emits
+  `manifest.activated`. Webhook signing secrets are returned once, in the activation response, to the activating
+  operator; they are never stored in the manifest. Rollback = activate a superseded version; history is never rewritten.
+- **Ingestion.** `POST /v1/business-events` `{name, payload, idempotency_key}` with an API key holding `events:write`:
+  validated against the active manifest (no active manifest → 409, unknown name or bad payload → 422), mapped to
+  usage events (`transaction_id` derived from the key, so each usage event is recorded once), and stored with its
+  outcome (personal data redacted). A retry with the same payload answers 200 with the original record; the same key
+  with another payload is 409.
+- **Simulate.** `POST /v1/projects/{p}/manifests/{v}/simulate` returns the usage drafts, the charge lines per price and
+  the split allocation per currency (largest remainder, platform last). It only reads.
+- **Demo.** `seed-demo` creates v1 (active; authored by Ana, approved and activated by Carla) mapping
+  `consultation.completed` to `api_calls`, and a draft v2 that changes the clinic split from 70% to 65%.
 
 ## 2. Payment providers
 

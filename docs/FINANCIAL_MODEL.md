@@ -197,8 +197,8 @@ The payment service books these recipes through `payments/application/ledger_pos
 each transition (creation, provider refresh/webhook, refund request, refund outcome). Postings derive only from the payment
 state before and after the transition, so every provider adapter reaches the same code.
 - **Standalone intents** (no invoice yet): the intent is its own invoice. R1 is booked at its first capture with key
-  `invoice:{intent}:finalized`, `B` = intent amount, `u` = 0. When billing creates intents from invoices, billing owns R1
-  and the payments hook must stop booking it.
+  `invoice:{intent}:finalized`, `B` = intent amount, `u` = 0. An intent created by billing for an invoice
+  (`payment_intents.invoice_id` set) is never booked R1 by payments: billing owns it (below), and payments books R2/R3.
 - **No split rules / no lines**: R3 allocates all of `B` to `platform_revenue` (no payees, `fee_bearer = proportional`).
 - **Net unknown at capture**: `F = 0` (`N = G`) until the provider reports a net, which then books R2a. R2a applies only to
   a payment already captured; a net returning to a value already adjusted to (its key exists) is not booked again: the
@@ -216,6 +216,20 @@ state before and after the transition, so every provider adapter reaches the sam
   `effective_at`, so redelivered webhooks, resolver re-runs and replayed transitions never post twice.
 - **Residues left for R12**: a refund before settlement followed by R4 of `N`, or an R2a after R4, leaves the difference on
   `provider_receivable:{pa}` until reconciliation; the trial balance stays zero.
+
+### Invoice postings as implemented (W5.3): R1 and R11
+`billing/application/service.py` books these in the transaction of the invoice transition, under the invoice row lock.
+- **R1 at finalize**: key `invoice:{invoice}:finalized`, `B` = `total`, `u` = 0 (`credits_applied` is 0 until the wallet,
+  R6/R7 not implemented), so `amount_due = total`. Booked only if `total > 0` (an entry needs an amount). The same
+  transaction opens the one payment intent for `amount_due` (`invoice_id` linked, unique); the provider call is sent
+  after commit, and a crash in between leaves a `create_requested` intent that the resolver converges.
+  `amount_due = 0` → the invoice is paid at once with no intent.
+- **Paid**: the capture of that intent books R2 + R3 (payments hook, keyed on the intent), then the
+  `payment.status_changed` handler marks the invoice paid (idempotent; a capture after void is R2b, the invoice stays
+  void). `customer_receivable` returns to zero (invariant 9).
+- **R11 at void**: reverses R1 (`Dr sales_clearing / Cr customer_receivable`, `B`) and cancels the intent at the
+  provider; the intent row stays. Booked only if the invoice was finalized with `total > 0`; a draft void books
+  nothing. Refused once money was captured (`paid` is final). R7 reversal waits for the wallet.
 
 ## 5. Worked example (HealthCheck consultation, 75/25 split, internal split)
 

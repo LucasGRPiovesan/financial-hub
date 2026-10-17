@@ -447,3 +447,141 @@ forbidden_modules = [
     "financial_hub.modules.projects.infrastructure.credentials_vault",
 ]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. reconciliation reaches payments and ledger only through their public application api"
+type = "forbidden"
+source_modules = ["financial_hub.modules.reconciliation"]
+forbidden_modules = [
+    "financial_hub.modules.payments.api",
+    "financial_hub.modules.payments.domain",
+    "financial_hub.modules.payments.infrastructure",
+    "financial_hub.modules.payments.application.config",
+    "financial_hub.modules.payments.application.events",
+    "financial_hub.modules.payments.application.ledger_postings",
+    "financial_hub.modules.payments.application.reconciliation",
+    "financial_hub.modules.payments.application.registry",
+    "financial_hub.modules.payments.application.service",
+    "financial_hub.modules.payments.application.webhooks",
+    "financial_hub.modules.ledger.api",
+    "financial_hub.modules.ledger.domain",
+    "financial_hub.modules.ledger.infrastructure",
+    "financial_hub.modules.ledger.application.queries",
+    "financial_hub.modules.ledger.application.recipes",
+    "financial_hub.modules.ledger.application.reconciliation",
+    "financial_hub.modules.ledger.application.service",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. pricing is reached by other modules only through application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.customers",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.metering",
+    "financial_hub.modules.billing",
+    "financial_hub.modules.payments",
+    "financial_hub.modules.events",
+    "financial_hub.modules.audit",
+]
+forbidden_modules = [
+    "financial_hub.modules.pricing.api",
+    "financial_hub.modules.pricing.domain",
+    "financial_hub.modules.pricing.infrastructure",
+    "financial_hub.modules.pricing.application.catalog",
+    "financial_hub.modules.pricing.application.service",
+    "financial_hub.modules.pricing.application.ports",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. billing is reached by other modules only through application.api"
+type = "forbidden"
+source_modules = [
+    "financial_hub.modules.identity",
+    "financial_hub.modules.projects",
+    "financial_hub.modules.customers",
+    "financial_hub.modules.ledger",
+    "financial_hub.modules.metering",
+    "financial_hub.modules.pricing",
+    "financial_hub.modules.payments",
+    "financial_hub.modules.events",
+    "financial_hub.modules.audit",
+    "financial_hub.workers",
+]
+forbidden_modules = [
+    "financial_hub.modules.billing.api",
+    "financial_hub.modules.billing.domain",
+    "financial_hub.modules.billing.infrastructure",
+    "financial_hub.modules.billing.application.service",
+    "financial_hub.modules.billing.application.scheduling",
+    "financial_hub.modules.billing.application.events",
+    "financial_hub.modules.billing.application.config",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. billing reaches pricing, metering, payments and ledger only through their public application api"
+type = "forbidden"
+source_modules = ["financial_hub.modules.billing"]
+forbidden_modules = [
+    "financial_hub.modules.metering.api",
+    "financial_hub.modules.metering.domain",
+    "financial_hub.modules.metering.infrastructure",
+    "financial_hub.modules.metering.application.events",
+    "financial_hub.modules.metering.application.service",
+    "financial_hub.modules.payments.api",
+    "financial_hub.modules.payments.domain",
+    "financial_hub.modules.payments.infrastructure",
+    "financial_hub.modules.payments.application.config",
+    "financial_hub.modules.payments.application.events",
+    "financial_hub.modules.payments.application.ledger_postings",
+    "financial_hub.modules.payments.application.reconciliation",
+    "financial_hub.modules.payments.application.registry",
+    "financial_hub.modules.payments.application.service",
+    "financial_hub.modules.payments.application.webhooks",
+    "financial_hub.modules.ledger.api",
+    "financial_hub.modules.ledger.domain",
+    "financial_hub.modules.ledger.infrastructure",
+    "financial_hub.modules.ledger.application.queries",
+    "financial_hub.modules.ledger.application.recipes",
+    "financial_hub.modules.ledger.application.reconciliation",
+    "financial_hub.modules.ledger.application.service",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "4. integrations reaches metering, pricing, webhooks, customers and events only through their public application api"
+type = "forbidden"
+source_modules = ["financial_hub.modules.integrations"]
+forbidden_modules = [
+    "financial_hub.modules.metering.api",
+    "financial_hub.modules.metering.domain",
+    "financial_hub.modules.metering.infrastructure",
+    "financial_hub.modules.metering.application.events",
+    "financial_hub.modules.metering.application.service",
+    "financial_hub.modules.pricing.api",
+    "financial_hub.modules.pricing.domain",
+    "financial_hub.modules.pricing.infrastructure",
+    "financial_hub.modules.pricing.application.catalog",
+    "financial_hub.modules.pricing.application.ports",
+    "financial_hub.modules.pricing.application.service",
+    "financial_hub.modules.webhooks.api",
+    "financial_hub.modules.webhooks.domain",
+    "financial_hub.modules.webhooks.infrastructure",
+    "financial_hub.modules.webhooks.application.config",
+    "financial_hub.modules.webhooks.application.events",
+    "financial_hub.modules.webhooks.application.sender",
+    "financial_hub.modules.webhooks.application.service",
+    "financial_hub.modules.customers.api",
+    "financial_hub.modules.customers.domain",
+    "financial_hub.modules.customers.infrastructure",
+    "financial_hub.modules.customers.application.service",
+    "financial_hub.modules.events.api",
+    "financial_hub.modules.events.domain",
+    "financial_hub.modules.events.infrastructure",
+]
+allow_indirect_imports = true

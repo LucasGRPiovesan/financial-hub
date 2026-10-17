@@ -44,6 +44,7 @@ from financial_hub.modules.payments.domain import (
     CreatePaymentRequest,
     PaymentMethod,
     PaymentProvider,
+    ProviderBalance,
     ProviderCredentials,
     ProviderCustomer,
     ProviderCustomerRequest,
@@ -73,6 +74,8 @@ TIMEOUT: Final = httpx.Timeout(connect=5.0, read=15.0, write=15.0, pool=5.0)
 # A sanity cap in minor units (R$ 10 billion): anything above is a bug or a hostile response.
 MAX_MINOR_UNITS: Final = 10**12
 LOOKUP_PAGE_SIZE: Final = 10
+LIST_PAGE_SIZE: Final = 100
+LIST_MAX_PAGES: Final = 500
 REDACTED: Final = "[REDACTED]"
 
 BILLING_TYPES: Final[Mapping[PaymentMethod, str]] = {
@@ -119,6 +122,17 @@ def from_asaas_value(value: object) -> Money:
         return Money.parse(format(amount, "f"), BRL)
     except ValueError:
         raise _InvalidResponse("amount has more than two decimals") from None
+
+
+def _signed_asaas_value(value: object) -> Money:
+    """Like :func:`from_asaas_value` but a negative amount is valid (an account balance)."""
+    if isinstance(value, bool) or not isinstance(value, (int, Decimal)):
+        raise _InvalidResponse("amount is not a decimal number")
+    amount = Decimal(value)
+    if not amount.is_finite():
+        raise _InvalidResponse("amount out of range")
+    magnitude = from_asaas_value(abs(amount))
+    return Money(-magnitude.minor_units, BRL) if amount < 0 else magnitude
 
 
 def _json_text(fields: Mapping[str, object], decimals: Mapping[str, str]) -> bytes:
@@ -387,6 +401,50 @@ class AsaasPaymentProvider:
 
     async def _get_payment_object(self, provider_payment_id: str) -> dict[str, Any]:
         return await self._call("GET", f"payments/{_checked_id(provider_payment_id)}")
+
+    # --- reconciliation reads (ADR-0013) --------------------------------------------------------
+
+    async def list_payments(
+        self, created_from: date, created_to: date
+    ) -> list[ProviderPaymentSnapshot]:
+        """``GET /payments`` filtered by ``dateCreated`` (Asaas' calendar), every page or an error.
+
+        A page that makes no progress, or more than :data:`LIST_MAX_PAGES` pages, is
+        :class:`ProviderUncertain`: a partial listing would read as ``missing_external`` breaks.
+        """
+        if created_to < created_from:
+            raise ProviderRejected("invalid_window")
+        found: dict[str, ProviderPaymentSnapshot] = {}
+        offset = 0
+        for _ in range(LIST_MAX_PAGES):
+            data = await self._call(
+                "GET",
+                "payments",
+                params={
+                    "dateCreated[ge]": _iso(created_from),
+                    "dateCreated[le]": _iso(created_to),
+                    "limit": LIST_PAGE_SIZE,
+                    "offset": offset,
+                },
+            )
+            page = [item for raw in _items(data.get("data")) if (item := _obj(raw)) is not None]
+            for item in page:
+                snapshot = _snapshot(item)
+                found[snapshot.provider_payment_id] = snapshot
+            if data.get("hasMore") is not True:
+                return list(found.values())
+            if not page:
+                raise ProviderUncertain("listing_stalled")
+            offset += len(page)
+        raise ProviderUncertain("listing_too_long")
+
+    async def get_balance(self) -> ProviderBalance:
+        """``GET /finance/balance``: the account's available balance (may be negative)."""
+        data = await self._call("GET", "finance/balance")
+        try:
+            return ProviderBalance(_signed_asaas_value(data.get("balance")))
+        except _InvalidResponse:
+            raise ProviderUncertain("invalid_response") from None
 
     # --- customers ------------------------------------------------------------------------------
 

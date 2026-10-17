@@ -11,6 +11,12 @@ from pathlib import Path
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from financial_hub.modules.billing.application.api import (
+    BillingService,
+    BillingSettings,
+    ensure_close_schedule,
+    register_billing_handlers,
+)
 from financial_hub.modules.events.application import EventPublisher, build_runtime, handlers
 from financial_hub.modules.payments.application.api import (
     PaymentService,
@@ -21,6 +27,12 @@ from financial_hub.modules.payments.application.api import (
     ensure_sweeper_schedule,
     projects_credentials_loader,
     register_payment_handlers,
+)
+from financial_hub.modules.reconciliation.application.api import (
+    ReconciliationSettings,
+    build_reconciliation_service,
+    ensure_reconciliation_schedule,
+    register_reconciliation_handlers,
 )
 from financial_hub.modules.webhooks.application.api import WebhookSettings, build_sender
 from financial_hub.platform.crypto.keyring import Keyring
@@ -65,6 +77,23 @@ def payment_processor(
     return WebhookProcessor(session_factory, service, clock=clock, settings=settings)
 
 
+def billing_service(
+    session_factory: async_sessionmaker[AsyncSession], publisher: EventPublisher, clock: SystemClock
+) -> BillingService:
+    """Period close and invoice payments (W5.3); invoice intents are sent after each commit."""
+    app_settings = get_settings()
+    keyring = Keyring.from_settings(app_settings)
+    payments = PaymentService(
+        session_factory,
+        clock=clock,
+        registry=build_registry(app_settings),
+        credentials=projects_credentials_loader(keyring),
+        contacts=customers_contact_loader(keyring),
+        publisher=publisher,
+    )
+    return BillingService(session_factory, clock=clock, payments=payments, publisher=publisher)
+
+
 async def run() -> None:
     settings = get_settings()
     configure_logging(settings.log_level)
@@ -87,9 +116,25 @@ async def run() -> None:
             create_session_factory(engine), runtime.publisher, SystemClock(), payments_settings
         )
         register_payment_handlers(handlers, processor)
+        keyring = Keyring.from_settings(settings)
+        reconciliation_settings = ReconciliationSettings()
+        reconciliation = build_reconciliation_service(
+            create_session_factory(engine),
+            clock=SystemClock(),
+            registry=build_registry(settings),
+            credentials=projects_credentials_loader(keyring),
+            contacts=customers_contact_loader(keyring),
+            publisher=runtime.publisher,
+        )
+        register_reconciliation_handlers(handlers, reconciliation)
+        billing_settings = BillingSettings()
+        billing = billing_service(create_session_factory(engine), runtime.publisher, SystemClock())
+        register_billing_handlers(handlers, billing, billing_settings)
         async with UnitOfWork(create_session_factory(engine)) as uow:
             await runtime.sync_subscriptions(uow)
             await ensure_sweeper_schedule(uow, payments_settings, SystemClock())
+            await ensure_reconciliation_schedule(uow, reconciliation_settings, SystemClock())
+            await ensure_close_schedule(uow, billing_settings, SystemClock())
         async with asyncio.TaskGroup() as group:
             group.create_task(heartbeat(stop))
             group.create_task(runtime.dispatcher.run(stop))

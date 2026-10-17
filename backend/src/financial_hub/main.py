@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from financial_hub.modules.audit.api.routes import router as audit_router
+from financial_hub.modules.billing.api.routes import router as billing_router
 from financial_hub.modules.customers.api.routes import router as customers_router
 from financial_hub.modules.events.api.explorer import router as events_router
 from financial_hub.modules.events.api.stream import router as stream_router
@@ -17,6 +18,11 @@ from financial_hub.modules.identity.api.routes import configure_identity
 from financial_hub.modules.identity.api.routes import demo_router as demo_auth_router
 from financial_hub.modules.identity.api.routes import router as auth_router
 from financial_hub.modules.identity.application.service import PasswordHasher
+from financial_hub.modules.integrations.api.routes import (
+    business_events_router,
+    manifests_router,
+    schema_router,
+)
 from financial_hub.modules.ledger.api.routes import router as ledger_router
 from financial_hub.modules.metering.api.routes import metrics_router, usage_router
 from financial_hub.modules.payments.api.routes import router as payments_router
@@ -26,12 +32,14 @@ from financial_hub.modules.payments.application.api import (
     customers_contact_loader,
     projects_credentials_loader,
 )
+from financial_hub.modules.pricing.api.routes import router as pricing_router
 from financial_hub.modules.projects.api.api_keys import router as api_keys_router
 from financial_hub.modules.projects.api.auth import configure_projects
 from financial_hub.modules.projects.api.members import router as members_router
 from financial_hub.modules.projects.api.providers import catalog_router as provider_catalog_router
 from financial_hub.modules.projects.api.providers import router as provider_accounts_router
 from financial_hub.modules.projects.api.routes import router as projects_router
+from financial_hub.modules.reconciliation.api.routes import router as reconciliation_router
 from financial_hub.modules.webhooks.api.routes import retry_router as webhook_retry_router
 from financial_hub.modules.webhooks.api.routes import router as webhooks_router
 from financial_hub.modules.webhooks.application.api import target_policy as webhook_target_policy
@@ -125,11 +133,17 @@ def create_app(
     app.include_router(provider_webhooks_router)
     app.include_router(metrics_router)
     app.include_router(usage_router)
+    app.include_router(pricing_router)
+    app.include_router(billing_router)
     app.include_router(stream_router)
     app.include_router(events_router)
     app.include_router(webhooks_router)
     app.include_router(webhook_retry_router)
     app.include_router(ledger_router)
+    app.include_router(reconciliation_router)
+    app.include_router(schema_router)
+    app.include_router(manifests_router)
+    app.include_router(business_events_router)
     app.include_router(audit_router)
 
     @app.get("/health/live", dependencies=[public()])

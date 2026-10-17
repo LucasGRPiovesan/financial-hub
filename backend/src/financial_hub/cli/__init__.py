@@ -153,7 +153,7 @@ def _seed_demo(out: TextIO, err: TextIO) -> int:
         print(
             "demo workspace already seeded; nothing to do "
             f"(customers={result.customers_present}, payments={result.payments_present}, "
-            f"api keys={result.api_keys_present})",
+            f"api keys={result.api_keys_present}, invoices={result.invoices_present})",
             file=out,
         )
         return 0
@@ -163,7 +163,10 @@ def _seed_demo(out: TextIO, err: TextIO) -> int:
         f"memberships created={result.memberships_created}, "
         f"customers created={result.customers_created}, "
         f"payments created={result.payments_created}, "
-        f"api key created={result.api_key_created}",
+        f"api key created={result.api_key_created}, "
+        f"reconciliation run created={result.reconciliation_run_created}, "
+        f"billing records created={result.billing_created}, "
+        f"manifest versions created={result.manifests_created}",
         file=out,
     )
     return 0

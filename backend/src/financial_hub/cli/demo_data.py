@@ -8,7 +8,7 @@ enforces, so a second run finds each payment by its key and creates nothing.
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Final
+from typing import Any, Final
 
 from financial_hub.modules.payments.infrastructure.fake_provider import FakeBehavior
 
@@ -135,3 +135,77 @@ DEMO_PAYMENTS: Final = (
     DemoPayment("demo-pay-11", "cust-0003", "card", 14900, 11, FakeBehavior.REJECT),
     DemoPayment("demo-pay-12", "cust-0005", "card", 33000, 14, FakeBehavior.SUCCEED),
 )
+
+# Billing (W5.3): a monthly fee plus API calls at BRL 0.05 each, on one plan. The first
+# subscription starts ``DEMO_BILLED_SUBSCRIPTION_AGE_DAYS`` before the seed runs, so its first
+# period has closed into one finalized invoice; the second is still in its trial.
+DEMO_METRIC_CODE: Final = "api_calls"
+DEMO_METRIC_NAME: Final = "Chamadas de API"
+DEMO_FEE_PRICE: Final = "demo-monthly-fee"
+DEMO_USAGE_PRICE: Final = "demo-api-calls"
+DEMO_PRICE_EFFECTIVE_FROM: Final = date(2026, 1, 1)
+DEMO_FEE_MODEL: Final = {"kind": "flat_fee", "amount": 4990}
+DEMO_USAGE_MODEL: Final = {"kind": "per_unit", "unit_price": "0.05"}
+DEMO_PLAN_CODE: Final = "demo-pro"
+DEMO_PLAN_NAME: Final = "Demo Pro"
+DEMO_BILLED_CUSTOMER: Final = "cust-0001"
+DEMO_TRIAL_CUSTOMER: Final = "cust-0002"
+DEMO_BILLED_SUBSCRIPTION_AGE_DAYS: Final = 35
+DEMO_TRIAL_DAYS: Final = 14
+DEMO_METRIC_FIELD: Final = "calls"
+# (days before the seed runs, calls): inside the closed first period and the 30-day usage window;
+# 1500 calls x BRL 0.05 = BRL 75.00, so the invoice is 4990 + 7500 = 12490 minor units
+DEMO_USAGE: Final = (
+    (28, 120),
+    (24, 340),
+    (20, 95),
+    (17, 210),
+    (14, 180),
+    (12, 255),
+    (10, 140),
+    (8, 160),
+)
+
+# Integration manifest (W6.1): v1 is active (authored by Ana, approved and activated by Carla:
+# four-eyes, it sets a split); v2 is a draft that moves the clinic's split from 70% to 65%.
+DEMO_MANIFEST_EVENT: Final = "consultation.completed"
+DEMO_MANIFEST_V1: Final[dict[str, Any]] = {
+    "schema_version": "manifest.v1",
+    "description": "Consultas da Demo Store: cada consulta concluída registra as chamadas de API.",
+    "product": {"code": "demo-store", "name": "Demo Store"},
+    "customers": {"external_id": "/customer/id", "name": "/customer/name"},
+    "business_events": [
+        {
+            "name": DEMO_MANIFEST_EVENT,
+            "payload_schema": {
+                "type": "object",
+                "required": ["customer", "consultation_id", "calls"],
+                "properties": {
+                    "customer": {
+                        "type": "object",
+                        "required": ["id"],
+                        "properties": {
+                            "id": {"type": "string", "maxLength": 128},
+                            "name": {"type": "string", "maxLength": 200},
+                        },
+                    },
+                    "consultation_id": {"type": "string", "maxLength": 64},
+                    "calls": {"type": "integer", "minimum": 1, "maximum": 10000},
+                },
+            },
+            "usage": [
+                {"metric": DEMO_METRIC_CODE, "quantity": {"op": "to_decimal", "of": "/calls"}}
+            ],
+        }
+    ],
+    "metrics": [{"source": "existing", "code": DEMO_METRIC_CODE}],
+    "prices": [{"code": DEMO_USAGE_PRICE}],
+    "splits": [{"payee": "clinica-parceira", "basis_points": 7000}],
+    "wallet": {"mode": "disabled"},
+    "webhooks": [],
+}
+DEMO_MANIFEST_V2: Final[dict[str, Any]] = {
+    **DEMO_MANIFEST_V1,
+    "description": "Rascunho: repasse da clínica parceira de 70% para 65%.",
+    "splits": [{"payee": "clinica-parceira", "basis_points": 6500}],
+}

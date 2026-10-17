@@ -16,10 +16,10 @@ Every object the hub creates carries ``external_reference`` = the hub's own id (
 which is what makes the lookup possible.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from financial_hub.modules.payments.domain.model import PaymentMethod
 from financial_hub.modules.payments.domain.refunds import RefundState
@@ -159,3 +159,24 @@ class PaymentProvider(Protocol):
     async def refund(self, request: RefundRequest) -> ProviderRefundSnapshot: ...
 
     async def cancel(self, provider_payment_id: str) -> ProviderPaymentSnapshot: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderBalance:
+    """The provider account's own balance (signed: a negative balance is possible)."""
+
+    amount: Money
+
+
+@runtime_checkable
+class ProviderReconciliationReader(Protocol):
+    """Read-only listing an adapter offers for reconciliation (ADR-0013); never writes."""
+
+    async def list_payments(
+        self, created_from: date, created_to: date
+    ) -> Sequence[ProviderPaymentSnapshot]:
+        """Every payment created on ``created_from..created_to`` (inclusive, provider's calendar),
+        with its refunds; the whole window or a :class:`ProviderError` (never a partial list)."""
+        ...
+
+    async def get_balance(self) -> ProviderBalance: ...

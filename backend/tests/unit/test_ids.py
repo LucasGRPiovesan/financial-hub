@@ -17,7 +17,8 @@ from financial_hub.shared.ids import (
 
 EXPECTED_PREFIXES = {
     "cus", "cid", "prj", "key", "acc", "je", "pst", "inv", "chg", "pi", "pp", "pev", "evt", "dlv",
-    "whe", "mfv", "pay", "rec", "opr", "ses", "aud", "pva", "fcus", "rf",
+    "whe", "mfv", "pay", "rec", "opr", "ses", "aud", "pva", "fcus", "rf", "sub",
+    "rbk", "adj",
 }  # fmt: skip
 
 

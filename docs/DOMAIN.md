@@ -48,7 +48,7 @@ Creation of the provider payment is tracked separately on the intent (`creation_
 Provider-initiated refunds enter directly as `done` (imported from `refunds[]`).
 
 ### Invoice
-`draft → finalized → paid` · `finalized → void` (only if no payment captured) · `finalized → uncollectible` (*Planned*).
+`draft → finalized → paid` · `draft | finalized → void` (only if no payment captured) · `finalized → uncollectible` (*Planned*). Nothing due at finalize: `finalized → paid` in the same transaction, with no payment intent. `paid` and `void` are final (see section 4).
 
 ### Outbound webhook delivery
 `pending → delivering → succeeded` · `delivering → retry_scheduled → delivering …` · after max attempts `→ dead` (DLQ) · `dead → pending` (replay).
@@ -73,3 +73,48 @@ Endpoint: `enabled ⇄ disabled` (auto-disable after sustained failures; manual 
 6. Split allocations sum exactly to their basis.
 7. No query can return data from another project (isolation suite).
 8. The AI/MCP layer has no path to create ledger entries, payments or payouts.
+
+## 4. Billing (as implemented, W5.3)
+
+Modules `pricing` (catalog, rating) and `billing` (plans, subscriptions, invoices). Every amount is an integer of minor
+units; quantities are `Decimal`; no `float` anywhere (`tests/unit/pricing/test_no_float.py`).
+
+**Catalog.** A price has a code, a currency and append-only versions (`effective_from`, exclusive `effective_to`). A new
+version must start in the future and ends the open one there; history is never rewritten (`price_versions_guard`, an
+exclusion constraint against overlaps). Usage prices name the billable metric they rate; fixed prices name none. A plan
+lists price codes of its currency (monthly interval only).
+
+**Periods.** A subscription bills on an `anchor_day` (1-31) at UTC midnight. In short months the boundary clamps to the
+last day (anchor 31 → Feb 28/29 → Mar 31), without drifting. A trial is `[start, trial_end)` and is never invoiced;
+after it the anchor becomes the trial-end day.
+
+**Rating and proration.** Each line is rated by `PricingService.rate` with the price version effective at the period
+start; the line pins that version, its model, the metric and the rounding policy (`line:ROUND_HALF_EVEN`). A period
+that starts mid-cycle prorates only the fixed recurring amounts (flat fee, base fee, minimum commitment) by
+`active_days / period_days`, half-even on integers (4990 x 21/31 → 3380). Usage is never prorated, and neither are
+the flat fees of graduated/volume tiers: those are charged by reaching the tier.
+
+**Late usage.** `sum`/`count` metrics are aggregated cumulatively from the billing start minus what earlier invoices
+already billed, so usage recorded after a period closed lands on the next invoice and a closed invoice is never
+re-rated. `max`/`unique_count` aggregate over the period only (late usage for them is not billed).
+
+**Period close.** The worker's `billing.close_due` schedule (every `FH_BILLING_CLOSE_INTERVAL_SECONDS`, batch
+`FH_BILLING_CLOSE_BATCH_SIZE`) closes each ended period oldest first, one transaction per period, idempotent by
+`(subscription, period_start)`, at most 24 periods per subscription per run. A closed period becomes a finalized
+invoice at once (R1 + one payment intent, `due_date` = close + `days_until_due`).
+
+**Invoice money.** `amount_due = total − credits_applied`; `credits_applied` is 0 until the wallet. Finalize books R1
+(`invoice:{id}:finalized`, only if `total > 0`) and opens one payment intent for `amount_due`; nothing due → paid, no
+intent. Capture of that intent marks the invoice paid (`payment.status_changed`, idempotent); payments books R2/R3,
+never a second R1. Void (R11) reverses R1 and cancels the intent; it is refused once money was captured.
+
+**Cancel.** `at_period_end` bills the current period, then the subscription is `canceled` with `ended_at` = period end.
+An immediate cancel closes any ended period first, then bills `[current period start, now)` as a final invoice
+(fixed fees prorated by day, usage to date), finalized at once; a trial ends with no invoice.
+
+**Events.** `price.created`, `price.version_added` and `plan.created` are audited; `subscription.created`,
+`subscription.canceled`, `invoice.created`, `invoice.finalized`, `invoice.paid` and `invoice.voided` are domain events.
+
+**RBAC (separation of duties).** `billing:read`: every role. `billing:manage` is money movement: owner and finance only;
+`admin` reads. The catalog, plans and invoice finalize/void are operator-only, so an API key gets `403` even with
+`billing:write`. A key with `billing:write` may create and cancel subscriptions (SECURITY.md s3).

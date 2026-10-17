@@ -162,6 +162,121 @@ EXPECTED = {
         "ledger:read",
     ),
     ("GET", "/v1/projects/{project_id}/ledger/trial-balance"): ("permission", "ledger:read"),
+    ("POST", "/v1/projects/{project_id}/reconciliation/runs"): (
+        "permission",
+        "reconciliation:manage",
+    ),
+    ("GET", "/v1/projects/{project_id}/reconciliation/runs"): (
+        "permission",
+        "reconciliation:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/reconciliation/runs/{run_id}"): (
+        "permission",
+        "reconciliation:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/reconciliation/breaks"): (
+        "permission",
+        "reconciliation:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/reconciliation/breaks/{break_id}"): (
+        "permission",
+        "reconciliation:read",
+    ),
+    ("POST", "/v1/projects/{project_id}/reconciliation/breaks/{break_id}/transition"): (
+        "permission",
+        "reconciliation:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/reconciliation/breaks/{break_id}/adjustments"): (
+        "permission",
+        "ledger:adjust",
+    ),
+    ("GET", "/v1/projects/{project_id}/reconciliation/adjustments"): (
+        "permission",
+        "reconciliation:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/reconciliation/adjustments/{adjustment_id}"): (
+        "permission",
+        "reconciliation:read",
+    ),
+    ("POST", "/v1/projects/{project_id}/reconciliation/adjustments/{adjustment_id}/approve"): (
+        "permission",
+        "ledger:adjust",
+    ),
+    ("POST", "/v1/projects/{project_id}/reconciliation/adjustments/{adjustment_id}/reject"): (
+        "permission",
+        "ledger:adjust",
+    ),
+    ("POST", "/v1/projects/{project_id}/prices"): ("permission", "billing:manage"),
+    ("GET", "/v1/projects/{project_id}/prices"): ("permission", "billing:read"),
+    ("GET", "/v1/projects/{project_id}/prices/{code}"): ("permission", "billing:read"),
+    ("POST", "/v1/projects/{project_id}/prices/{code}/versions"): (
+        "permission",
+        "billing:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/plans"): ("permission", "billing:manage"),
+    ("GET", "/v1/projects/{project_id}/plans"): ("permission", "billing:read"),
+    ("GET", "/v1/projects/{project_id}/plans/{code}"): ("permission", "billing:read"),
+    ("POST", "/v1/projects/{project_id}/subscriptions"): ("permission", "billing:manage"),
+    ("GET", "/v1/projects/{project_id}/subscriptions"): ("permission", "billing:read"),
+    ("GET", "/v1/projects/{project_id}/subscriptions/{subscription_id}"): (
+        "permission",
+        "billing:read",
+    ),
+    ("POST", "/v1/projects/{project_id}/subscriptions/{subscription_id}/cancel"): (
+        "permission",
+        "billing:manage",
+    ),
+    ("GET", "/v1/projects/{project_id}/invoices"): ("permission", "billing:read"),
+    ("GET", "/v1/projects/{project_id}/invoices/{invoice_id}"): ("permission", "billing:read"),
+    ("POST", "/v1/projects/{project_id}/invoices/{invoice_id}/finalize"): (
+        "permission",
+        "billing:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/invoices/{invoice_id}/void"): (
+        "permission",
+        "billing:manage",
+    ),
+    # Integration manifests: drafting is configuration, approval/activation is integrations:approve
+    # (owner, finance); business events come from API keys with events:write (checked inside).
+    ("GET", "/v1/manifest-schema/v1"): ("authenticated", None),
+    ("POST", "/v1/projects/{project_id}/manifests"): ("permission", "integrations:manage"),
+    ("GET", "/v1/projects/{project_id}/manifests"): ("permission", "integrations:read"),
+    ("GET", "/v1/projects/{project_id}/manifests/active"): ("permission", "integrations:read"),
+    ("GET", "/v1/projects/{project_id}/manifests/activations"): (
+        "permission",
+        "integrations:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/manifests/{version}"): ("permission", "integrations:read"),
+    ("PUT", "/v1/projects/{project_id}/manifests/{version}"): (
+        "permission",
+        "integrations:manage",
+    ),
+    ("POST", "/v1/projects/{project_id}/manifests/{version}/validate"): (
+        "permission",
+        "integrations:manage",
+    ),
+    ("GET", "/v1/projects/{project_id}/manifests/{version}/diff"): (
+        "permission",
+        "integrations:read",
+    ),
+    ("POST", "/v1/projects/{project_id}/manifests/{version}/approve"): (
+        "permission",
+        "integrations:approve",
+    ),
+    ("POST", "/v1/projects/{project_id}/manifests/{version}/reject"): (
+        "permission",
+        "integrations:approve",
+    ),
+    ("POST", "/v1/projects/{project_id}/manifests/{version}/activate"): (
+        "permission",
+        "integrations:approve",
+    ),
+    ("POST", "/v1/projects/{project_id}/manifests/{version}/simulate"): (
+        "permission",
+        "integrations:read",
+    ),
+    ("GET", "/v1/projects/{project_id}/business-events"): ("permission", "integrations:read"),
+    ("POST", "/v1/business-events"): ("authenticated", None),
 }
 
 

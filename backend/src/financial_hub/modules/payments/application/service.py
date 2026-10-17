@@ -270,6 +270,16 @@ class NewPayment:
 
 
 @dataclass(frozen=True, slots=True)
+class PendingPayment:
+    """An intent recorded in transaction A whose provider call is still to be sent."""
+
+    provider: PaymentProvider
+    intent: PaymentIntent
+    attempt_id: UUID
+    request: CreatePaymentRequest
+
+
+@dataclass(frozen=True, slots=True)
 class _Outcome:
     """What one provider call produced: a result, or the error that says what to assume."""
 
@@ -485,70 +495,212 @@ class PaymentService:
             raise _invalid("/customer", "give customer.id or customer.external_ref", "required")
         amount, method, external_ref, description, metadata = self._validated(new)
         project_id = scope.project_id
-        intent_id, attempt_id = new_uuid(), new_uuid()
         async with self._uow() as uow:
-            session = uow.session
             customer = await customers_api.resolve_customer_identity(
-                session,
+                uow.session,
                 project_id=project_id,
                 customer_id=new.customer_id,
                 external_ref=new.customer_external_ref,
             )
             if customer is None:
                 raise _invalid("/customer", "unknown or anonymized customer", "not_found")
-            provider_name, account_id = await self._choose_account(
-                session, project_id, new.provider_account_id
-            )
-            provider = await self._resolve_provider(session, project_id, provider_name, account_id)
-            provider_customer = (
-                None
-                if account_id is None
-                else await customers_api.get_provider_customer(
-                    session,
-                    project_id=project_id,
-                    identity_id=customer,
-                    provider_account_id=account_id,
-                )
-            )
-            now = self._clock.now()
-            intent = PaymentIntent(
-                id=intent_id,
+            pending = await self._open(
+                uow,
                 project_id=project_id,
-                customer_id=customer,
+                customer=customer,
                 amount=amount,
                 method=method,
                 due_date=new.due_date,
                 external_ref=external_ref,
                 description=description,
                 metadata=metadata,
-                provider=provider_name,
+                provider_account_id=new.provider_account_id,
+            )
+        await self.send_pending(pending)
+        return await self._load_view(project_id, pending.intent.id)
+
+    async def _open(
+        self,
+        uow: UnitOfWork,
+        *,
+        project_id: UUID,
+        customer: UUID,
+        amount: Money,
+        method: PaymentMethod,
+        due_date: date,
+        external_ref: str | None,
+        description: str | None,
+        metadata: Mapping[str, Any],
+        provider_account_id: str | None,
+        invoice_id: UUID | None = None,
+    ) -> PendingPayment:
+        """Transaction A in the caller's unit of work: the intent, its attempt and the event."""
+        session = uow.session
+        intent_id, attempt_id = new_uuid(), new_uuid()
+        provider_name, account_id = await self._choose_account(
+            session, project_id, provider_account_id
+        )
+        provider = await self._resolve_provider(session, project_id, provider_name, account_id)
+        provider_customer = (
+            None
+            if account_id is None
+            else await customers_api.get_provider_customer(
+                session,
+                project_id=project_id,
+                identity_id=customer,
                 provider_account_id=account_id,
-                creation_status=CreationStatus.CREATE_REQUESTED,
-                attempt_id=attempt_id,
-                failure_code=None,
-                created_at=now,
-                updated_at=now,
             )
-            if not await repository.insert_intent(session, intent):
-                raise PaymentExternalRefTaken(
-                    "Another payment of this project uses this external_ref."
-                )
-            request = self._create_request(intent, provider_customer)
-            await self._insert_attempt(session, intent, attempt_id, request, now)
-            payment_id = format_id(IdPrefix.PAYMENT_INTENT, intent_id)
-            await self._publish(
-                uow,
-                project_id,
-                payment_events.PAYMENT_CREATED.name,
-                payment_id,
-                payment_id=payment_id,
-                customer_id=format_id(IdPrefix.CUSTOMER, customer),
-                status=derive_status(intent, None, (), self.today()).value,
-            )
-        ready = await self._with_customer(provider, intent, attempt_id, request)
+        )
+        now = self._clock.now()
+        intent = PaymentIntent(
+            id=intent_id,
+            project_id=project_id,
+            customer_id=customer,
+            amount=amount,
+            method=method,
+            due_date=due_date,
+            external_ref=external_ref,
+            description=description,
+            metadata=metadata,
+            provider=provider_name,
+            provider_account_id=account_id,
+            creation_status=CreationStatus.CREATE_REQUESTED,
+            attempt_id=attempt_id,
+            failure_code=None,
+            created_at=now,
+            updated_at=now,
+            invoice_id=invoice_id,
+        )
+        if not await repository.insert_intent(session, intent):
+            raise PaymentExternalRefTaken("Another payment of this project uses this external_ref.")
+        request = self._create_request(intent, provider_customer)
+        await self._insert_attempt(session, intent, attempt_id, request, now)
+        payment_id = format_id(IdPrefix.PAYMENT_INTENT, intent_id)
+        await self._publish(
+            uow,
+            project_id,
+            payment_events.PAYMENT_CREATED.name,
+            payment_id,
+            payment_id=payment_id,
+            customer_id=format_id(IdPrefix.CUSTOMER, customer),
+            status=derive_status(intent, None, (), self.today()).value,
+        )
+        return PendingPayment(provider, intent, attempt_id, request)
+
+    async def send_pending(self, pending: PendingPayment) -> None:
+        """The provider call and transaction B of an intent opened by ``_open`` (after commit)."""
+        ready = await self._with_customer(
+            pending.provider, pending.intent, pending.attempt_id, pending.request
+        )
         if ready is not None:
-            await self._send_create(provider, intent, attempt_id, ready)
-        return await self._load_view(project_id, intent_id)
+            await self._send_create(pending.provider, pending.intent, pending.attempt_id, ready)
+
+    # --- invoice payments (W5.3) ---------------------------------------------------------------
+
+    async def open_invoice_payment(
+        self,
+        uow: UnitOfWork,
+        *,
+        project_id: UUID,
+        customer_id: UUID,
+        invoice_id: UUID,
+        amount: Money,
+        method: str,
+        due_date: date,
+        description: str | None = None,
+    ) -> PendingPayment:
+        """Open the one intent collecting ``invoice_id`` in billing's finalize transaction.
+
+        The caller sends it after its commit (:meth:`send_pending`, e.g. from ``after_commit``); a
+        crash in between leaves a ``create_requested`` intent the resolver converges. The intent
+        is linked by ``invoice_id`` (never by metadata a product could forge), so the ledger hook
+        books no R1 for it: billing booked R1 at finalize.
+        """
+        try:
+            checked = validate_amount(amount)
+        except ValueError as error:
+            raise _invalid("/amount", str(error)) from None
+        try:
+            payment_method = PaymentMethod(method)
+        except ValueError:
+            raise _invalid("/method", "must be one of: pix, boleto, card") from None
+        if payment_method in BRL_ONLY_METHODS and checked.currency.code != "BRL":
+            raise _invalid("/currency", f"{payment_method.value} payments are in BRL only")
+        if due_date < self.today():
+            raise _invalid("/due_date", "must be today or later")
+        try:
+            text = validate_description(description)
+        except ValueError as error:
+            raise _invalid("/description", str(error)) from None
+        return await self._open(
+            uow,
+            project_id=project_id,
+            customer=customer_id,
+            amount=checked,
+            method=payment_method,
+            due_date=due_date,
+            external_ref=None,
+            description=text,
+            metadata={"invoice_id": format_id(IdPrefix.INVOICE, invoice_id)},
+            provider_account_id=None,
+            invoice_id=invoice_id,
+        )
+
+    async def cancel_invoice_payment(self, uow: UnitOfWork, intent_id: UUID) -> PaymentIntent:
+        """Cancel the intent of an invoice being voided, in billing's void transaction (R11).
+
+        Refuses (``Conflict``) when money was captured or the creation outcome is not known yet.
+        A pending provider payment is marked ``canceled`` hub-side (so a capture that still
+        arrives is a late capture, booked as unapplied cash R2b) and canceled at the provider
+        after the commit, best effort.
+        """
+        session = uow.session
+        intent = await repository.find_intent(session, intent_id)
+        if intent is None:
+            raise NotFound("Payment not found.")
+        payment = await repository.get_provider_payment(session, intent.id, for_update=True)
+        if payment is None:
+            if intent.creation_status in _UNRESOLVED:
+                raise Conflict("The invoice's payment is still being created; retry later.")
+            return intent  # rejected: nothing exists at the provider
+        if payment.state.capture_status is CaptureStatus.CAPTURED:
+            raise Conflict("The invoice's payment was captured; refund it instead of voiding.")
+        if payment.state.capture_status is not CaptureStatus.PENDING:
+            return intent  # already failed or canceled
+        now = self._clock.now()
+        today = self.today()
+        refunds = list(await repository.refunds_of(session, [intent.id]))
+        before = derive_status(intent, payment, refunds, today)
+        state = move_capture(payment.state, CaptureStatus.CANCELED)
+        await repository.update_provider_payment(
+            session, payment.id, state=state, raw_status=payment.raw_status, now=now
+        )
+        canceled = replace(payment, state=state, updated_at=now)
+        await self._ledger_hook(
+            uow, PaymentChange(intent, canceled, payment.state, now, refunds, refunds)
+        )
+        after = derive_status(intent, canceled, refunds, today)
+        await self._status_changed(uow, intent, before, after)
+        try:
+            provider = await self._provider(
+                session, intent.project_id, intent.provider, intent.provider_account_id
+            )
+        except ProviderUnavailable:
+            logger.warning("payments.invoice_cancel_skipped", payment_intent_id=str(intent_id))
+            return intent
+        provider_payment_id = payment.provider_payment_id
+
+        async def cancel_at_provider() -> None:
+            outcome = await self._call(provider.cancel(provider_payment_id))
+            if outcome.error is not None:
+                logger.warning(
+                    "payments.invoice_cancel_failed",
+                    payment_intent_id=str(intent_id),
+                    code=outcome.error.code,
+                )
+
+        uow.after_commit.append(cancel_at_provider)
+        return intent
 
     @staticmethod
     def _create_request(
@@ -1488,6 +1640,7 @@ def _with_creation(
         failure_code=failure_code,
         created_at=intent.created_at,
         updated_at=intent.updated_at,
+        invoice_id=intent.invoice_id,
     )
 
 

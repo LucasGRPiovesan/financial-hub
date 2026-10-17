@@ -6,7 +6,9 @@ difference only, never from provider payloads, so the fake provider and Asaas re
 
 - first capture of the intent: **R1** (a standalone intent is its own invoice: ``B`` = the intent
   amount, no wallet) + **R2** (``G`` = captured amount, ``F = G - N`` when the net is known, else
-  0) + **R3** (no split: the platform takes ``B``);
+  0) + **R3** (no split: the platform takes ``B``). An intent that collects a billing invoice
+  (``invoice_id`` set, W5.3) gets R2 + R3 only: billing booked R1 when it finalized the invoice
+  (key ``invoice:{invoice_id}:finalized``) and ``B`` = the intent amount = the invoice's amount due;
 - a late capture (the payment had failed or been canceled) or a capture of an intent already
   billed by another provider payment: **R2b** unapplied cash, never R2/R3;
 - the reported net changed after the capture: **R2a** (see :func:`with_reported_net`);
@@ -108,7 +110,8 @@ async def post_payment_changes(uow: UnitOfWork, change: PaymentChange) -> None:
     project_id = change.payment.project_id
     booked = await booked_capture(uow, project_id, change.payment.id)
     billed = False
-    if booked is None and _newly_captured(change):
+    # Invoice-backed intents have one provider payment and their R1 is billing's (W5.3).
+    if booked is None and _newly_captured(change) and change.intent.invoice_id is None:
         r1 = capture_facts(change.intent, change.payment, unapplied=False)[0]
         billed = not await unbooked(uow, project_id, [r1])
     facts = await unbooked(uow, project_id, plan_postings(change, booked, intent_billed=billed))
@@ -165,7 +168,7 @@ def plan_postings(
 def capture_facts(
     intent: PaymentIntent, payment: ProviderPayment, *, unapplied: bool
 ) -> list[LedgerInput]:
-    """R1 + R2 + R3 for the first capture of the intent, else R2b."""
+    """R1 + R2 + R3 for the first capture (R2 + R3 if invoice-backed), else R2b."""
     currency = intent.amount.currency
     gross = Money(payment.state.captured_amount, currency)
     fee = gross - Money(booked_net(payment.state), currency)
@@ -174,8 +177,11 @@ def capture_facts(
     if unapplied:
         return [UnappliedCashReceived(payment.id, customer, account, gross, fee)]
     billed = intent.amount
+    facts: list[LedgerInput] = []
+    if intent.invoice_id is None:
+        facts.append(InvoiceFinalized(intent.id, customer, billed, Money.zero(currency)))
     return [
-        InvoiceFinalized(intent.id, customer, billed, Money.zero(currency)),
+        *facts,
         PaymentCaptured(payment.id, customer, account, billed, gross, fee),
         SplitAllocated(payment.id, billed, gross - fee, FeeBearer.PROPORTIONAL, NO_SPLIT),
     ]

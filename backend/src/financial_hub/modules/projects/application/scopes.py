@@ -39,6 +39,8 @@ SCOPE_PERMISSIONS: Final[Mapping[ApiKeyScope, frozenset[str]]] = MappingProxyTyp
         # Recording usage is append-only and reads nothing back; the project's summaries are for
         # operators (metering:read), so a leaked ingestion key cannot read consumption.
         ApiKeyScope.USAGE_WRITE: frozenset({Permission.USAGE_WRITE.value}),
+        # Business events (integration manifests) are mapped to usage server-side; write-only too.
+        ApiKeyScope.EVENTS_WRITE: frozenset({Permission.EVENTS_WRITE.value}),
     }
 )
 
@@ -50,6 +52,7 @@ ADMIN_ONLY: Final = frozenset(
         Permission.MEMBERS_MANAGE.value,
         Permission.INTEGRATIONS_READ.value,
         Permission.INTEGRATIONS_MANAGE.value,
+        Permission.INTEGRATIONS_APPROVE.value,
         Permission.PROJECTS_MANAGE.value,
         Permission.WEBHOOKS_READ.value,
         Permission.WEBHOOKS_MANAGE.value,

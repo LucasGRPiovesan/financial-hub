@@ -27,6 +27,8 @@ Projeto de portfólio. A seção [Status](#status) diz com precisão o que exist
 4. **RBAC, chaves de API com escopos e segredos criptografados**: [docs/SECURITY.md](docs/SECURITY.md).
 5. **Fronteiras de módulo verificadas por máquina**: contratos do `import-linter` em [`backend/pyproject.toml`](backend/pyproject.toml).
 
+**O que ainda não está pronto:** carteira de créditos e onboarding com IA/MCP estão mapeados em [Pendências mapeadas](#pendências-mapeadas-próximos-passos).
+
 **Rodar em 5 minutos** (só precisa de Docker; detalhes em [Como rodar](#como-rodar)):
 
 ```bash
@@ -48,17 +50,20 @@ Derivado do código e do histórico git (não do plano). Itens "Planejado" estã
 | Tempo real (SSE + `LISTEN/NOTIFY`) | Implementado | Hook `useProjectStream` no console |
 | Identidade: operadores, sessões, CSRF, throttling, RBAC (owner/admin/finance/viewer) | Implementado | Login demo opt-in para avaliação |
 | Projetos, membros, chaves de API com escopos | Implementado | Hash HMAC com pepper, exibição única |
-| Contas de provider com credenciais criptografadas (AES-256-GCM) | Implementado | Catálogo e contas; sem adapter real |
+| Contas de provider com credenciais criptografadas (AES-256-GCM) | Implementado | Catálogo e contas; adapter real: Asaas Sandbox (linha abaixo) |
 | Log de auditoria append-only, `Idempotency-Key`, rate limit em Postgres | Implementado | |
 | Clientes universais e identidades por projeto | Implementado | Documento (CPF/CNPJ) em cofre criptografado |
-| Pagamentos: estado ortogonal, porta de provider, chamadas externas com fencing, reembolsos | Implementado | **Com provider fake** (`fake_provider.py`) |
+| Pagamentos: estado ortogonal, porta de provider, chamadas externas com fencing, reembolsos | Implementado | Provider fake nos testes (`fake_provider.py`) e Asaas Sandbox real |
 | Pagamentos lançam no razão (captura, ajuste de taxa, liquidação, reembolso) na mesma transação | Implementado | Receitas R1-R4, R2a, R2b, R8; [`ledger_postings.py`](backend/src/financial_hub/modules/payments/application/ledger_postings.py) |
-| Console React (visão geral, projetos, chaves, membros, clientes, integrações) | Implementado | Design em [docs/FRONTEND.md](docs/FRONTEND.md) |
+| Console React (visão geral, projetos, chaves, membros, clientes, integrações, pagamentos, razão, auditoria, eventos, medição, webhooks, configurações) | Implementado | Design em [docs/FRONTEND.md](docs/FRONTEND.md) |
 | Suíte E2E Playwright como usuário final | Implementado | Roda em CI na `main` |
 | Adapter Asaas Sandbox, webhooks de entrada, sweeper de resultado desconhecido | Sandbox | Só `api-sandbox.asaas.com`; cliente Asaas provisionado antes da cobrança; webhook `POST /v1/webhooks/asaas/{conta}` com token, dedup e refetch; sweeper periódico no worker ([INTEGRATIONS.md](docs/INTEGRATIONS.md) s2) |
-| Medição de uso (metering), cobrança, faturas, assinaturas, carteira | Planejado | Módulos ainda vazios; ADR-0007 |
+| Medição de uso (métricas faturáveis, ingestão append-only) | Implementado | [docs/METERING.md](docs/METERING.md) |
+| Cobrança: catálogo de preços versionado, planos, assinaturas com proração, faturas (rascunho → finalizada → paga \| anulada) | Implementado | Fechamento de período idempotente pelo agendador; R1 na finalização, R11 na anulação ([docs/DOMAIN.md](docs/DOMAIN.md), [FINANCIAL_MODEL.md](docs/FINANCIAL_MODEL.md)) |
+| Carteira (créditos pré-pagos) | Planejado | ADR-0007; `credits_applied` é sempre 0 até lá |
 | Webhooks de saída (Standard Webhooks, rotação de segredo, retentativas, reenvio manual) | Implementado | Guarda contra SSRF; envio pelo worker ([INTEGRATIONS.md](docs/INTEGRATIONS.md) s3) |
-| Reconciliação, manifesto de integração | Planejado | ADR-0008, ADR-0013 |
+| Reconciliação (execuções interna/transações/saldo, quebras, ajustes R12 com quatro olhos) | Implementado | [docs/RECONCILIATION.md](docs/RECONCILIATION.md), ADR-0013 |
+| Manifesto de integração (schema `manifest.v1`, validar → aprovar com quatro olhos → ativar, simulação, `POST /v1/business-events`) | Implementado | ADR-0008; [INTEGRATIONS.md](docs/INTEGRATIONS.md) s1, [schema](docs/schemas/manifest.v1.json) |
 | Onboarding com IA e servidor MCP | Planejado | ADR-0009; a IA nunca movimenta dinheiro |
 | Stripe / Mercado Pago, FX multi-moeda | Planejado | A porta de provider já comporta novos adapters |
 
@@ -176,8 +181,18 @@ docs/       PLAN, ARCHITECTURE, DOMAIN, FINANCIAL_MODEL, SECURITY, TESTING, FRON
 ## Roadmap
 
 O plano mestre, o escopo (Implementado / Sandbox / Simulado / Planejado) e os marcos estão em [docs/PLAN.md](docs/PLAN.md).
-Próximos passos: adapter Asaas Sandbox e webhooks de entrada sobre a porta de pagamentos existente, medição de uso e
-cobrança, webhooks de saída, reconciliação e onboarding assistido por IA.
+
+### Pendências mapeadas (próximos passos)
+
+Itens conscientemente adiados. Estão arquiteturados nos ADRs, mas ainda não implementados:
+
+| Pendência | O que falta | Onde já está preparado |
+|---|---|---|
+| **Carteira (créditos pré-pagos)** | Saldo de créditos por cliente, receitas R6 (recarga) e R7 (consumo *wallet-first* na fatura) e estorno de R7 na anulação (R11) | [ADR-0007](docs/adr/0007-own-billing-engine.md), [FINANCIAL_MODEL.md](docs/FINANCIAL_MODEL.md); a fatura já calcula `amount_due = total - credits_applied` (hoje `credits_applied = 0`); o manifesto já aceita `wallet: disabled | wallet_first` |
+| **Onboarding assistido por IA + servidor MCP** | Assistente (Gemini Flash-Lite) que gera **rascunhos** de `manifest.v1` a partir da descrição do negócio, exposto também como ferramentas MCP | [ADR-0009](docs/adr/0009-ai-and-mcp-boundary.md); o schema `manifest.v1` já é público e autodescritivo; o fluxo validar → aprovar com quatro olhos → ativar garante que a IA **nunca** ativa nem movimenta dinheiro |
+| **Telas do console para cobrança, reconciliação e manifesto** | Faturas, assinaturas e catálogo de preços; execuções e quebras de reconciliação com aprovação de ajustes; editor/diff/aprovação de manifestos | As APIs já existem e estão documentadas no OpenAPI (`/docs`) e no cliente gerado do front-end |
+| **Step-up de autenticação na aprovação** | Reautenticação recente exigida ao aprovar ajustes R12 e manifestos | Hoje a aprovação usa a sessão do operador, com quatro olhos obrigatório ([SECURITY.md](docs/SECURITY.md)) |
+| **Stripe / Mercado Pago, FX multi-moeda** | Novos adapters e conversão de moeda | A porta de provider já comporta novos adapters |
 
 ## Licença
 

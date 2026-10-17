@@ -59,6 +59,7 @@ def _intent(row: Any) -> PaymentIntent:
         failure_code=row.failure_code,
         created_at=row.created_at,
         updated_at=row.updated_at,
+        invoice_id=row.invoice_id,
     )
 
 
@@ -126,6 +127,7 @@ async def insert_intent(session: AsyncSession, intent: PaymentIntent) -> bool:
             failure_code=intent.failure_code,
             created_at=intent.created_at,
             updated_at=intent.updated_at,
+            invoice_id=intent.invoice_id,
         )
         .on_conflict_do_nothing(constraint="uq_payment_intents_project_id_external_ref")
         .returning(_intents.c.id)

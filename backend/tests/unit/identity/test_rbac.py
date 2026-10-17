@@ -43,7 +43,7 @@ def test_viewer_only_reads_and_not_the_audit_log() -> None:
 def test_permission_strings_are_area_colon_action() -> None:
     for permission in Permission:
         area, _, action = permission.value.partition(":")
-        assert area and action in {"read", "manage", "adjust", "refund", "write"}
+        assert area and action in {"read", "manage", "adjust", "refund", "write", "approve"}
 
 
 def test_members_are_readable_by_every_role_but_managed_by_owner_and_admin_only() -> None:

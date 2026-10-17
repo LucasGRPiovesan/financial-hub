@@ -1,0 +1,920 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://financial-hub.dev/schemas/manifest.v1.json",
+  "$defs": {
+    "BusinessEventSpec": {
+      "additionalProperties": false,
+      "description": "A business event the product sends to ``POST /v1/business-events``.",
+      "properties": {
+        "name": {
+          "maxLength": 100,
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "payload_schema": {
+          "$ref": "#/$defs/PayloadSchema"
+        },
+        "usage": {
+          "items": {
+            "$ref": "#/$defs/UsageMapping"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Usage",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "payload_schema",
+        "usage"
+      ],
+      "title": "BusinessEventSpec",
+      "type": "object"
+    },
+    "CoalesceExpression": {
+      "additionalProperties": false,
+      "description": "The first operand that is present and not ``null``; absent when none is.",
+      "properties": {
+        "op": {
+          "const": "coalesce",
+          "title": "Op",
+          "type": "string"
+        },
+        "of": {
+          "items": {
+            "$ref": "#/$defs/Selector"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Of",
+          "type": "array"
+        }
+      },
+      "required": [
+        "op",
+        "of"
+      ],
+      "title": "CoalesceExpression",
+      "type": "object"
+    },
+    "CustomerMapping": {
+      "additionalProperties": false,
+      "description": "Where a business event payload carries the customer's identity.\n\n``external_id`` is matched against the customer's ``external_ref`` in the hub. The other\nselectors declare where personal data sits: those values are redacted before the payload is\nstored, and are not used to create customers (customers are created through the API first).",
+      "properties": {
+        "external_id": {
+          "$ref": "#/$defs/Selector"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "document": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "email": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "external_id"
+      ],
+      "title": "CustomerMapping",
+      "type": "object"
+    },
+    "ExistingMetric": {
+      "additionalProperties": false,
+      "description": "A billable metric that already exists in the project.",
+      "properties": {
+        "source": {
+          "const": "existing",
+          "title": "Source",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 63,
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "code"
+      ],
+      "title": "ExistingMetric",
+      "type": "object"
+    },
+    "Expression": {
+      "discriminator": {
+        "mapping": {
+          "coalesce": "#/$defs/CoalesceExpression",
+          "literal": "#/$defs/LiteralExpression",
+          "multiply": "#/$defs/MultiplyExpression",
+          "pointer": "#/$defs/PointerExpression",
+          "to_decimal": "#/$defs/ToDecimalExpression"
+        },
+        "propertyName": "op"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LiteralExpression"
+        },
+        {
+          "$ref": "#/$defs/PointerExpression"
+        },
+        {
+          "$ref": "#/$defs/MultiplyExpression"
+        },
+        {
+          "$ref": "#/$defs/CoalesceExpression"
+        },
+        {
+          "$ref": "#/$defs/ToDecimalExpression"
+        }
+      ]
+    },
+    "LiteralExpression": {
+      "additionalProperties": false,
+      "description": "A constant.",
+      "properties": {
+        "op": {
+          "const": "literal",
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "type": "string"
+            },
+            {
+              "maximum": 999999999999999999,
+              "minimum": -999999999999999999,
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "op",
+        "value"
+      ],
+      "title": "LiteralExpression",
+      "type": "object"
+    },
+    "MetricSpec": {
+      "discriminator": {
+        "mapping": {
+          "create": "#/$defs/NewMetric",
+          "existing": "#/$defs/ExistingMetric"
+        },
+        "propertyName": "source"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ExistingMetric"
+        },
+        {
+          "$ref": "#/$defs/NewMetric"
+        }
+      ]
+    },
+    "MultiplyExpression": {
+      "additionalProperties": false,
+      "description": "``of`` (an integer or a decimal string) times the constant ``by``, exactly.",
+      "properties": {
+        "op": {
+          "const": "multiply",
+          "title": "Op",
+          "type": "string"
+        },
+        "of": {
+          "$ref": "#/$defs/Selector"
+        },
+        "by": {
+          "description": "A decimal as a string (at most 18 integer digits and 9 decimals).",
+          "maxLength": 29,
+          "pattern": "^-?(0|[1-9][0-9]{0,17})(\\.[0-9]{1,9})?$",
+          "title": "By",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "of",
+        "by"
+      ],
+      "title": "MultiplyExpression",
+      "type": "object"
+    },
+    "NewMetric": {
+      "additionalProperties": false,
+      "description": "A billable metric created (if missing) when the manifest is activated.",
+      "properties": {
+        "source": {
+          "const": "create",
+          "title": "Source",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 63,
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Code",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "aggregation": {
+          "enum": [
+            "sum",
+            "count",
+            "max",
+            "unique_count"
+          ],
+          "title": "Aggregation",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        }
+      },
+      "required": [
+        "source",
+        "code",
+        "name",
+        "aggregation"
+      ],
+      "title": "NewMetric",
+      "type": "object"
+    },
+    "PayloadSchema": {
+      "additionalProperties": false,
+      "description": "One node of a payload schema (the root must be an ``object``).",
+      "properties": {
+        "type": {
+          "enum": [
+            "object",
+            "array",
+            "string",
+            "integer",
+            "boolean",
+            "null"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "properties": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/PayloadSchema"
+              },
+              "maxProperties": 64,
+              "propertyNames": {
+                "maxLength": 100,
+                "minLength": 1
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Properties"
+        },
+        "required": {
+          "anyOf": [
+            {
+              "items": {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 64,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Additionalproperties"
+        },
+        "items": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PayloadSchema"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "minItems": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minitems"
+        },
+        "maxItems": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maxitems"
+        },
+        "minLength": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minlength"
+        },
+        "maxLength": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maxlength"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "maximum": 999999999999999999,
+              "minimum": -999999999999999999,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "maximum": 999999999999999999,
+              "minimum": -999999999999999999,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "enum": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "maxLength": 256,
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxItems": 64,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enum"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "enum": [
+                "decimal",
+                "date-time"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "PayloadSchema",
+      "type": "object"
+    },
+    "PointerExpression": {
+      "additionalProperties": false,
+      "description": "The value at ``pointer`` (absent when the payload has nothing there).",
+      "properties": {
+        "op": {
+          "const": "pointer",
+          "title": "Op",
+          "type": "string"
+        },
+        "pointer": {
+          "description": "A JSON pointer (RFC 6901) into the business event payload, e.g. \"/order/id\".",
+          "maxLength": 256,
+          "pattern": "^(/([^~/]|~[01])*)*$",
+          "title": "Pointer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "pointer"
+      ],
+      "title": "PointerExpression",
+      "type": "object"
+    },
+    "PriceRef": {
+      "additionalProperties": false,
+      "description": "A price of the project's catalog, by code (validated against the catalog).",
+      "properties": {
+        "code": {
+          "maxLength": 100,
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,99}$",
+          "title": "Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "PriceRef",
+      "type": "object"
+    },
+    "Product": {
+      "additionalProperties": false,
+      "description": "The product this manifest integrates.",
+      "properties": {
+        "code": {
+          "maxLength": 63,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "title": "Code",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "code",
+        "name"
+      ],
+      "title": "Product",
+      "type": "object"
+    },
+    "Selector": {
+      "anyOf": [
+        {
+          "description": "A JSON pointer (RFC 6901) into the business event payload, e.g. \"/order/id\".",
+          "maxLength": 256,
+          "pattern": "^(/([^~/]|~[01])*)*$",
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Expression"
+        }
+      ]
+    },
+    "Split": {
+      "additionalProperties": false,
+      "description": "A payee's share of each charge in basis points (1 bp = 0.01%); the platform keeps the rest",
+      "properties": {
+        "payee": {
+          "maxLength": 100,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$",
+          "title": "Payee",
+          "type": "string"
+        },
+        "basis_points": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Basis Points",
+          "type": "integer"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "payee",
+        "basis_points"
+      ],
+      "title": "Split",
+      "type": "object"
+    },
+    "ToDecimalExpression": {
+      "additionalProperties": false,
+      "description": "``of`` (an integer or a decimal string) as a decimal.",
+      "properties": {
+        "op": {
+          "const": "to_decimal",
+          "title": "Op",
+          "type": "string"
+        },
+        "of": {
+          "$ref": "#/$defs/Selector"
+        }
+      },
+      "required": [
+        "op",
+        "of"
+      ],
+      "title": "ToDecimalExpression",
+      "type": "object"
+    },
+    "UsageMapping": {
+      "additionalProperties": false,
+      "description": "One usage event to record when the business event happens.\n\n``quantity`` is the value the metric's ``field`` reads (absent for ``count`` metrics);\n``customer`` defaults to ``customers.external_id``; ``idempotency_key`` to the business event's\nown key; ``timestamp`` (an RFC 3339 instant) to the time of receipt.",
+      "properties": {
+        "metric": {
+          "maxLength": 63,
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Metric",
+          "type": "string"
+        },
+        "quantity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "customer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "idempotency_key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Selector"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "title": "UsageMapping",
+      "type": "object"
+    },
+    "WalletPolicy": {
+      "additionalProperties": false,
+      "description": "Placeholder until wallets exist: ``disabled`` or ``wallet_first`` (debit a wallet first).",
+      "properties": {
+        "mode": {
+          "default": "disabled",
+          "enum": [
+            "disabled",
+            "wallet_first"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "title": "WalletPolicy",
+      "type": "object"
+    },
+    "WebhookSpec": {
+      "additionalProperties": false,
+      "description": "An outbound webhook endpoint created when the manifest is activated.",
+      "properties": {
+        "url": {
+          "maxLength": 2048,
+          "minLength": 8,
+          "title": "Url",
+          "type": "string"
+        },
+        "event_types": {
+          "items": {
+            "maxLength": 100,
+            "pattern": "^(\\*|[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*(\\.\\*)?)$",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Event Types",
+          "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "url",
+        "event_types"
+      ],
+      "title": "WebhookSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Integration manifest of a Financial Hub project (ADR-0008). Cross-field rules checked by the hub: business event names, metric codes, price codes, split payees and webhook urls are unique; split basis points sum to at most 10000; every usage metric is declared in `metrics`; selectors nest at most 4 levels; payload schemas describe an object and nest at most 6 levels. Floats are never accepted: use integers or decimal strings.",
+  "properties": {
+    "schema_version": {
+      "const": "manifest.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "product": {
+      "$ref": "#/$defs/Product"
+    },
+    "customers": {
+      "$ref": "#/$defs/CustomerMapping"
+    },
+    "business_events": {
+      "items": {
+        "$ref": "#/$defs/BusinessEventSpec"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Business Events",
+      "type": "array"
+    },
+    "metrics": {
+      "items": {
+        "$ref": "#/$defs/MetricSpec"
+      },
+      "maxItems": 32,
+      "title": "Metrics",
+      "type": "array"
+    },
+    "prices": {
+      "items": {
+        "$ref": "#/$defs/PriceRef"
+      },
+      "maxItems": 32,
+      "title": "Prices",
+      "type": "array"
+    },
+    "splits": {
+      "items": {
+        "$ref": "#/$defs/Split"
+      },
+      "maxItems": 16,
+      "title": "Splits",
+      "type": "array"
+    },
+    "wallet": {
+      "$ref": "#/$defs/WalletPolicy"
+    },
+    "webhooks": {
+      "items": {
+        "$ref": "#/$defs/WebhookSpec"
+      },
+      "maxItems": 10,
+      "title": "Webhooks",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "product",
+    "customers",
+    "business_events"
+  ],
+  "title": "manifest.v1",
+  "type": "object"
+}

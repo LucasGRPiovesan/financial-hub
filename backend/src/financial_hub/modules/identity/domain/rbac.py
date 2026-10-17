@@ -5,6 +5,14 @@ routes declare with ``platform.http.auth.require``. Separation of duties: ``admi
 project but cannot move money; ``finance`` moves money but cannot change configuration or members;
 ``owner`` can do everything; ``viewer`` only reads. Money movement still needs four-eyes approval
 on top of the permission (maker-checker, later milestones).
+
+``reconciliation:manage`` (start runs, move breaks through their states) moves no money, so admin
+holds it too; posting an adjustment (R12) needs ``ledger:adjust`` and a second operator's approval.
+
+``integrations:approve`` (approve, reject and activate integration manifests: they set prices,
+splits and wallets) belongs to owner and finance; drafting and validating them is
+``integrations:manage`` (configuration). ``events:write`` is for project API keys sending business
+events.
 """
 
 from collections.abc import Mapping
@@ -43,9 +51,11 @@ class Permission(StrEnum):
     RECONCILIATION_MANAGE = "reconciliation:manage"
     INTEGRATIONS_READ = "integrations:read"
     INTEGRATIONS_MANAGE = "integrations:manage"
+    INTEGRATIONS_APPROVE = "integrations:approve"
     WEBHOOKS_READ = "webhooks:read"
     WEBHOOKS_MANAGE = "webhooks:manage"
     EVENTS_READ = "events:read"
+    EVENTS_WRITE = "events:write"
     AUDIT_READ = "audit:read"
 
 
@@ -58,7 +68,6 @@ MONEY_MOVEMENT: Final = frozenset(
         Permission.PAYMENTS_REFUND,
         Permission.PAYOUTS_MANAGE,
         Permission.BILLING_MANAGE,
-        Permission.RECONCILIATION_MANAGE,
     }
 )
 
@@ -77,10 +86,19 @@ ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType
         Role.OWNER: frozenset(Permission),
         Role.ADMIN: READ_PERMISSIONS
         | CONFIGURATION
-        | {Permission.CUSTOMERS_MANAGE, Permission.METERING_MANAGE},
+        | {
+            Permission.CUSTOMERS_MANAGE,
+            Permission.METERING_MANAGE,
+            Permission.RECONCILIATION_MANAGE,
+        },
         Role.FINANCE: READ_PERMISSIONS
         | MONEY_MOVEMENT
-        | {Permission.CUSTOMERS_MANAGE, Permission.METERING_MANAGE},
+        | {
+            Permission.CUSTOMERS_MANAGE,
+            Permission.METERING_MANAGE,
+            Permission.RECONCILIATION_MANAGE,
+            Permission.INTEGRATIONS_APPROVE,
+        },
         Role.VIEWER: READ_PERMISSIONS - {Permission.AUDIT_READ, Permission.WEBHOOKS_READ},
     }
 )

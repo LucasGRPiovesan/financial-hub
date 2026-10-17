@@ -63,6 +63,8 @@ class PaymentIntent:
     failure_code: str | None
     created_at: datetime
     updated_at: datetime
+    # The invoice this intent collects (W5.3): set by billing only, never from the HTTP API.
+    invoice_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)

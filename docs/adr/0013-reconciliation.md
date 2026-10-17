@@ -20,3 +20,6 @@ The ledger records what the hub believes happened; the provider holds the money.
 
 ## Alternatives
 Ad-hoc balance comparison only (hides transaction-level causes); auto-adjusting all differences (would let the system invent money).
+
+## Implementation notes (W8.1)
+Implemented as described in [docs/RECONCILIATION.md](../RECONCILIATION.md): runs `internal`/`transactions`/`balance` idempotent by window (provider calendar, UTC-3), auto-resolution limited to `fee_mismatch`/`status_mismatch` via refresh, R12 (`provider_balance` vs `opening_balance`) only through a four-eyes proposal bound to a payload hash. Transactions use `GET /payments` by `dateCreated` and `GET /finance/balance` instead of statement endpoints.

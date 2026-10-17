@@ -21,6 +21,7 @@ settings allow it.
 import asyncio
 from collections import deque
 from dataclasses import dataclass, field, replace
+from datetime import date
 from enum import StrEnum
 from typing import Final
 
@@ -29,6 +30,7 @@ from financial_hub.modules.payments.domain import (
     CaptureStatus,
     CreatePaymentRequest,
     DisputeStatus,
+    ProviderBalance,
     ProviderCustomer,
     ProviderCustomerRequest,
     ProviderDuplicate,
@@ -41,7 +43,7 @@ from financial_hub.modules.payments.domain import (
     RefundState,
     SettlementStatus,
 )
-from financial_hub.shared.money import Money
+from financial_hub.shared.money import BRL, Money
 
 RAW_STATUS: Final = {
     CaptureStatus.PENDING: "PENDING",
@@ -72,6 +74,7 @@ class FakeRefundBehavior(StrEnum):
 class _Payment:
     snapshot: ProviderPaymentSnapshot
     refunds: list[ProviderRefundSnapshot] = field(default_factory=list[ProviderRefundSnapshot])
+    created_on: date | None = None
 
     def current(self) -> ProviderPaymentSnapshot:
         return replace(self.snapshot, refunds=tuple(self.refunds))
@@ -91,6 +94,8 @@ class FakePaymentProvider:
         self.default = default
         self.default_refund = default_refund
         self.lookup_unavailable = False
+        self.listing_unavailable = False
+        self.balance_override: Money | None = None
         self.calls: list[str] = []
         self._script: deque[FakeBehavior] = deque()
         self._refund_script: deque[FakeRefundBehavior] = deque()
@@ -282,6 +287,78 @@ class FakePaymentProvider:
         if behavior is FakeRefundBehavior.TIMEOUT_AFTER_COMMIT:
             raise ProviderUncertain("timeout")
         return refund
+
+    # --- reconciliation reads (ADR-0013) --------------------------------------------------------
+    # A payment without ``created_on`` is in every window (the fake has no clock). The balance is
+    # what R4/R8 book: settled nets minus completed refunds of settled payments, unless overridden.
+
+    def set_created_on(self, provider_payment_id: str, day: date) -> None:
+        self._payments[provider_payment_id].created_on = day
+
+    def override(self, provider_payment_id: str, **changes: object) -> ProviderPaymentSnapshot:
+        """Change any snapshot field behind the hub's back (drift scenarios in tests)."""
+        return self._set(provider_payment_id, **changes)
+
+    def forget(self, provider_payment_id: str) -> None:
+        """The provider no longer knows the payment (``missing_external`` scenarios in tests)."""
+        record = self._payments.pop(provider_payment_id)
+        reference = record.snapshot.external_reference
+        if reference is not None and self._by_reference.get(reference) == provider_payment_id:
+            del self._by_reference[reference]
+
+    def add_external_payment(
+        self,
+        amount: Money,
+        *,
+        external_reference: str | None = None,
+        captured: bool = True,
+        fee: int = 0,
+        created_on: date | None = None,
+    ) -> ProviderPaymentSnapshot:
+        """A payment created at the provider (dashboard), unknown to the hub."""
+        capture = CaptureStatus.CAPTURED if captured else CaptureStatus.PENDING
+        provider_id = self._next_id("pay")
+        snapshot = ProviderPaymentSnapshot(
+            provider_payment_id=provider_id,
+            external_reference=external_reference,
+            raw_status=RAW_STATUS[capture],
+            amount=amount,
+            capture_status=capture,
+            net_amount=amount.minor_units - fee if captured else None,
+        )
+        self._payments[provider_id] = _Payment(snapshot, created_on=created_on)
+        if external_reference is not None:
+            self._by_reference[external_reference] = provider_id
+        return snapshot
+
+    async def list_payments(
+        self, created_from: date, created_to: date
+    ) -> list[ProviderPaymentSnapshot]:
+        self.calls.append("list_payments")
+        if self.listing_unavailable:
+            raise ProviderRetryable("provider_unavailable")
+        return [
+            record.current()
+            for record in self._payments.values()
+            if record.created_on is None or created_from <= record.created_on <= created_to
+        ]
+
+    async def get_balance(self) -> ProviderBalance:
+        self.calls.append("get_balance")
+        if self.balance_override is not None:
+            return ProviderBalance(self.balance_override)
+        total = 0
+        for record in self._payments.values():
+            snapshot = record.snapshot
+            if snapshot.settlement_status is not SettlementStatus.SETTLED:
+                continue
+            total += snapshot.net_amount or 0
+            total -= sum(
+                refund.amount.minor_units
+                for refund in record.refunds
+                if refund.status is RefundState.DONE
+            )
+        return ProviderBalance(Money(total, BRL))
 
     def complete_refund(self, provider_payment_id: str, provider_refund_id: str) -> None:
         refunds = self._payments[provider_payment_id].refunds
