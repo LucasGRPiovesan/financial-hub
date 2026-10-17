@@ -22,6 +22,7 @@ const OverviewPage = lazyRouteComponent(() => import("./routes/overview"), "Over
 const PaymentDetailPage = lazyRouteComponent(() => import("./routes/payments-detail"), "PaymentDetailPage");
 const LedgerEntryPage = lazyRouteComponent(() => import("./routes/ledger-entry"), "LedgerEntryPage");
 const EventDetailPage = lazyRouteComponent(() => import("./routes/events-detail"), "EventDetailPage");
+const WebhookDetailPage = lazyRouteComponent(() => import("./routes/webhooks-detail"), "WebhookDetailPage");
 const PlaceholderPage = lazyRouteComponent(() => import("./routes/placeholder"), "PlaceholderPage");
 const SCREENS = {
   "/projects": lazyRouteComponent(() => import("./routes/projects"), "ProjectsPage"),
@@ -34,6 +35,8 @@ const SCREENS = {
   "/billing": lazyRouteComponent(() => import("./routes/billing"), "BillingPage"),
   "/ledger": lazyRouteComponent(() => import("./routes/ledger"), "LedgerPage"),
   "/audit": lazyRouteComponent(() => import("./routes/audit"), "AuditPage"),
+  "/webhooks": lazyRouteComponent(() => import("./routes/webhooks"), "WebhooksPage"),
+  "/settings": lazyRouteComponent(() => import("./routes/settings"), "SettingsPage"),
 };
 
 /** Screens with tabs keep the active one in `?tab=` so a view can be linked to. */
@@ -106,6 +109,7 @@ function buildRouteTree() {
   const paymentDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/payments/$paymentId", component: PaymentDetailPage });
   const ledgerEntryRoute = createRoute({ getParentRoute: () => appRoute, path: "/ledger/entries/$entryId", component: LedgerEntryPage });
   const eventDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/events/$eventId", component: EventDetailPage });
+  const webhookDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/webhooks/$endpointId", component: WebhookDetailPage });
   const placeholderRoutes = NAV_ITEMS.filter((item) => item.to !== "/" && !(item.to in screens)).map((item) =>
     createRoute({
       getParentRoute: () => appRoute,
@@ -116,7 +120,7 @@ function buildRouteTree() {
     }),
   );
 
-  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, paymentDetailRoute, ledgerEntryRoute, eventDetailRoute, ...placeholderRoutes])]);
+  return rootRoute.addChildren([loginRoute, appRoute.addChildren([overviewRoute, ...screenRoutes, paymentDetailRoute, ledgerEntryRoute, eventDetailRoute, webhookDetailRoute, ...placeholderRoutes])]);
 }
 
 /**

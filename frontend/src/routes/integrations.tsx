@@ -15,7 +15,8 @@ import { GatedButton } from "../features/console/gated-button";
 import { NoProjectState } from "../features/console/no-project";
 import { deniedReason } from "../features/console/permissions";
 import { useProject } from "../features/console/use-project";
-import { CreateProviderAccountDialog, ReplaceCredentialsDialog } from "../features/console/provider-dialogs";
+import { CreateProviderAccountDialog } from "../features/console/provider-dialogs";
+import { CredentialsDialog } from "../features/integrations/credentials-dialog";
 import { errorText } from "../features/console/errors";
 import { ListSkeleton, QueryErrorState } from "../features/console/states";
 import { useI18n } from "../i18n";
@@ -210,7 +211,7 @@ function ProviderAccountsForProject({
       ) : null}
 
       <CreateProviderAccountDialog projectId={projectId} catalog={entries} open={creating} onOpenChange={setCreating} />
-      <ReplaceCredentialsDialog
+      <CredentialsDialog
         projectId={projectId}
         account={replacing}
         entry={entries.find((entry) => entry.provider === replacing?.provider)}

@@ -88,8 +88,8 @@ describe("app shell", () => {
     const { container } = renderApp("/");
     await screen.findByRole("heading", { name: "Overview" });
 
-    await user.click(within(screen.getByRole("navigation", { name: /main|primary/i })).getByRole("link", { name: "Settings" }));
-    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    await user.click(within(screen.getByRole("navigation", { name: /main|primary/i })).getByRole("link", { name: "Reconciliation" }));
+    expect(await screen.findByRole("heading", { name: "Reconciliation" })).toBeInTheDocument();
     const main = screen.getByRole("main");
     expect(within(main).getByText("Planned")).toBeInTheDocument();
     expect(within(main).getByText(/isn't available in the console yet/)).toBeInTheDocument();

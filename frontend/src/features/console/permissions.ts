@@ -12,6 +12,8 @@ export type Permission =
   | "api_keys:manage"
   | "integrations:read"
   | "integrations:manage"
+  | "webhooks:read"
+  | "webhooks:manage"
   | "ledger:read"
   | "customers:read"
   | "customers:manage"
@@ -29,12 +31,16 @@ const CONFIGURATION: readonly Permission[] = [
   "members:manage",
   "api_keys:manage",
   "integrations:manage",
+  "webhooks:manage",
 ];
 
+/** Everyone but viewer reads webhooks (backend: READ_PERMISSIONS minus audit and webhooks for viewer). */
+const WEBHOOKS_READ: readonly Permission[] = ["webhooks:read"];
+
 const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
-  owner: [...READ, "audit:read", ...CONFIGURATION, "customers:manage", "payments:refund", "metering:manage"],
-  admin: [...READ, "audit:read", ...CONFIGURATION, "customers:manage", "metering:manage"],
-  finance: [...READ, "audit:read", "customers:manage", "payments:refund", "metering:manage"],
+  owner: [...READ, ...WEBHOOKS_READ, "audit:read", ...CONFIGURATION, "customers:manage", "payments:refund", "metering:manage"],
+  admin: [...READ, ...WEBHOOKS_READ, "audit:read", ...CONFIGURATION, "customers:manage", "metering:manage"],
+  finance: [...READ, ...WEBHOOKS_READ, "audit:read", "customers:manage", "payments:refund", "metering:manage"],
   viewer: READ,
 };
 

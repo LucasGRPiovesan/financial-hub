@@ -9,6 +9,8 @@ import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { useToast } from "../components/ui/use-toast";
+import { GatedButton } from "../features/console/gated-button";
 import { NoProjectState } from "../features/console/no-project";
 import { deniedReason } from "../features/console/permissions";
 import { ListSkeleton, QueryErrorState } from "../features/console/states";
@@ -16,6 +18,7 @@ import { useProject } from "../features/console/use-project";
 import { CopyableValue, DeliveryStatusBadge, EventTypeLabel, JsonBlock } from "../features/events/event-parts";
 import { useCausality, useEvent } from "../features/events/events-api";
 import { useDocumentTitle } from "../features/shell/document-title";
+import { useRetryWebhookDelivery } from "../features/webhooks/webhooks-api";
 import { useI18n } from "../i18n";
 import { isApiError } from "../lib/api";
 import { cn } from "../lib/cn";
@@ -130,7 +133,7 @@ function EventView({ projectId, event, deliveries }: { projectId: string; event:
             </CardContent>
           </Card>
 
-          <DeliveriesCard deliveries={deliveries} />
+          <DeliveriesCard projectId={projectId} eventId={event.id} deliveries={deliveries} />
         </div>
 
         <CausalityCard projectId={projectId} eventId={event.id} />
@@ -139,8 +142,20 @@ function EventView({ projectId, event, deliveries }: { projectId: string; event:
   );
 }
 
-function DeliveriesCard({ deliveries }: { deliveries: DeliveryOut[] }) {
+function DeliveriesCard({ projectId, eventId, deliveries }: { projectId: string; eventId: string; deliveries: DeliveryOut[] }) {
   const { t } = useI18n();
+  const toast = useToast();
+  const { membership, can } = useProject();
+  const mayRetry = can("webhooks:manage");
+  const retry = useRetryWebhookDelivery(projectId, eventId);
+
+  function resend(delivery: DeliveryOut) {
+    retry.mutate(delivery.id, {
+      onSuccess: () => toast({ tone: "success", title: t("events.detail.retryQueued") }),
+      onError: () => toast({ tone: "danger", title: t("events.detail.retryFailed") }),
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -159,6 +174,9 @@ function DeliveriesCard({ deliveries }: { deliveries: DeliveryOut[] }) {
                 <TableHead>{t("events.detail.deliveryCols.status")}</TableHead>
                 <TableHead className="text-right">{t("events.detail.deliveryCols.attempts")}</TableHead>
                 <TableHead>{t("events.detail.deliveryCols.lastError")}</TableHead>
+                <TableHead>
+                  <span className="sr-only">{t("providers.cols.actions")}</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -178,6 +196,23 @@ function DeliveriesCard({ deliveries }: { deliveries: DeliveryOut[] }) {
                   <TableCell className="figures text-right">{delivery.attempts}</TableCell>
                   <TableCell className="max-w-64 text-xs break-words">
                     {delivery.last_error ? <span className="text-danger">{delivery.last_error}</span> : <span className="text-ink-faint">{t("events.detail.noError")}</span>}
+                  </TableCell>
+                  <TableCell>
+                    {delivery.kind === "webhook" ? (
+                      <div className="flex justify-end">
+                        <GatedButton
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t("events.detail.retryNamed", { id: delivery.id })}
+                          allowed={mayRetry}
+                          reason={deniedReason("webhooks:manage", membership?.role)}
+                          disabled={retry.isPending && retry.variables === delivery.id}
+                          onClick={() => resend(delivery)}
+                        >
+                          {t("events.detail.retry")}
+                        </GatedButton>
+                      </div>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}
