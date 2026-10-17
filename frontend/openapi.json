@@ -132,6 +132,74 @@
         "title": "AccountType",
         "type": "string"
       },
+      "ActivateOut": {
+        "properties": {
+          "activation": {
+            "$ref": "#/components/schemas/ActivationOut"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/ManifestOut"
+          },
+          "webhook_secrets": {
+            "description": "Secrets of the endpoints this activation created (only in this response).",
+            "items": {
+              "$ref": "#/components/schemas/EndpointSecretOut"
+            },
+            "title": "Webhook Secrets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "manifest",
+          "activation",
+          "webhook_secrets"
+        ],
+        "title": "ActivateOut",
+        "type": "object"
+      },
+      "ActivationOut": {
+        "properties": {
+          "activated_at": {
+            "format": "date-time",
+            "title": "Activated At",
+            "type": "string"
+          },
+          "activated_by": {
+            "title": "Activated By",
+            "type": "string"
+          },
+          "materialized": {
+            "additionalProperties": true,
+            "description": "Metrics (`existing`, `reused`, `created`) and webhook endpoint ids.",
+            "title": "Materialized",
+            "type": "object"
+          },
+          "previous_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Version"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "previous_version",
+          "activated_by",
+          "activated_at",
+          "materialized"
+        ],
+        "title": "ActivationOut",
+        "type": "object"
+      },
       "AddMemberRequest": {
         "properties": {
           "email": {
@@ -152,6 +220,163 @@
           "role"
         ],
         "title": "AddMemberRequest",
+        "type": "object"
+      },
+      "AddVersionRequest": {
+        "properties": {
+          "effective_from": {
+            "description": "Start of the new version, in the future; the current version ends there.",
+            "format": "date-time",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "model": {
+            "additionalProperties": true,
+            "description": "The price model (`kind` + parameters). Quantities and unit prices are decimal strings in major units (`\"0.0015\"`); fixed amounts are integers in minor units (`4990`). Kinds: `per_unit`, `package`, `graduated`, `volume`, `percentage`, `flat_fee`, `base_fee_with_overage`, `minimum_commitment`.",
+            "title": "Model",
+            "type": "object"
+          }
+        },
+        "required": [
+          "model",
+          "effective_from"
+        ],
+        "title": "AddVersionRequest",
+        "type": "object"
+      },
+      "AdjustmentOut": {
+        "properties": {
+          "amount_minor": {
+            "description": "> 0 debits provider_balance, < 0 credits it.",
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "break_id": {
+            "title": "Break Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "journal_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The R12 entry, once approved.",
+            "title": "Journal Entry Id"
+          },
+          "payload_hash": {
+            "description": "SHA-256 the approver must send back.",
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "proposed_by": {
+            "title": "Proposed By",
+            "type": "string"
+          },
+          "provider_account_id": {
+            "title": "Provider Account Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "description": "`proposed`, `approved` or `rejected`.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "break_id",
+          "provider_account_id",
+          "currency",
+          "amount_minor",
+          "reason",
+          "payload_hash",
+          "status",
+          "proposed_by",
+          "decided_by",
+          "decision_reason",
+          "journal_entry_id",
+          "created_at",
+          "decided_at"
+        ],
+        "title": "AdjustmentOut",
+        "type": "object"
+      },
+      "AllocationOut": {
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/MoneyOut"
+          },
+          "basis_points": {
+            "title": "Basis Points",
+            "type": "integer"
+          },
+          "payee": {
+            "description": "A split payee, or `platform` (always last: the remainder).",
+            "title": "Payee",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payee",
+          "basis_points",
+          "amount"
+        ],
+        "title": "AllocationOut",
         "type": "object"
       },
       "ApiKeyOut": {
@@ -248,6 +473,37 @@
           "revoked_at"
         ],
         "title": "ApiKeyOut",
+        "type": "object"
+      },
+      "ApproveAdjustmentRequest": {
+        "properties": {
+          "payload_hash": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Payload Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payload_hash"
+        ],
+        "title": "ApproveAdjustmentRequest",
+        "type": "object"
+      },
+      "ApproveRequest": {
+        "properties": {
+          "content_hash": {
+            "description": "The `content_hash` you reviewed.",
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Content Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_hash"
+        ],
+        "title": "ApproveRequest",
         "type": "object"
       },
       "AuditRecordOut": {
@@ -501,6 +757,278 @@
         "title": "BatchRequest",
         "type": "object"
       },
+      "BreakOut": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "difference_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "External minus internal.",
+            "title": "Difference Minor"
+          },
+          "external": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The provider / recomputed side.",
+            "title": "External"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "internal": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The hub side (integer minor units).",
+            "title": "Internal"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_run_id": {
+            "description": "The last run that detected it.",
+            "title": "Last Run Id",
+            "type": "string"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Id"
+          },
+          "provider_payment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Payment Id"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "run_id": {
+            "description": "The run that opened it.",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "state": {
+            "description": "`open`, `investigating`, `resolved` or `accepted`.",
+            "title": "State",
+            "type": "string"
+          },
+          "subject": {
+            "additionalProperties": true,
+            "title": "Subject",
+            "type": "object"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "last_run_id",
+          "kind",
+          "state",
+          "subject",
+          "internal",
+          "external",
+          "currency",
+          "difference_minor",
+          "payment_id",
+          "provider_payment_id",
+          "account_id",
+          "history",
+          "resolution",
+          "resolved_by",
+          "resolved_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "BreakOut",
+        "type": "object"
+      },
+      "BusinessEventOut": {
+        "properties": {
+          "idempotency_key": {
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "manifest_version": {
+            "title": "Manifest Version",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcome": {
+            "additionalProperties": true,
+            "description": "The usage events it recorded.",
+            "title": "Outcome",
+            "type": "object"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "description": "As stored: personal data redacted.",
+            "title": "Payload",
+            "type": "object"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "idempotency_key",
+          "manifest_version",
+          "payload",
+          "outcome",
+          "received_at"
+        ],
+        "title": "BusinessEventOut",
+        "type": "object"
+      },
+      "BusinessEventRequest": {
+        "properties": {
+          "idempotency_key": {
+            "description": "Your unique id of this event, per project and name.",
+            "maxLength": 64,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "name": {
+            "description": "A business event of the active manifest.",
+            "maxLength": 100,
+            "title": "Name",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "payload",
+          "idempotency_key"
+        ],
+        "title": "BusinessEventRequest",
+        "type": "object"
+      },
+      "CancelSubscriptionRequest": {
+        "properties": {
+          "at_period_end": {
+            "default": true,
+            "description": "End at the current period's end (default) or now (final prorated invoice).",
+            "title": "At Period End",
+            "type": "boolean"
+          }
+        },
+        "title": "CancelSubscriptionRequest",
+        "type": "object"
+      },
       "CatalogEntryOut": {
         "properties": {
           "credential_fields": {
@@ -622,6 +1150,88 @@
           "role"
         ],
         "title": "ChangeRoleRequest",
+        "type": "object"
+      },
+      "ChargeLineOut": {
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/MoneyOut"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "unit_amount": {
+            "title": "Unit Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "quantity",
+          "unit_amount",
+          "amount"
+        ],
+        "title": "ChargeLineOut",
+        "type": "object"
+      },
+      "ChargeOut": {
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/MoneyOut"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          },
+          "price_version": {
+            "title": "Price Version",
+            "type": "integer"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "metric",
+          "price",
+          "price_version",
+          "lines",
+          "amount"
+        ],
+        "title": "ChargeOut",
+        "type": "object"
+      },
+      "ContentRequest": {
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "description": "A `manifest.v1` document.",
+            "title": "Content",
+            "type": "object"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "ContentRequest",
         "type": "object"
       },
       "CorrelationOut": {
@@ -823,6 +1433,104 @@
         "title": "CreatePaymentRequest",
         "type": "object"
       },
+      "CreatePlanRequest": {
+        "properties": {
+          "code": {
+            "description": "Lowercase letters, digits, `_ . -`; unique.",
+            "maxLength": 100,
+            "title": "Code",
+            "type": "string"
+          },
+          "currency": {
+            "default": "BRL",
+            "maxLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "prices": {
+            "description": "Price codes in the plan's currency.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Prices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "prices"
+        ],
+        "title": "CreatePlanRequest",
+        "type": "object"
+      },
+      "CreatePriceRequest": {
+        "properties": {
+          "code": {
+            "description": "Lowercase letters, digits, `_ . -`; unique.",
+            "maxLength": 100,
+            "title": "Code",
+            "type": "string"
+          },
+          "currency": {
+            "default": "BRL",
+            "maxLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of version 1 (with timezone). Defaults to now.",
+            "title": "Effective From"
+          },
+          "metric_code": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required for usage models, absent otherwise.",
+            "title": "Metric Code"
+          },
+          "model": {
+            "additionalProperties": true,
+            "description": "The price model (`kind` + parameters). Quantities and unit prices are decimal strings in major units (`\"0.0015\"`); fixed amounts are integers in minor units (`4990`). Kinds: `per_unit`, `package`, `graduated`, `volume`, `percentage`, `flat_fee`, `base_fee_with_overage`, `minimum_commitment`.",
+            "title": "Model",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "model"
+        ],
+        "title": "CreatePriceRequest",
+        "type": "object"
+      },
       "CreateProjectRequest": {
         "properties": {
           "name": {
@@ -914,6 +1622,62 @@
           }
         },
         "title": "CreateRefundRequest",
+        "type": "object"
+      },
+      "CreateSubscriptionRequest": {
+        "properties": {
+          "anchor_day": {
+            "anyOf": [
+              {
+                "maximum": 31.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Day of the month periods start (UTC).",
+            "title": "Anchor Day"
+          },
+          "customer_id": {
+            "description": "The `cus_` id of the customer.",
+            "maxLength": 64,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "days_until_due": {
+            "default": 7,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Days Until Due",
+            "type": "integer"
+          },
+          "payment_method": {
+            "default": "pix",
+            "description": "`pix`, `boleto` or `card`.",
+            "title": "Payment Method",
+            "type": "string"
+          },
+          "plan": {
+            "description": "The plan code.",
+            "maxLength": 100,
+            "title": "Plan",
+            "type": "string"
+          },
+          "trial_days": {
+            "default": 0,
+            "maximum": 365.0,
+            "minimum": 0.0,
+            "title": "Trial Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customer_id",
+          "plan"
+        ],
+        "title": "CreateSubscriptionRequest",
         "type": "object"
       },
       "CreateWebhookEndpointRequest": {
@@ -1383,6 +2147,30 @@
         "title": "DemoOperatorsResponse",
         "type": "object"
       },
+      "EndpointSecretOut": {
+        "properties": {
+          "endpoint_id": {
+            "title": "Endpoint Id",
+            "type": "string"
+          },
+          "secret": {
+            "description": "Signing secret; shown once, never stored in the manifest.",
+            "title": "Secret",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint_id",
+          "url",
+          "secret"
+        ],
+        "title": "EndpointSecretOut",
+        "type": "object"
+      },
       "EntryDetailOut": {
         "properties": {
           "causation_id": {
@@ -1743,6 +2531,221 @@
         "title": "EventOut",
         "type": "object"
       },
+      "InvoiceLineOut": {
+        "properties": {
+          "amount": {
+            "description": "Minor units.",
+            "title": "Amount",
+            "type": "integer"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "kind": {
+            "description": "`fixed` or `usage`.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Code"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "price": {
+            "description": "The price code.",
+            "title": "Price",
+            "type": "string"
+          },
+          "price_version": {
+            "title": "Price Version",
+            "type": "integer"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Billed usage (usage lines).",
+            "title": "Quantity"
+          },
+          "rounding": {
+            "title": "Rounding",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "price",
+          "price_version",
+          "model",
+          "metric_code",
+          "quantity",
+          "amount",
+          "rounding",
+          "details"
+        ],
+        "title": "InvoiceLineOut",
+        "type": "object"
+      },
+      "InvoiceOut": {
+        "properties": {
+          "amount_due": {
+            "description": "`total - credits_applied`, collected by the payment.",
+            "title": "Amount Due",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credits_applied": {
+            "title": "Credits Applied",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "finalized_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalized At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The `pi_` payment collecting the amount due.",
+            "title": "Payment Id"
+          },
+          "period_end": {
+            "description": "Exclusive end of the billed period.",
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date-time",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "status": {
+            "description": "`draft`, `finalized`, `paid`, `void` or `uncollectible`.",
+            "title": "Status",
+            "type": "string"
+          },
+          "subscription_id": {
+            "title": "Subscription Id",
+            "type": "string"
+          },
+          "total": {
+            "description": "Minor units: the sum of the lines.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "voided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voided At"
+          }
+        },
+        "required": [
+          "id",
+          "subscription_id",
+          "customer_id",
+          "currency",
+          "status",
+          "period_start",
+          "period_end",
+          "total",
+          "credits_applied",
+          "amount_due",
+          "payment_id",
+          "due_date",
+          "finalized_at",
+          "paid_at",
+          "voided_at",
+          "created_at",
+          "lines"
+        ],
+        "title": "InvoiceOut",
+        "type": "object"
+      },
       "JournalEntryOut": {
         "properties": {
           "causation_id": {
@@ -1845,6 +2848,198 @@
           "csrf_token"
         ],
         "title": "LoginResponse",
+        "type": "object"
+      },
+      "ManifestOut": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "approval_base_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Base Version"
+          },
+          "approval_diff": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Diff"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "content_hash": {
+            "description": "SHA-256 of the canonical JSON; approve it verbatim.",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "four_eyes": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Approved by an operator other than the author.",
+            "title": "Four Eyes"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rejected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected At"
+          },
+          "rejected_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected By"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "status": {
+            "description": "`draft`, `validated`, `approved`, `active`, `superseded` or `rejected`.",
+            "title": "Status",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "validated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "status",
+          "content",
+          "content_hash",
+          "created_by",
+          "created_at",
+          "updated_at",
+          "validated_at",
+          "approved_by",
+          "approved_at",
+          "four_eyes",
+          "approval_base_version",
+          "approval_diff",
+          "rejected_by",
+          "rejected_at",
+          "rejection_reason",
+          "activated_at",
+          "superseded_at"
+        ],
+        "title": "ManifestOut",
         "type": "object"
       },
       "MeResponse": {
@@ -2101,6 +3296,39 @@
         "title": "Page[AccountOut]",
         "type": "object"
       },
+      "Page_AdjustmentOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdjustmentOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[AdjustmentOut]",
+        "type": "object"
+      },
       "Page_ApiKeyOut_": {
         "properties": {
           "data": {
@@ -2165,6 +3393,72 @@
           "has_more"
         ],
         "title": "Page[AuditRecordOut]",
+        "type": "object"
+      },
+      "Page_BreakOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BreakOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[BreakOut]",
+        "type": "object"
+      },
+      "Page_BusinessEventOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BusinessEventOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[BusinessEventOut]",
         "type": "object"
       },
       "Page_CustomerOut_": {
@@ -2233,6 +3527,72 @@
         "title": "Page[EntryOut]",
         "type": "object"
       },
+      "Page_InvoiceOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[InvoiceOut]",
+        "type": "object"
+      },
+      "Page_ManifestOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ManifestOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[ManifestOut]",
+        "type": "object"
+      },
       "Page_MetricOut_": {
         "properties": {
           "data": {
@@ -2299,6 +3659,72 @@
         "title": "Page[PaymentOut]",
         "type": "object"
       },
+      "Page_PlanOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PlanOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[PlanOut]",
+        "type": "object"
+      },
+      "Page_PriceOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PriceOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[PriceOut]",
+        "type": "object"
+      },
       "Page_ProjectOut_": {
         "properties": {
           "data": {
@@ -2363,6 +3789,72 @@
           "has_more"
         ],
         "title": "Page[ProviderAccountOut]",
+        "type": "object"
+      },
+      "Page_RunOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/RunOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[RunOut]",
+        "type": "object"
+      },
+      "Page_SubscriptionOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "data",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "Page[SubscriptionOut]",
         "type": "object"
       },
       "Page_WebhookEndpointOut_": {
@@ -2597,6 +4089,50 @@
         "title": "PaymentOut",
         "type": "object"
       },
+      "PlanOut": {
+        "properties": {
+          "billing_interval": {
+            "description": "Always `month`.",
+            "title": "Billing Interval",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prices": {
+            "description": "The price codes billed every period, in order.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Prices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "currency",
+          "billing_interval",
+          "prices",
+          "created_at"
+        ],
+        "title": "PlanOut",
+        "type": "object"
+      },
       "PostingOut": {
         "properties": {
           "account_code": {
@@ -2627,6 +4163,101 @@
           "amount"
         ],
         "title": "PostingOut",
+        "type": "object"
+      },
+      "PriceOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`fixed` (flat fee, percentage) or `usage` (rates a metric).",
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The billable metric a usage price rates.",
+            "title": "Metric Code"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/PriceVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "currency",
+          "kind",
+          "metric_code",
+          "created_at",
+          "versions"
+        ],
+        "title": "PriceOut",
+        "type": "object"
+      },
+      "PriceVersionOut": {
+        "properties": {
+          "effective_from": {
+            "format": "date-time",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exclusive end; null = open-ended.",
+            "title": "Effective To"
+          },
+          "model": {
+            "additionalProperties": true,
+            "title": "Model",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "model",
+          "effective_from",
+          "effective_to"
+        ],
+        "title": "PriceVersionOut",
         "type": "object"
       },
       "Problem": {
@@ -2774,6 +4405,52 @@
         "title": "ProjectOut",
         "type": "object"
       },
+      "ProposeAdjustmentRequest": {
+        "properties": {
+          "amount_minor": {
+            "description": "Signed integer minor units, non-zero.",
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: the break's.",
+            "title": "Currency"
+          },
+          "provider_account_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`pva_...`; default: the break's account.",
+            "title": "Provider Account Id"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_minor",
+          "reason"
+        ],
+        "title": "ProposeAdjustmentRequest",
+        "type": "object"
+      },
       "ProviderAccountOut": {
         "properties": {
           "created_at": {
@@ -2903,6 +4580,35 @@
         "title": "RefundOut",
         "type": "object"
       },
+      "RejectAdjustmentRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RejectAdjustmentRequest",
+        "type": "object"
+      },
+      "RejectRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RejectRequest",
+        "type": "object"
+      },
       "ReplaceCredentialsRequest": {
         "properties": {
           "credentials": {
@@ -2920,6 +4626,372 @@
           "credentials"
         ],
         "title": "ReplaceCredentialsRequest",
+        "type": "object"
+      },
+      "RunOut": {
+        "properties": {
+          "breaks_opened": {
+            "title": "Breaks Opened",
+            "type": "integer"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider error code of a failed run.",
+            "title": "Error Code"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`internal`, `transactions` or `balance`.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "provider_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Account Id"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "description": "`running`, `completed` or `failed`.",
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "description": "Counts; amounts in integer minor units.",
+            "title": "Summary",
+            "type": "object"
+          },
+          "triggered_by": {
+            "title": "Triggered By",
+            "type": "string"
+          },
+          "window_end": {
+            "description": "Last day, inclusive.",
+            "format": "date",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "description": "First day (America/Sao_Paulo), inclusive.",
+            "format": "date",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "provider",
+          "provider_account_id",
+          "window_start",
+          "window_end",
+          "status",
+          "triggered_by",
+          "summary",
+          "breaks_opened",
+          "error_code",
+          "started_at",
+          "completed_at",
+          "created_at"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "SimulateRequest": {
+        "properties": {
+          "idempotency_key": {
+            "default": "simulation",
+            "maxLength": 64,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "name": {
+            "description": "A business event the version declares.",
+            "maxLength": 100,
+            "title": "Name",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "payload"
+        ],
+        "title": "SimulateRequest",
+        "type": "object"
+      },
+      "SimulationOut": {
+        "properties": {
+          "allocations": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/AllocationOut"
+              },
+              "type": "array"
+            },
+            "description": "Per currency: largest-remainder split of the rated total, platform last.",
+            "title": "Allocations",
+            "type": "object"
+          },
+          "charges": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeOut"
+            },
+            "title": "Charges",
+            "type": "array"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageDraftOut"
+            },
+            "title": "Usage",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "event",
+          "usage",
+          "charges",
+          "allocations",
+          "notes"
+        ],
+        "title": "SimulationOut",
+        "type": "object"
+      },
+      "StartRunRequest": {
+        "properties": {
+          "kind": {
+            "description": "`internal`, `transactions` or `balance`.",
+            "maxLength": 16,
+            "title": "Kind",
+            "type": "string"
+          },
+          "provider_account_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`pva_...`; required if the project has several.",
+            "title": "Provider Account Id"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "At most 31 days, before today.",
+            "title": "Window End"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: yesterday.",
+            "title": "Window Start"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "StartRunRequest",
+        "type": "object"
+      },
+      "SubscriptionOut": {
+        "properties": {
+          "anchor_day": {
+            "title": "Anchor Day",
+            "type": "integer"
+          },
+          "cancel_at_period_end": {
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "canceled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canceled At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_period_end": {
+            "description": "Exclusive end of the current period.",
+            "format": "date-time",
+            "title": "Current Period End",
+            "type": "string"
+          },
+          "current_period_start": {
+            "format": "date-time",
+            "title": "Current Period Start",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "days_until_due": {
+            "title": "Days Until Due",
+            "type": "integer"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "payment_method": {
+            "title": "Payment Method",
+            "type": "string"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "description": "`trialing`, `active` or `canceled`.",
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial End"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "plan",
+          "status",
+          "anchor_day",
+          "started_at",
+          "trial_end",
+          "current_period_start",
+          "current_period_end",
+          "cancel_at_period_end",
+          "canceled_at",
+          "ended_at",
+          "payment_method",
+          "days_until_due",
+          "created_at"
+        ],
+        "title": "SubscriptionOut",
         "type": "object"
       },
       "SummaryOut": {
@@ -2976,6 +5048,33 @@
           "events"
         ],
         "title": "SummaryOut",
+        "type": "object"
+      },
+      "TransitionRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "description": "`investigating`, `resolved` or `accepted`.",
+            "maxLength": 16,
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "TransitionRequest",
         "type": "object"
       },
       "TrialBalanceLineOut": {
@@ -3238,6 +5337,48 @@
           "kind"
         ],
         "title": "UpsertCustomerRequest",
+        "type": "object"
+      },
+      "UsageDraftOut": {
+        "properties": {
+          "customer_external_ref": {
+            "title": "Customer External Ref",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "title": "Properties",
+            "type": "object"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "metric",
+          "customer_external_ref",
+          "properties",
+          "timestamp"
+        ],
+        "title": "UsageDraftOut",
         "type": "object"
       },
       "UsageOut": {
@@ -3841,6 +5982,104 @@
         ]
       }
     },
+    "/v1/business-events": {
+      "post": {
+        "description": "Record a business event; the active manifest maps it to usage. A retry answers 200.",
+        "operationId": "send_business_event_v1_business_events_post",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessEventOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessEventOut"
+                }
+              }
+            },
+            "description": "Recorded."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No active manifest, or the key was used with another payload."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Send Business Event",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/manifest-schema/v1": {
+      "get": {
+        "description": "The ``manifest.v1`` JSON Schema (draft 2020-12). Validation adds cross-field rules.",
+        "operationId": "manifest_schema_v1_manifest_schema_v1_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Manifest Schema V1 Manifest Schema V1 Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Manifest Schema",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
     "/v1/projects": {
       "get": {
         "operationId": "list_projects_v1_projects_get",
@@ -4421,6 +6660,76 @@
         "summary": "List Audit Records",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/business-events": {
+      "get": {
+        "operationId": "list_business_events_v1_projects__project_id__business_events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_BusinessEventOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Business Events",
+        "tags": [
+          "integrations"
         ]
       }
     },
@@ -5198,6 +7507,270 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/invoices": {
+      "get": {
+        "operationId": "list_invoices_v1_projects__project_id__invoices_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Exact match.",
+            "in": "query",
+            "name": "subscription_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact match.",
+              "title": "Subscription Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_InvoiceOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Invoices",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/invoices/{invoice_id}": {
+      "get": {
+        "operationId": "get_invoice_v1_projects__project_id__invoices__invoice_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Invoice",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/invoices/{invoice_id}/finalize": {
+      "post": {
+        "description": "Finalize a draft: books the receivable and requests its payment (operators only).",
+        "operationId": "finalize_invoice_v1_projects__project_id__invoices__invoice_id__finalize_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State conflict."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Finalize Invoice",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/invoices/{invoice_id}/void": {
+      "post": {
+        "description": "Void an invoice nothing was captured for: cancels its payment (operators only).",
+        "operationId": "void_invoice_v1_projects__project_id__invoices__invoice_id__void_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State conflict."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Void Invoice",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/ledger/accounts": {
       "get": {
         "description": "Accounts of the project with their current balance, oldest first (cursor pagination, stable order). `owner_id` matches the customer (`cus_`), payee (`pay_`) or provider account (`pva_`) the account belongs to.",
@@ -5769,6 +8342,680 @@
         "summary": "Trial balance",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests": {
+      "get": {
+        "operationId": "list_manifests_v1_projects__project_id__manifests_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ManifestOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Manifests",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "post": {
+        "description": "Create a draft with the next version number. Validation is a separate step.",
+        "operationId": "create_manifest_v1_projects__project_id__manifests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/activations": {
+      "get": {
+        "description": "The latest activations, newest first (rollbacks included).",
+        "operationId": "list_activations_v1_projects__project_id__manifests_activations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActivationOut"
+                  },
+                  "title": "Response List Activations V1 Projects  Project Id  Manifests Activations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Activations",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/active": {
+      "get": {
+        "operationId": "active_manifest_v1_projects__project_id__manifests_active_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Active Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}": {
+      "get": {
+        "operationId": "get_manifest_v1_projects__project_id__manifests__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Manifest",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "put": {
+        "description": "Replace a draft's content. Validated versions are immutable: create a new version.",
+        "operationId": "replace_manifest_v1_projects__project_id__manifests__version__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Replace Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}/activate": {
+      "post": {
+        "description": "Activate an approved version, or roll back to a superseded one. Atomic: supersedes the\nactive version and creates the declared metrics and webhook endpoints.",
+        "operationId": "activate_manifest_v1_projects__project_id__manifests__version__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Activate Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}/approve": {
+      "post": {
+        "description": "Approve exactly ``content_hash``. A money-sensitive change needs an operator other than\nits author (403 ``four-eyes-required``).",
+        "operationId": "approve_manifest_v1_projects__project_id__manifests__version__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Approve Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}/diff": {
+      "get": {
+        "description": "Changes against the active version; ``money_sensitive`` marks split/price/wallet changes.",
+        "operationId": "diff_manifest_v1_projects__project_id__manifests__version__diff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Diff Manifest V1 Projects  Project Id  Manifests  Version  Diff Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Diff Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}/reject": {
+      "post": {
+        "operationId": "reject_manifest_v1_projects__project_id__manifests__version__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Reject Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}/simulate": {
+      "post": {
+        "description": "Dry run: the usage events, charge lines and split a business event would produce. Writes\nnothing.",
+        "operationId": "simulate_manifest_v1_projects__project_id__manifests__version__simulate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Simulate Manifest",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/manifests/{version}/validate": {
+      "post": {
+        "description": "Check shape, cross-field rules and references (metrics, prices); freezes the content.",
+        "operationId": "validate_manifest_v1_projects__project_id__manifests__version__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Validate Manifest",
+        "tags": [
+          "integrations"
         ]
       }
     },
@@ -6508,6 +9755,442 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/plans": {
+      "get": {
+        "operationId": "list_plans_v1_projects__project_id__plans_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlanOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Plans",
+        "tags": [
+          "billing"
+        ]
+      },
+      "post": {
+        "description": "Create a monthly plan from catalog prices (operators only).",
+        "operationId": "create_plan_v1_projects__project_id__plans_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State conflict."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/plans/{code}": {
+      "get": {
+        "operationId": "get_plan_v1_projects__project_id__plans__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/prices": {
+      "get": {
+        "operationId": "list_prices_v1_projects__project_id__prices_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PriceOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Prices",
+        "tags": [
+          "pricing"
+        ]
+      },
+      "post": {
+        "description": "Create a price with its first version.",
+        "operationId": "create_price_v1_projects__project_id__prices_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Code in use."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Price",
+        "tags": [
+          "pricing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/prices/{code}": {
+      "get": {
+        "operationId": "get_price_v1_projects__project_id__prices__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Price",
+        "tags": [
+          "pricing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/prices/{code}/versions": {
+      "post": {
+        "description": "Add a version from a future date. History is never rewritten.",
+        "operationId": "add_price_version_v1_projects__project_id__prices__code__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A later version exists."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Add Price Version",
+        "tags": [
+          "pricing"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/provider-accounts": {
       "get": {
         "operationId": "list_provider_accounts_v1_projects__project_id__provider_accounts_get",
@@ -6860,6 +10543,903 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/reconciliation/adjustments": {
+      "get": {
+        "operationId": "list_adjustments_v1_projects__project_id__reconciliation_adjustments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "break_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Break Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AdjustmentOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Adjustments",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/adjustments/{adjustment_id}": {
+      "get": {
+        "operationId": "get_adjustment_v1_projects__project_id__reconciliation_adjustments__adjustment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Adjustment",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/adjustments/{adjustment_id}/approve": {
+      "post": {
+        "description": "Post the R12 entry and resolve the break (a different operator than the proposer).",
+        "operationId": "approve_adjustment_v1_projects__project_id__reconciliation_adjustments__adjustment_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAdjustmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an operator, or four-eyes."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State changed."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Approve Adjustment",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/adjustments/{adjustment_id}/reject": {
+      "post": {
+        "description": "Reject the proposal: nothing is posted, the break stays as it was.",
+        "operationId": "reject_adjustment_v1_projects__project_id__reconciliation_adjustments__adjustment_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectAdjustmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an operator, or four-eyes."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State changed."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Reject Adjustment",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/breaks": {
+      "get": {
+        "operationId": "list_breaks_v1_projects__project_id__reconciliation_breaks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_BreakOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Breaks",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/breaks/{break_id}": {
+      "get": {
+        "operationId": "get_break_v1_projects__project_id__reconciliation_breaks__break_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "break_id",
+            "required": true,
+            "schema": {
+              "title": "Break Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreakOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Break",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/breaks/{break_id}/adjustments": {
+      "post": {
+        "description": "Propose an R12 entry for the break. Nothing is posted until another operator approves.",
+        "operationId": "propose_adjustment_v1_projects__project_id__reconciliation_breaks__break_id__adjustments_post",
+        "parameters": [
+          {
+            "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "path",
+            "name": "break_id",
+            "required": true,
+            "schema": {
+              "title": "Break Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeAdjustmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an operator, or four-eyes."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State changed."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Propose Adjustment",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/breaks/{break_id}/transition": {
+      "post": {
+        "description": "``open -> investigating -> resolved | accepted``; a closed break never reopens.",
+        "operationId": "transition_break_v1_projects__project_id__reconciliation_breaks__break_id__transition_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "break_id",
+            "required": true,
+            "schema": {
+              "title": "Break Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreakOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State changed."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Transition Break",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/runs": {
+      "get": {
+        "operationId": "list_runs_v1_projects__project_id__reconciliation_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RunOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "reconciliation"
+        ]
+      },
+      "post": {
+        "description": "Reconcile one window now, or return the stored run of that window (idempotent).",
+        "operationId": "start_run_v1_projects__project_id__reconciliation_runs_post",
+        "parameters": [
+          {
+            "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "1..255 visible ASCII characters; retries with the same key and body replay the first response for 24 hours (ADR-0004).",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State changed."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Start Run",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/reconciliation/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_v1_projects__project_id__reconciliation_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/stream": {
       "get": {
         "operationId": "stream_v1_projects__project_id__stream_get",
@@ -6924,6 +11504,278 @@
         "summary": "Stream",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/subscriptions": {
+      "get": {
+        "operationId": "list_subscriptions_v1_projects__project_id__subscriptions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Exact match.",
+            "in": "query",
+            "name": "customer_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact match.",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SubscriptionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "List Subscriptions",
+        "tags": [
+          "billing"
+        ]
+      },
+      "post": {
+        "description": "Subscribe a customer to a plan from now.",
+        "operationId": "create_subscription_v1_projects__project_id__subscriptions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State conflict."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Create Subscription",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/subscriptions/{subscription_id}": {
+      "get": {
+        "operationId": "get_subscription_v1_projects__project_id__subscriptions__subscription_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subscription_id",
+            "required": true,
+            "schema": {
+              "title": "Subscription Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Get Subscription",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/subscriptions/{subscription_id}/cancel": {
+      "post": {
+        "operationId": "cancel_subscription_v1_projects__project_id__subscriptions__subscription_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "project_id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subscription_id",
+            "required": true,
+            "schema": {
+              "title": "Subscription Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSubscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "State conflict."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem details"
+          }
+        },
+        "summary": "Cancel Subscription",
+        "tags": [
+          "billing"
         ]
       }
     },
